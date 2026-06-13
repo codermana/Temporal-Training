@@ -478,6 +478,63 @@ section.image img {
   width: 100%;
 }
 
+section.center {
+  text-align: center;
+}
+
+section.middle {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+section.portrait img {
+  max-height: 310px;
+  object-fit: contain;
+}
+
+section.intro-photo img {
+  border-radius: 8px;
+  max-height: 360px;
+  object-fit: contain;
+}
+
+section.center.middle p,
+section.center.middle h2,
+section.center.middle h3 {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+section.content-time .content-time-rule {
+  align-items: center;
+  display: flex;
+  gap: 30px;
+  justify-content: center;
+}
+
+section.content-time .content-time-item {
+  align-items: center;
+  display: inline-flex;
+  gap: 14px;
+  font-size: 34px;
+  font-weight: 800;
+}
+
+section.content-time .content-time-symbol {
+  color: var(--accent);
+  font-size: 42px;
+  font-weight: 800;
+}
+
+section.content-time .lucide {
+  height: 42px;
+  margin: 0;
+  max-height: none;
+  object-fit: contain;
+  width: 42px;
+}
+
 section.quote blockquote {
   font-size: 52px;
   max-width: 920px;

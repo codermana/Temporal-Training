@@ -35,6 +35,9 @@ slides/**/node_modules/
 slides/**/dist/
 .DS_Store
 
+# Local Temporal dev server state
+.temporal/
+
 # Standalone Marp template repo (kept for reference; lives in its own .git)
 slides-template/
 

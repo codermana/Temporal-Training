@@ -79,10 +79,13 @@ check: ## Verify required and optional tools
 # Temporal server
 # ---------------------------------------------------------------------------
 
-.PHONY: temporal ui
+.PHONY: temporal temporal-persistent ui
 
 temporal: ## Start the Temporal dev server (foreground)
 	scripts/start-temporal.sh
+
+temporal-persistent: ## Start Temporal dev server with local persistent state
+	scripts/start-temporal-persistent.sh
 
 ui: ## Open the Temporal Web UI in the default browser
 	@open http://127.0.0.1:8233 2>/dev/null || xdg-open http://127.0.0.1:8233 2>/dev/null || \

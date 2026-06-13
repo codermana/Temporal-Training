@@ -29,9 +29,9 @@ Ask for a show of hands: "who's been paged for a half-finished workflow?"
 
 ---
 
-<!-- _class: speaker -->
+<!-- _class: center middle portrait -->
 
-###### Speaker
+![Me](assets/images/me.png)
 
 ## Gaurav Agarwal
 
@@ -46,6 +46,101 @@ ex-Tarka Labs, ex-BrowserStack, ex-ThoughtWorks
 If the room is mixed (engineers + managers), mention you've shipped Temporal
 to production at companies with both Java and Go stacks - it lands trust faster.
 -->
+
+---
+
+<!-- _class: center middle intro-photo -->
+
+*What we wanted*
+
+![In-class Training](assets/images/professional-training-courses.jpg)
+
+---
+
+<!-- _class: center middle intro-photo -->
+
+*What we got*
+
+![WFH](assets/images/wfh.jpg)
+
+---
+
+## As an instructor
+
+- I promise to make this class as interactive as possible
+- I will use as many resources as available to keep you engaged
+- I will ensure everyone's questions are addressed
+
+---
+
+## What I need from you
+
+- Be vocal
+  - Let me know if there are any audio/video issues ASAP
+  - Feel free to interrupt me and ask questions
+- Be punctual
+- Give feedback
+- Work on the exercises
+- Be *on mute* unless you are speaking
+
+---
+
+<!-- _class: center middle intro-photo -->
+
+## Class progression
+
+![Learning Curve](assets/images/learning-curve.jpg)
+
+---
+
+<!-- _class: center middle -->
+
+Here you are trying to *learn* something, while here your **brain** is doing you a favor by making sure the learning doesn't stick.
+
+---
+
+### Some tips
+
+- Slow down: stop and think
+  - Listen for the questions and answer
+- Do the exercises
+  - They are not add-ons; they are not optional
+- There are no dumb questions
+- Drink water. Lots of it.
+
+---
+
+### Some tips (continued)
+
+- Take notes
+  - Try repetitive, spaced-out learning
+- Talk about it out loud
+- Listen to your brain
+- *Experiment*
+
+---
+
+<!-- _class: center middle content-time -->
+
+<div class="content-time-rule" aria-label="Content is greater than time">
+  <span class="content-time-item">
+    <img class="lucide" src="assets/icons/book-open.svg" alt="" />
+    <span>Content</span>
+  </span>
+  <span class="content-time-symbol">&gt;</span>
+  <span class="content-time-item">
+    <img class="lucide" src="assets/icons/clock.svg" alt="" />
+    <span>Time</span>
+  </span>
+</div>
+
+---
+
+<!-- _class: center middle -->
+
+## Show of hands
+
+*Yay's in chat*
 
 ---
 
