@@ -20,15 +20,14 @@ Durable execution for engineers tired of writing recovery runbooks.
 ###### Gaurav Agarwal
 
 <!--
-Open with energy. Read the subtitle out loud - it's the hook.
+Open with energy.
+
+Read the subtitle out loud - it's the hook.
 
 This is a 25-minute talk: aim to land 3 ideas, not 30.
 
-The 3 are:
-(1) state drifts across systems,
-(2) durable execution is application code that
-survives process death,
-(3) you'd use it where you write runbooks today.
+The 3 are: (1) state drifts across systems, (2) durable execution is application
+code that survives process death, (3) you'd use it where you write runbooks today.
 
 Ask for a show of hands: "who's been paged for a half-finished workflow?"
 -->
@@ -48,9 +47,12 @@ Director of Engineering & Founder @ https://codermana.com
 ex-Tarka Labs, ex-BrowserStack, ex-ThoughtWorks
 
 <!--
-30 seconds max. Establish credibility, then move on.
-If the room is mixed (engineers + managers), mention you've shipped Temporal
-to production at companies with both Java and Go stacks - it lands trust faster.
+30 seconds max.
+
+Establish credibility, then move on.
+
+If the room is mixed (engineers + managers), mention you've shipped Temporal to
+production at companies with both Java and Go stacks - it lands trust faster.
 -->
 
 ---
@@ -149,8 +151,9 @@ Here you are trying to *learn* something, while here your **brain** is doing you
 *Yay's in chat*
 
 <!--
-Use these as quick chat prompts. Ask for "yes" / "no" or a one-word answer;
-do not discuss every response.
+Use these as quick chat prompts.
+
+Ask for "yes" / "no" or a one-word answer; do not discuss every response.
 
 - Have you ever been paged for a half-finished business process?
 - Have you had to manually reconcile whether an external API call succeeded?
@@ -177,8 +180,11 @@ do not discuss every response.
 7. Where to start
 
 <!--
-Don't dwell. ~20 seconds. The agenda is signposting so the audience can
-locate themselves later. Keep it short - orientation, not detail.
+Don't dwell. ~20 seconds.
+
+The agenda is signposting so the audience can locate themselves later.
+
+Keep it short - orientation, not detail.
 -->
 
 ---
@@ -192,9 +198,14 @@ locate themselves later. Keep it short - orientation, not detail.
 What you actually shipped last quarter, and what broke at 2 AM.
 
 <!--
-Section divider. Pause for 2-3 seconds. The next 3 slides set up the pain
-the rest of the talk resolves. Tone shift: slow down, get serious about
-real outages the audience has lived through.
+Section divider.
+
+Pause for 2-3 seconds.
+
+The next 3 slides set up the pain the rest of the talk resolves.
+
+Tone shift: slow down, get serious about real outages the audience has lived
+through.
 -->
 
 ---
@@ -209,9 +220,13 @@ real outages the audience has lived through.
 These are **workflows**. They look easy until one step fails.
 
 <!--
-Read the bullets in voices. The first sounds like an e-commerce backend,
-the second like a data team, the third like an ops/devex flow. The audience
-will recognize at least one - that's the point.
+Read the bullets in voices.
+
+The first sounds like an e-commerce backend, the second like a data team, the
+third like an ops/devex flow.
+
+The audience will recognize at least one - that's the point.
+
 Land the final line with weight: "look easy until one step fails."
 -->
 
@@ -228,9 +243,11 @@ Land the final line with weight: "look easy until one step fails."
 > Recovery is a **runbook**, not a button.
 
 <!--
-Pace yourself - each bullet is a real incident shape. After the third one
-("crashed between DB write and publish") pause; that's the moment people
-nod because they remember a specific outage.
+Pace yourself - each bullet is a real incident shape.
+
+After the third one ("crashed between DB write and publish") pause; that's the
+moment people nod because they remember a specific outage.
+
 Closing line is the slogan to repeat: "runbook, not a button."
 -->
 
@@ -245,8 +262,11 @@ Closing line is the slogan to repeat: "runbook, not a button."
 A quick tour of the four common stacks and the seams they leave open.
 
 <!--
-About 5 minutes for the four stacks combined. Don't bash any tool - each
-solves a real problem. The framing is "what each leaves to you."
+About 5 minutes for the four stacks combined.
+
+Don't bash any tool - each solves a real problem.
+
+The framing is "what each leaves to you."
 -->
 
 ---
@@ -266,9 +286,12 @@ solves a real problem. The framing is "what each leaves to you."
 > Fine for the first month. Not for the third year.
 
 <!--
-Quick. Cron isn't a strawman - it's where many teams start. The reason it
-breaks is incidental complexity that nobody owns: logs scattered, lock
-files invented, monitoring bolted on.
+Quick.
+
+Cron isn't a strawman - it's where many teams start.
+
+The reason it breaks is incidental complexity that nobody owns: logs scattered,
+lock files invented, monitoring bolted on.
 -->
 
 ---
@@ -288,9 +311,11 @@ extract >> transform >> load
 > Great for batch ETL on a fixed cadence. Painful for cross-system flows with retries and human steps.
 
 <!--
-For Airflow users in the room, validate that Airflow IS great for what
-it was built for. The pitch is: don't replace your DAGs - move the cross-
-system flows out of Airflow into Temporal, keep the data DAGs in Airflow.
+For Airflow users in the room, validate that Airflow IS great for what it was
+built for.
+
+The pitch is: don't replace your DAGs - move the cross-system flows out of
+Airflow into Temporal, keep the data DAGs in Airflow.
 -->
 
 ---
@@ -309,10 +334,11 @@ system flows out of Airflow into Temporal, keep the data DAGs in Airflow.
 - Vendor-coupled. Cost surprises at scale.
 
 <!--
-The JSON-state-machine point lands hardest with engineers. Ask: "would you
-review a 4000-line YAML for an order workflow as readily as Java?"
-The Lambda 15-min cap is the sneaky one - many teams hit it and don't
-realize it for months.
+The JSON-state-machine point lands hardest with engineers.
+
+Ask: "would you review a 4000-line YAML for an order workflow as readily as Java?"
+The Lambda 15-min cap is the sneaky one - many teams hit it and don't realize it
+for months.
 -->
 
 ---
@@ -327,8 +353,11 @@ realize it for months.
 > Kafka tells you *what happened*. Temporal tells you *where we are*.
 
 <!--
-Don't position as Kafka vs Temporal. Position as Kafka + Temporal: Kafka
-is the bus between teams, Temporal is the brain inside a team.
+Don't position as Kafka vs Temporal.
+
+Position as Kafka + Temporal: Kafka is the bus between teams, Temporal is the
+brain inside a team.
+
 The quote at the bottom is the line they'll quote back at you - say it slowly.
 -->
 
@@ -343,9 +372,13 @@ The quote at the bottom is the line they'll quote back at you - say it slowly.
 | Lives in scheduler DB, app DB, S3, Kafka, operator memory. | Every handoff is a chance for the systems to disagree. | Drift is what the 2 AM page is. |
 
 <!--
-The reframe. The problem isn't any single tool - it's that workflow state
-is scattered across N+1 places. Make eye contact, lean into "drift is what
-the 2 AM page is." It's the bridge to the Temporal section.
+The reframe.
+
+The problem isn't any single tool - it's that workflow state is scattered across
+N+1 places.
+
+Make eye contact, lean into "drift is what the 2 AM page is." It's the bridge to
+the Temporal section.
 -->
 
 ---
@@ -359,8 +392,11 @@ the 2 AM page is." It's the bridge to the Temporal section.
 Application code that survives process death.
 
 <!--
-Tone shift again - from problem to solution. Energy back up. The talk
-inflects here; if you're 11 minutes in, you're on schedule.
+Tone shift again - from problem to solution.
+
+Energy back up.
+
+The talk inflects here; if you're 11 minutes in, you're on schedule.
 -->
 
 ---
@@ -384,11 +420,21 @@ public String processOrder(String orderId) {
 If the Worker dies on line 3, line 4 still runs - on **a different process, hours later**, from where it left off.
 
 <!--
-THIS IS THE CENTRAL SLIDE. Spend ~90 seconds here.
-Walk the code: this is normal Java. There's no special framework. The
-methods are just method calls. The MAGIC is the last bullet.
-Then say: "the Workflow doesn't care which JVM is running it. The state
-lives in the cluster, not on a host."
+THIS IS THE CENTRAL SLIDE.
+
+Spend ~90 seconds here.
+
+Walk the code: this is normal Java.
+
+There's no special framework.
+
+The methods are just method calls.
+
+The MAGIC is the last bullet.
+
+Then say: "the Workflow doesn't care which JVM is running it.
+
+The state lives in the cluster, not on a host."
 -->
 
 ---
@@ -417,10 +463,13 @@ func ProcessOrder(ctx workflow.Context, orderID string) (string, error) {
 Same contract: Workflow code is deterministic; Activities own side effects.
 
 <!--
-Go is often the clearest SDK for engineers coming from backend services. Point
-out the shape: ExecuteActivity records a command in history, and Get waits for
-the durable result. If a Worker dies after reserveInventory, replay rebuilds
-paymentID and reservationID from history before scheduling ship.
+Go is often the clearest SDK for engineers coming from backend services.
+
+Point out the shape: ExecuteActivity records a command in history, and Get waits
+for the durable result.
+
+If a Worker dies after reserveInventory, replay rebuilds paymentID and
+reservationID from history before scheduling ship.
 -->
 
 ---
@@ -449,9 +498,10 @@ class OrderWorkflow:
 Async syntax, same durable execution model.
 
 <!--
-Use this to defuse "is this Java-only?" concerns. Python is async-first, but
-the mental model is the same: durable Workflow decisions, side effects in
-Activities, result replay from history.
+Use this to defuse "is this Java-only?" concerns.
+
+Python is async-first, but the mental model is the same: durable Workflow
+decisions, side effects in Activities, result replay from history.
 -->
 
 ---
@@ -466,10 +516,12 @@ Activities, result replay from history.
 > You write code. The runtime writes the journal.
 
 <!--
-The 4 steps are the entire model. If they only remember this one slide,
-the rest follows. Use a whiteboard metaphor: "imagine someone took notes
-of every decision your program made; you can replay those notes to
-recreate the program's state."
+The 4 steps are the entire model.
+
+If they only remember this one slide, the rest follows.
+
+Use a whiteboard metaphor: "imagine someone took notes of every decision your
+program made; you can replay those notes to recreate the program's state."
 -->
 
 ---
@@ -484,11 +536,16 @@ recreate the program's state."
 - **History** as the audit trail. The Web UI is your first debugging stop.
 
 <!--
-Quick fly-through - 90 seconds. Don't go deep on any one. The point is
-breadth: ALL of these are built-in. Each bullet represents code your team
-currently writes and maintains.
-The "Workflow.sleep(Duration.ofDays(30))" line gets a chuckle from people
-who have written cron-replacement logic.
+Quick fly-through - 90 seconds.
+
+Don't go deep on any one.
+
+The point is breadth: ALL of these are built-in.
+
+Each bullet represents code your team currently writes and maintains.
+
+The "Workflow.sleep(Duration.ofDays(30))" line gets a chuckle from people who have
+written cron-replacement logic.
 -->
 
 ---
@@ -508,8 +565,16 @@ who have written cron-replacement logic.
 **Task Queue** - a string name. Routes work to a pool.
 
 <!--
-30 seconds. This is the mental model summary. Most important: Task Queue
-is JUST a string - it's not Kafka. It's not a database. It's a routing key.
+30 seconds.
+
+This is the mental model summary.
+
+Most important: Task Queue is JUST a string - it's not Kafka.
+
+It's not a database.
+
+It's a routing key.
+
 This often confuses people coming from message-queue thinking.
 -->
 
@@ -524,8 +589,11 @@ This often confuses people coming from message-queue thinking.
 Three examples that show the typical patterns.
 
 <!--
-Section divider. The next 3 slides are the "show, don't tell" moment. Each
-slide is a complete pattern in ~15 lines of Java.
+Section divider.
+
+The next 3 slides are the "show, don't tell" moment.
+
+Each slide is a complete pattern in ~15 lines of Java.
 -->
 
 ---
@@ -554,11 +622,19 @@ public String process(String orderId) {
 ```
 
 <!--
-Walk top to bottom. Stop on `saga.addCompensation(...)` - explain that this
-is registered IMMEDIATELY after the forward step succeeds. If the Workflow
-dies between the forward step and the compensation registration, the
-compensation is lost. So you write them paired.
-The catch handler runs in LIFO order. Compensations also retry.
+Walk top to bottom.
+
+Stop on `saga.addCompensation(...)` - explain that this is registered IMMEDIATELY
+after the forward step succeeds.
+
+If the Workflow dies between the forward step and the compensation registration,
+the compensation is lost.
+
+So you write them paired.
+
+The catch handler runs in LIFO order.
+
+Compensations also retry.
 -->
 
 ---
@@ -585,10 +661,11 @@ Schedule.newBuilder()
 > Durable Temporal object, not a cron line. Survives the redeploy you forgot about.
 
 <!--
-The point is at the bottom. Don't read the whole builder - point at
-`setIntervals(Duration.ofHours(1))` and `setJitter(...)` and say: "this is
-what your cron line wished it was."
-For Airflow users: this replaces the scheduler, not your DAG logic.
+The point is at the bottom.
+
+Don't read the whole builder - point at `setIntervals(Duration.ofHours(1))` and
+`setJitter(...)` and say: "this is what your cron line wished it was." For Airflow
+users: this replaces the scheduler, not your DAG logic.
 -->
 
 ---
@@ -612,11 +689,18 @@ public void approve(String approver) { this.approved = true; }
 > No polling. No queue. Sleeps on the server until the Signal arrives.
 
 <!--
-This is the killer slide for product teams. The "wait for human approval"
-pattern is often a custom-built monstrosity. Here it's three lines.
-The Workflow doesn't poll. The Worker doesn't keep a thread. The state
-lives in the cluster; when the Signal arrives, a Worker (maybe a different
-one) picks up the Workflow and the await unblocks.
+This is the killer slide for product teams.
+
+The "wait for human approval" pattern is often a custom-built monstrosity.
+
+Here it's three lines.
+
+The Workflow doesn't poll.
+
+The Worker doesn't keep a thread.
+
+The state lives in the cluster; when the Signal arrives, a Worker (maybe a
+different one) picks up the Workflow and the await unblocks.
 -->
 
 ---
@@ -630,8 +714,10 @@ one) picks up the Workflow and the await unblocks.
 Where Temporal earns its keep today.
 
 <!--
-Pivot to credibility/social proof. The next two slides answer the implicit
-question: "who else is using this and what for?"
+Pivot to credibility/social proof.
+
+The next two slides answer the implicit question: "who else is using this and what
+for?"
 -->
 
 ---
@@ -647,8 +733,12 @@ question: "who else is using this and what for?"
 - **Subscription lifecycles** - billing cycles measured in months
 
 <!--
-Pick the one that matches the audience. If they're in fintech, dwell on
-payments. If they're a platform team, dwell on infrastructure provisioning.
+Pick the one that matches the audience.
+
+If they're in fintech, dwell on payments.
+
+If they're a platform team, dwell on infrastructure provisioning.
+
 The AI agents bullet is newest and lands hardest in 2024+ rooms.
 -->
 
@@ -668,9 +758,16 @@ A non-exhaustive sample of companies that talk publicly about Temporal in produc
 - Datadog (internal automation)
 
 <!--
-Skim. The point is breadth - this isn't a niche tool. Stripe and Snap are
-the strongest names for fintech. Netflix for data platforms. Datadog for
-SRE-leaning teams.
+Skim.
+
+The point is breadth - this isn't a niche tool.
+
+Stripe and Snap are the strongest names for fintech.
+
+Netflix for data platforms.
+
+Datadog for SRE-leaning teams.
+
 If the audience asks for case studies later, point them at
 https://temporal.io/case-studies.
 -->
@@ -690,10 +787,12 @@ https://temporal.io/case-studies.
 | Years-long runs | ✗ | ✗ | ✗ | n/a | ✓ |
 
 <!--
-Don't read the table - point at one row and discuss. The most useful row
-is "Long human waits" because it surprises people. Cron and Airflow are
-not built for "wait for a human for 3 days."
-The "Vendor neutral" row matters for Step Functions skeptics.
+Don't read the table - point at one row and discuss.
+
+The most useful row is "Long human waits" because it surprises people.
+
+Cron and Airflow are not built for "wait for a human for 3 days." The "Vendor
+neutral" row matters for Step Functions skeptics.
 -->
 
 ---
@@ -708,9 +807,12 @@ The "Vendor neutral" row matters for Step Functions skeptics.
 > Use Temporal where you would have written a runbook.
 
 <!--
-Critical slide for credibility. If you don't show the limits, the audience
-suspects you're selling. The runbook line at the bottom is the test: "if
-the next person on call would need a runbook to recover, it's a Workflow."
+Critical slide for credibility.
+
+If you don't show the limits, the audience suspects you're selling.
+
+The runbook line at the bottom is the test: "if the next person on call would need
+a runbook to recover, it's a Workflow."
 -->
 
 ---
@@ -724,29 +826,51 @@ the next person on call would need a runbook to recover, it's a Workflow."
 Both are useful. Only one is a smell for missing durable execution.
 
 <!--
-This is a vocabulary reset before the exercise. Many teams use "runbook" and
-"playbook" interchangeably. For this talk, make the distinction operational:
-runbook is reactive recovery; playbook is repeatable coordination.
+This is a vocabulary reset before the exercise.
+
+Many teams use "runbook" and "playbook" interchangeably.
+
+For this talk, make the distinction operational: runbook is reactive recovery;
+playbook is repeatable coordination.
 -->
 
 ---
 
-<!-- _class: cards -->
-
 # Runbook vs playbook
 
-| Runbook | Playbook |
-| --- | --- |
-| Incident recovery steps | Planned response pattern |
-| Used after something breaks | Used when a known situation appears |
-| Answers: "how do I fix this?" | Answers: "how do we handle this?" |
-| Often hand-executes missing state transitions | Often coordinates people, systems, and decisions |
-| Strong signal for automation | Strong signal for standardization |
+| Aspect | Runbook | Playbook |
+| --- | --- | --- |
+| **Purpose** | Execute a specific operational task | Handle a broader operational scenario |
+| **Scope** | Narrow and task-focused | Broad and scenario-focused |
+| **Structure** | Step-by-step procedure | Workflows, decisions, branches, and runbooks |
+| **Decision making** | Minimal; follow prescribed steps | Explicit decision points and branching actions |
+| **Example** | "Restart a failed database service" | "Respond to a database outage incident" |
+| **Temporal signal** | Repeated manual recovery steps | Repeatable cross-system coordination |
 
 <!--
-Do not make either one sound bad. A good SRE team needs both. The key point is
-that repeated runbook execution is evidence that the system has pushed
-application state recovery onto humans.
+Do not make either one sound bad.
+
+A good SRE team needs both.
+
+The key point is that repeated runbook execution is evidence that the system has
+pushed application state recovery onto humans.
+-->
+
+---
+
+# Simple analogy
+
+- **Runbook** = "How to change a tire."
+- **Playbook** = "How to handle a roadside breakdown."
+
+The playbook may include the tire-change runbook, calling roadside assistance,
+moving passengers to safety, and deciding when to abandon the vehicle.
+
+<!--
+Use this as the memory hook.
+
+The important distinction is containment: a playbook can contain runbooks, but it
+also carries scenario judgment, branching, and coordination.
 -->
 
 ---
@@ -805,9 +929,15 @@ Online ILT flow:
 The smallest defensible step.
 
 <!--
-We're 20 minutes in. The last 5 minutes are about giving them an action.
-The mistake here is recommending a big migration. Don't. Recommend ONE
-workflow.
+We're 20 minutes in.
+
+The last 5 minutes are about giving them an action.
+
+The mistake here is recommending a big migration.
+
+Don't.
+
+Recommend ONE workflow.
 -->
 
 ---
@@ -823,9 +953,16 @@ workflow.
 > Don't migrate everything. Migrate where Temporal earns its keep.
 
 <!--
-Step 5 is the lesson. The biggest mistake teams make is REDESIGNING during
-the migration. You don't. You move first, then improve. Mechanical
-migration is faster, easier to verify, and lets you compare apples to apples.
+Step 5 is the lesson.
+
+The biggest mistake teams make is REDESIGNING during the migration.
+
+You don't.
+
+You move first, then improve.
+
+Mechanical migration is faster, easier to verify, and lets you compare apples to
+apples.
 -->
 
 ---
@@ -851,8 +988,12 @@ make run-hello      # in another
 ```
 
 <!--
-End with a concrete action. If the room is on laptops, ask them to run it.
+End with a concrete action.
+
+If the room is on laptops, ask them to run it.
+
 The dev server is genuinely 5 minutes; the brag is fair.
+
 For remote audiences, this is the screen they screenshot.
 -->
 
@@ -867,9 +1008,13 @@ For remote audiences, this is the screen they screenshot.
 - One resource: docs.temporal.io plus the course repo from today.
 
 <!--
-The three things they should remember. Read them slowly. Each one maps to
-the agenda's central claim. If they only remember the "runbook → Workflow"
-habit, the talk worked.
+The three things they should remember.
+
+Read them slowly.
+
+Each one maps to the agenda's central claim.
+
+If they only remember the "runbook → Workflow" habit, the talk worked.
 -->
 
 ---
@@ -881,7 +1026,12 @@ habit, the talk worked.
 The cost is learning a new model. The reward is fewer runbooks.
 
 <!--
-Close strong. Land on the quote. Don't immediately segue to Q&A - let it sit.
+Close strong.
+
+Land on the quote.
+
+Don't immediately segue to Q&A - let it sit.
+
 Then: "Questions?"
 -->
 
@@ -906,6 +1056,8 @@ Course repo
 https://github.com/CoderMana/temporal-training
 
 <!--
-Leave on screen during Q&A. The slides URL gets photographed; make sure
-the QR code works if you've added one for in-person events.
+Leave on screen during Q&A.
+
+The slides URL gets photographed; make sure the QR code works if you've added one
+for in-person events.
 -->

@@ -18,8 +18,12 @@ footer: "![CoderMana](assets/codermana.svg)"
 ###### Gaurav Agarwal
 
 <!--
-6 days × 4 hours. Each day mirrors a day in lecture_notes/Day-XX.md.
+6 days × 4 hours.
+
+Each day mirrors a day in lecture_notes/Day-XX.md.
+
 Lab slides are marked - laptops out, fingers on keyboards.
+
 Pace check: end of Day 1 should leave the room with one Workflow running.
 -->
 
@@ -37,8 +41,9 @@ Pace check: end of Day 1 should leave the room with one Workflow running.
 | 6 | AWS migration + containers | Glue, K8s, KEDA |
 
 <!--
-Quick orientation slide. Don't dwell - each Day cover slide opens the
-detailed agenda for that block.
+Quick orientation slide.
+
+Don't dwell - each Day cover slide opens the detailed agenda for that block.
 -->
 
 ---
@@ -52,8 +57,9 @@ detailed agenda for that block.
 Rethinking orchestration as durable application code.
 
 <!--
-4 hours: 2 morning + 2 afternoon. Morning is concepts; afternoon is the
-first hands-on Workflow.
+4 hours: 2 morning + 2 afternoon.
+
+Morning is concepts; afternoon is the first hands-on Workflow.
 -->
 
 ---
@@ -78,7 +84,9 @@ The failure modes of cron- and DAG-based orchestration.
 These are **workflows**. They look easy until one step fails.
 
 <!--
-Read in different voices. Each shape will resonate with someone in the room.
+Read in different voices.
+
+Each shape will resonate with someone in the room.
 -->
 
 ---
@@ -113,8 +121,11 @@ The slogan to repeat across the day: runbook, not a button.
 Drift across all of them = the 2 AM page.
 
 <!--
-Don't bash any tool. Each solves a real problem. The point is the seam each
-leaves open, not that any is bad.
+Don't bash any tool.
+
+Each solves a real problem.
+
+The point is the seam each leaves open, not that any is bad.
 -->
 
 ---
@@ -138,8 +149,15 @@ Workflows, Activities, Workers, Task Queues.
 | Durable function. State is the event history. Deterministic. | Arbitrary code with side effects. Retried independently. | Long-lived process polling one or more Task Queues. | A string name. Routes work to a Worker pool. |
 
 <!--
-Four cards, four primitives. Task Queue is JUST A STRING. Not Kafka. Not a
-DB. It's a routing key.
+Four cards, four primitives.
+
+Task Queue is JUST A STRING.
+
+Not Kafka.
+
+Not a DB.
+
+It's a routing key.
 -->
 
 ---
@@ -159,8 +177,9 @@ public interface OrdersWorkflow {
 - State lives in event history; the impl is replayable.
 
 <!--
-This is just a Java interface. The SDK uses the @WorkflowInterface
-annotation to identify it via reflection.
+This is just a Java interface.
+
+The SDK uses the @WorkflowInterface annotation to identify it via reflection.
 -->
 
 ---
@@ -196,7 +215,9 @@ factory.start();
 - The Task Queue **string** routes work to a Worker pool.
 
 <!--
-factory.start() kicks off the long-poll loop. Workers connect outbound.
+factory.start() kicks off the long-poll loop.
+
+Workers connect outbound.
 -->
 
 ---
@@ -219,8 +240,9 @@ factory.start() kicks off the long-poll loop. Workers connect outbound.
 > You stop describing shape. You start writing behavior.
 
 <!--
-For Airflow rooms, this slide is the moment of recognition. XCom-becomes-
-a-return-value gets the biggest reaction.
+For Airflow rooms, this slide is the moment of recognition.
+
+XCom-becomes-a-return-value gets the biggest reaction.
 -->
 
 ---
@@ -247,8 +269,11 @@ When a Worker resumes a Workflow:
 > Different decision than the recorded history = non-determinism error.
 
 <!--
-Whiteboard moment. Walk through with arrows. "Replay" doesn't re-execute
-side effects - Activity results are READ from history.
+Whiteboard moment.
+
+Walk through with arrows.
+
+"Replay" doesn't re-execute side effects - Activity results are READ from history.
 -->
 
 ---
@@ -278,8 +303,10 @@ for (var e : hashMap.entrySet()) { ... }       // risky
 ```
 
 <!--
-Reference card. Family 4 is the biggest aha - Workflow.sleep records a
-timer; the Worker FORGETS the workflow.
+Reference card.
+
+Family 4 is the biggest aha - Workflow.sleep records a timer; the Worker FORGETS
+the workflow.
 -->
 
 ---
@@ -297,8 +324,7 @@ Workflow.sleep(Duration.ofDays(30));
 > No JVM stays alive. Survives every deploy in between.
 
 <!--
-Ask: "how would you wait 30 days for an email opt-in today?" Compare to
-one line.
+Ask: "how would you wait 30 days for an email opt-in today?" Compare to one line.
 -->
 
 ---
@@ -338,8 +364,10 @@ What's inside the box.
 Your Workers connect **outbound** to Frontend on `:7233`.
 
 <!--
-Trace one Workflow start. SDK → Frontend → History (write
-WorkflowExecutionStarted) → Matching → Worker polls.
+Trace one Workflow start.
+
+SDK → Frontend → History (write WorkflowExecutionStarted) → Matching → Worker
+polls.
 -->
 
 ---
@@ -378,8 +406,11 @@ temporal operator namespace list
 > Goal: every laptop shows the `default` namespace in the Web UI.
 
 <!--
-Wait until every laptop is green. Pair the stragglers. Don't proceed without
-this; the rest of the day depends on it.
+Wait until every laptop is green.
+
+Pair the stragglers.
+
+Don't proceed without this; the rest of the day depends on it.
 -->
 
 ---
@@ -403,8 +434,11 @@ What to look for:
 > Restart the Worker mid-run; the Workflow resumes. That's the lesson.
 
 <!--
-Have one person KILL the Worker mid-run on purpose. The Workflow completes
-when the Worker restarts. This is the most important moment of Day 1.
+Have one person KILL the Worker mid-run on purpose.
+
+The Workflow completes when the Worker restarts.
+
+This is the most important moment of Day 1.
 -->
 
 ---
@@ -428,8 +462,9 @@ Identify in order:
 - `WorkflowExecutionCompleted` - final outcome
 
 <!--
-This grep-able view is the production debugging starting point. Show it
-now; it'll come back on Day 4 for replay tests.
+This grep-able view is the production debugging starting point.
+
+Show it now; it'll come back on Day 4 for replay tests.
 -->
 
 ---
@@ -443,8 +478,10 @@ now; it'll come back on Day 4 for replay tests.
 - One habit: pick Workflow IDs from business identity. They're durable handles.
 
 <!--
-The first slogan to repeat. If only one thing sticks for Day 1, it's the
-re-execution-vs-recorded-results distinction.
+The first slogan to repeat.
+
+If only one thing sticks for Day 1, it's the re-execution-vs-recorded-results
+distinction.
 -->
 
 ---
@@ -459,7 +496,9 @@ Async, retries, heartbeats - and the ways you interact with running executions.
 
 <!--
 4 hours: morning is reliability mechanics; afternoon is signals/queries/
-updates/schedules/children. Lots of code.
+updates/schedules/children.
+
+Lots of code.
 -->
 
 ---
@@ -509,8 +548,9 @@ int total = counts.stream().mapToInt(Promise::get).sum();
 All partitions run in parallel. The Workflow suspends across all of them.
 
 <!--
-One JVM hosts tens of thousands of suspended Workflows. Each one is just
-heap state, not a parked thread.
+One JVM hosts tens of thousands of suspended Workflows.
+
+Each one is just heap state, not a parked thread.
 -->
 
 ---
@@ -532,8 +572,9 @@ In the Web UI:
 3. Pair: predict what happens if one of three parallel Activities fails.
 
 <!--
-Have students sketch on paper before running. Then run and verify their
-prediction was right (or wrong - even better).
+Have students sketch on paper before running.
+
+Then run and verify their prediction was right (or wrong - even better).
 -->
 
 ---
@@ -585,8 +626,9 @@ ActivityOptions.newBuilder()
 6 × 5min attempts + 6 backoff waits ≈ 33min — set scheduleToClose to bound it.
 
 <!--
-The arithmetic is the lesson. Bring a calculator if you don't trust the
-audience to do it on paper.
+The arithmetic is the lesson.
+
+Bring a calculator if you don't trust the audience to do it on paper.
 -->
 
 ---
@@ -635,8 +677,10 @@ The rules that keep replay honest.
 > The replay tests on Day 4 catch all of these.
 
 <!--
-Reinforcement, not new content. The students saw the families yesterday;
-this is the "what bites in production" list.
+Reinforcement, not new content.
+
+The students saw the families yesterday; this is the "what bites in production"
+list.
 -->
 
 ---
@@ -714,8 +758,8 @@ temporal workflow query --workflow-id approval-demo \
 > Send the Signal before the Workflow starts; see what happens.
 
 <!--
-The "before workflow starts" twist: signalWithStart later in the day will
-make this explicit.
+The "before workflow starts" twist: signalWithStart later in the day will make
+this explicit.
 -->
 
 ---
@@ -768,8 +812,10 @@ client.signalWithStart(batch);
 > Bare `start()` throws `WorkflowExecutionAlreadyStarted` on event #2.
 
 <!--
-This is THE foot-gun. Every team copies bare WorkflowClient.start() from
-a tutorial and crashes on the second Kafka message for the same key.
+This is THE foot-gun.
+
+Every team copies bare WorkflowClient.start() from a tutorial and crashes on the
+second Kafka message for the same key.
 -->
 
 ---
@@ -814,8 +860,9 @@ temporal workflow update --workflow-id cart-1001 \
 
 <!--
 The blocking-call shape is what makes Updates the modern primitive.
-Signal+Query is older and works against older clusters; Update is the
-right tool when the caller wants the result.
+
+Signal+Query is older and works against older clusters; Update is the right tool
+when the caller wants the result.
 -->
 
 ---
@@ -874,8 +921,10 @@ Discuss:
 - Pause + resume from the CLI; observe what the schedule does.
 
 <!--
-Compare to "your DAG runs hourly but the 3 AM run takes 90 minutes" - in
-Airflow you set max_active_runs. Here you set ScheduleOverlapPolicy.
+Compare to "your DAG runs hourly but the 3 AM run takes 90 minutes" - in Airflow
+you set max_active_runs.
+
+Here you set ScheduleOverlapPolicy.
 -->
 
 ---
@@ -927,8 +976,9 @@ WorkflowOptions.newBuilder()
 - `WorkflowRunTimeout` - cap for this run; forces continuation.
 
 <!--
-Workflow timeouts ≠ Activity timeouts. These are top-level execution caps,
-not per-attempt budgets.
+Workflow timeouts ≠ Activity timeouts.
+
+These are top-level execution caps, not per-attempt budgets.
 -->
 
 ---
@@ -942,7 +992,9 @@ not per-attempt budgets.
 - One sync RPC: **startUpdateWithStart** for "POST and wait for result."
 
 <!--
-Three slogans for Day 2. Each one is a foot-gun saved.
+Three slogans for Day 2.
+
+Each one is a foot-gun saved.
 -->
 
 ---
@@ -956,8 +1008,8 @@ Three slogans for Day 2. Each one is a foot-gun saved.
 Kafka is the bus between teams. Temporal is the brain inside one team.
 
 <!--
-Day 3 is half conceptual (where does Kafka end and Temporal start?) and
-half hands-on (full Kafka → Temporal → Kafka loop).
+Day 3 is half conceptual (where does Kafka end and Temporal start?) and half
+hands-on (full Kafka → Temporal → Kafka loop).
 -->
 
 ---
@@ -1011,7 +1063,12 @@ public List<String> pollBatch(String topic) {
 ```
 
 <!--
-Disable auto-commit. Always. Commit after the unit of work succeeds.
+Disable auto-commit.
+
+Always.
+
+Commit after the unit of work succeeds.
+
 Heartbeat the topic:partition:offset so retries can resume.
 -->
 
@@ -1127,8 +1184,11 @@ kcat -b localhost:9092 -t order-outcomes -C -o end -f 'key=%k value=%s\n'
 > Send a second event for the same key. Watch it Signal the existing workflow.
 
 <!--
-Have students fire two events for one key. The second event should NOT
-start a new workflow. If it does, they're using bare start - debug it.
+Have students fire two events for one key.
+
+The second event should NOT start a new workflow.
+
+If it does, they're using bare start - debug it.
 -->
 
 ---
@@ -1231,8 +1291,11 @@ try {
 Versioning, sizing, observability, replay tests, namespaces, Airflow migration.
 
 <!--
-Heaviest day on production rigour. Lots of ops content. Two big labs:
-metrics dashboard and replay tests.
+Heaviest day on production rigour.
+
+Lots of ops content.
+
+Two big labs: metrics dashboard and replay tests.
 -->
 
 ---
@@ -1545,8 +1608,9 @@ For a Workflow you wrote on Day 1-2:
 5. Modify the Workflow to reorder Activities; watch the test fail.
 
 <!--
-This is the safety net for the rest of the year. Encourage students to
-take this pattern back to their team and seed a corpus.
+This is the safety net for the rest of the year.
+
+Encourage students to take this pattern back to their team and seed a corpus.
 -->
 
 ---
@@ -1608,8 +1672,11 @@ A decision framework.
 Real-world Workflow walkthrough. Then build one.
 
 <!--
-4 hours. Morning is saga + Spring. Afternoon is capstone (75 min of build
-time + 25 min review + 20 min Q&A).
+4 hours.
+
+Morning is saga + Spring.
+
+Afternoon is capstone (75 min of build time + 25 min review + 20 min Q&A).
 -->
 
 ---
@@ -1684,8 +1751,10 @@ temporal workflow start --task-queue orders \
 > For cross-team flows from Airflow + Kafka, orchestration wins.
 
 <!--
-War story: when team #3 silently drops an event in a choreographed flow,
-nobody notices for 36 hours. Temporal's log shows it immediately.
+War story: when team #3 silently drops an event in a choreographed flow, nobody
+notices for 36 hours.
+
+Temporal's log shows it immediately.
 -->
 
 ---
@@ -1734,8 +1803,9 @@ class TemporalConfig {
 ```
 
 <!--
-This is the underlying wiring. In production, prefer the
-temporal-spring-boot-starter and let it do this.
+This is the underlying wiring.
+
+In production, prefer the temporal-spring-boot-starter and let it do this.
 -->
 
 ---
@@ -1857,8 +1927,11 @@ Go. 75 minutes. Walk the room every 15. Unstick people on Spring config -
 the lesson is in the saga shape, not the wiring.
 
 <!--
-Hold the line on time. At 50 minutes, stop everyone and check in. If most
-are stuck, slow down; if most are done, pull review forward.
+Hold the line on time.
+
+At 50 minutes, stop everyone and check in.
+
+If most are stuck, slow down; if most are done, pull review forward.
 -->
 
 ---
@@ -1873,8 +1946,11 @@ Two or three volunteer pairs share screen. The room critiques. Cover:
 - What would they change for a 30-day saga?
 
 <!--
-Resist correcting code style. Focus on the four questions above. They are
-what the cohort will face on real systems.
+Resist correcting code style.
+
+Focus on the four questions above.
+
+They are what the cohort will face on real systems.
 -->
 
 ---
@@ -1910,6 +1986,7 @@ Replacing Glue + Lambda + Step Functions. Running Workers in Kubernetes.
 
 <!--
 4 hours: morning is AWS migration; afternoon is containers + KEDA.
+
 Two big labs: containerized Worker on kind, and KEDA autoscale.
 -->
 

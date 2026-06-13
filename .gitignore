@@ -42,3 +42,4 @@ slides/**/dist/
 slides-template/
 
 # End of https://www.toptal.com/developers/gitignore/api/java
+*.pdf
