@@ -32,7 +32,7 @@ npm run pptx       # dist/slides.pptx
 ## Edit
 
 - Content: `slides.md`
-- Theme: `themes/base.css`
+- Theme: `../themes/base.css`
 - Images: `assets/images/`
 
 ## Deploy

@@ -32,7 +32,7 @@ npm run pptx       # dist/slides.pptx
 ## Edit
 
 - Content: `slides.md`
-- Theme: `themes/base.css`
+- Theme: `../themes/base.css`
 - Images: `assets/images/`
 
 The starter slide patterns (title, section, split, speaker, cards, quote, code, exercise, takeaway) are documented at the root `slides/README.md`.

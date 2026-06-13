@@ -21,9 +21,15 @@ Durable execution for engineers tired of writing recovery runbooks.
 
 <!--
 Open with energy. Read the subtitle out loud - it's the hook.
-This is a 25-minute talk: aim to land 3 ideas, not 30. The 3 are:
-(1) state drifts across systems, (2) durable execution is application code that
-survives process death, (3) you'd use it where you write runbooks today.
+
+This is a 25-minute talk: aim to land 3 ideas, not 30.
+
+The 3 are:
+(1) state drifts across systems,
+(2) durable execution is application code that
+survives process death,
+(3) you'd use it where you write runbooks today.
+
 Ask for a show of hands: "who's been paged for a half-finished workflow?"
 -->
 
@@ -141,6 +147,22 @@ Here you are trying to *learn* something, while here your **brain** is doing you
 ## Show of hands
 
 *Yay's in chat*
+
+<!--
+Use these as quick chat prompts. Ask for "yes" / "no" or a one-word answer;
+do not discuss every response.
+
+- Have you ever been paged for a half-finished business process?
+- Have you had to manually reconcile whether an external API call succeeded?
+- Have you written retry logic that later needed a retry limit, timeout, or
+  backoff policy?
+- Have you debugged a stuck cron, queue consumer, or scheduled job after it was
+  already too late?
+- Have you used a workflow/orchestration tool before: Airflow, Step Functions,
+  Camunda, Conductor, Argo, or something homegrown?
+- If you already use Temporal, where: local experiments, one service, or
+  production-critical workflows?
+-->
 
 ---
 
@@ -367,6 +389,69 @@ Walk the code: this is normal Java. There's no special framework. The
 methods are just method calls. The MAGIC is the last bullet.
 Then say: "the Workflow doesn't care which JVM is running it. The state
 lives in the cluster, not on a host."
+-->
+
+---
+
+<!-- _class: code -->
+
+## Same idea in Go
+
+```go
+func ProcessOrder(ctx workflow.Context, orderID string) (string, error) {
+  var paymentID string
+  err := workflow.ExecuteActivity(ctx, AuthorizePayment, orderID).
+    Get(ctx, &paymentID)
+  if err != nil { return "", err }
+
+  var reservationID string
+  err = workflow.ExecuteActivity(ctx, ReserveInventory, orderID).
+    Get(ctx, &reservationID)
+  if err != nil { return "", err }
+
+  err = workflow.ExecuteActivity(ctx, Ship, orderID).Get(ctx, nil)
+  return "OK", err
+}
+```
+
+Same contract: Workflow code is deterministic; Activities own side effects.
+
+<!--
+Go is often the clearest SDK for engineers coming from backend services. Point
+out the shape: ExecuteActivity records a command in history, and Get waits for
+the durable result. If a Worker dies after reserveInventory, replay rebuilds
+paymentID and reservationID from history before scheduling ship.
+-->
+
+---
+
+<!-- _class: code -->
+
+## Same idea in Python
+
+```python
+@workflow.defn
+class OrderWorkflow:
+    @workflow.run
+    async def process_order(self, order_id: str) -> str:
+        payment_id = await workflow.execute_activity(
+            authorize_payment, order_id, start_to_close_timeout=timedelta(minutes=2)
+        )
+        reservation_id = await workflow.execute_activity(
+            reserve_inventory, order_id, start_to_close_timeout=timedelta(minutes=2)
+        )
+        await workflow.execute_activity(
+            ship, order_id, start_to_close_timeout=timedelta(minutes=2)
+        )
+        return "OK"
+```
+
+Async syntax, same durable execution model.
+
+<!--
+Use this to defuse "is this Java-only?" concerns. Python is async-first, but
+the mental model is the same: durable Workflow decisions, side effects in
+Activities, result replay from history.
 -->
 
 ---
@@ -630,22 +715,83 @@ the next person on call would need a runbook to recover, it's a Workflow."
 
 ---
 
+<!-- _class: section -->
+
+###### Operations
+
+# Runbook vs playbook
+
+Both are useful. Only one is a smell for missing durable execution.
+
+<!--
+This is a vocabulary reset before the exercise. Many teams use "runbook" and
+"playbook" interchangeably. For this talk, make the distinction operational:
+runbook is reactive recovery; playbook is repeatable coordination.
+-->
+
+---
+
+<!-- _class: cards -->
+
+# Runbook vs playbook
+
+| Runbook | Playbook |
+| --- | --- |
+| Incident recovery steps | Planned response pattern |
+| Used after something breaks | Used when a known situation appears |
+| Answers: "how do I fix this?" | Answers: "how do we handle this?" |
+| Often hand-executes missing state transitions | Often coordinates people, systems, and decisions |
+| Strong signal for automation | Strong signal for standardization |
+
+<!--
+Do not make either one sound bad. A good SRE team needs both. The key point is
+that repeated runbook execution is evidence that the system has pushed
+application state recovery onto humans.
+-->
+
+---
+
+# What Temporal changes
+
+- A **runbook** often becomes a Workflow when it repairs half-finished state.
+- A **playbook** often becomes a Workflow when it is repeatable, cross-system, and auditable.
+- Keep the human decision; automate the waiting, retries, timers, and recovery.
+- If the steps depend on durable state, Temporal should be in the conversation.
+
+> The goal is not fewer operators. It is fewer manual state machines.
+
+<!--
+Use examples:
+- Runbook: "payment charged but order not shipped" recovery.
+- Playbook: "new enterprise customer onboarding" or "security exception
+  approval" where the steps are known but involve humans and systems.
+This sets up the discussion exercise: participants should classify their own
+workflow as runbook-shaped, playbook-shaped, or not Temporal-shaped.
+-->
+
+---
+
 <!-- _class: exercise -->
 
 # Discuss
 
-Take 5 minutes in pairs.
+Take 5 minutes. Post your answer in chat.
 
-1. Pick one workflow in your stack that hurts the most.
-2. Name the failure mode that wakes someone up.
-3. Decide: is this a Temporal-shaped problem, or not?
+1. Pick one workflow in your stack that needs a recovery runbook.
+2. Name the failure mode: timeout, crash, duplicate, stuck wait, or manual fix.
+3. Decide: Temporal-shaped, or better solved elsewhere?
 
 <!--
-If you're in an interactive setting, actually do this. Walk the room.
-The 5 minutes is real - set a timer. The conversations that come out of
-this exercise are 70% of the value of the talk.
-For a recorded/conference talk, skip this slide or repurpose as "questions
-to ask yourself this week."
+Online ILT flow:
+1. Set a 5-minute timer and ask everyone to type their answer privately first.
+2. At 2 minutes, ask them to paste a short version in chat:
+   "<workflow> / <failure mode> / <Temporal-shaped or not>".
+3. If the platform supports breakouts and the group is >8 people, use 3-minute
+   pairs before chat share-out. Otherwise keep it all in chat.
+4. Pick two examples: one strong Temporal fit and one non-fit. Ask each person
+   to unmute for 30 seconds only if they are comfortable.
+5. Close by tying answers back to the runbook test: if the next on-call would
+   need step-by-step recovery instructions, it may be a Workflow.
 -->
 
 ---

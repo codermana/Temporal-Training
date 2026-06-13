@@ -9,7 +9,7 @@ Two [Marp](https://marp.app) decks for the Temporal training. Deployed to GitHub
 
 Landing page (with links to both decks): <https://temporal-training.slides.codermana.com>
 
-Both share the same theme tokens (orange/yellow accents on a dark background, Inter for text, JetBrains Mono for code). Each deck is otherwise self-contained — its own `slides.md`, `themes/base.css`, `package.json` — so you can extract a deck to its own repo later.
+Both use the shared theme at `slides/themes/base.css` (orange/yellow accents on a dark background, Inter for text, JetBrains Mono for code). Each deck keeps its own `slides.md` and `package.json`; shared visual changes should go in `slides/themes/base.css` to avoid drift.
 
 ## Preview a deck
 
@@ -52,7 +52,7 @@ npm run pptx       # dist/slides.pptx
 
 ## Marp slide classes
 
-Both decks use the layout classes defined in `themes/base.css`. Apply with Marp's `<!-- _class: ... -->` directive.
+Both decks use the layout classes defined in `slides/themes/base.css`. Apply with Marp's `<!-- _class: ... -->` directive.
 
 | Class | Use for |
 | --- | --- |
@@ -99,7 +99,7 @@ GitHub Pages, single site, sub-paths per deck.
 
 ## Notes
 
-- The template that seeded these decks lives separately at `slides-template/` (a standalone git repo). Treat it as the source of truth for the theme.
+- The shared Marp theme lives at `slides/themes/base.css`. Treat that as the source of truth for slide styling.
 - Marp CLI requires Node 18+. `npm install` is per-deck.
 - `slides/CNAME` is the single source of truth for the deployed domain. Per-deck `CNAME` files are intentionally absent — they would be ignored anyway in a sub-path deployment.
 - Image alignment with `![bg right:38% w:88%](assets/images/example.jpg)` is the documented Marp pattern for visual split slides.

@@ -187,11 +187,6 @@ tbody tr:nth-child(even) td {
   background-color: rgba(32, 39, 51, 0.72);
 }
 
-thead tr:first-child th:first-child { border-top-left-radius:  10px; }
-thead tr:first-child th:last-child  { border-top-right-radius: 10px; }
-tbody tr:last-child  td:first-child { border-bottom-left-radius:  10px; }
-tbody tr:last-child  td:last-child  { border-bottom-right-radius: 10px; }
-
 code {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid var(--line);
@@ -567,12 +562,12 @@ section.cards th {
   vertical-align: top;
 }
 
-/* Body - rounded on bottom only, no roundness adjoining the header */
+/* Body - square internal rows; only the outer table corners get rounded. */
 section.cards td {
   background-color: rgba(23, 28, 35, 0.78);
   border: 1px solid var(--line);
   border-top: 1px solid rgba(234, 179, 8, 0.25);
-  border-radius: 0 0 12px 12px;
+  border-radius: 0;
   color: var(--muted);
   font-size: 19px;
   line-height: 1.4;
@@ -588,12 +583,10 @@ section.cards tbody tr:hover td {
   background-color: rgba(23, 28, 35, 0.78);
 }
 
-/* On cards slides we want NO bottom-corner radius from the global table
-   rule (it would round the wrong corner since cards has only one tbody row). */
-section.cards tbody tr:last-child td:first-child,
-section.cards tbody tr:last-child td:last-child  { border-radius: 0 0 12px 12px; }
-section.cards thead tr:first-child th:first-child,
-section.cards thead tr:first-child th:last-child { border-radius: 12px 12px 0 0; }
+/* Each column is visually its own card, so every cell in the final row gets
+   bottom corners; internal rows stay square. */
+section.cards tbody tr:last-child td { border-radius: 0 0 12px 12px; }
+section.cards thead tr:first-child th { border-radius: 12px 12px 0 0; }
 
 section.code pre {
   margin-top: 22px;
