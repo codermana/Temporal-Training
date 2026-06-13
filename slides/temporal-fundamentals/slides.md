@@ -6,18 +6,16 @@ size: 16:9
 title: Temporal Fundamentals
 description: A Java-first 24-hour Temporal training mapped to the course Agenda.
 author: Gaurav Agarwal
-footer: "@codermana"
+footer: "![CoderMana](assets/codermana.svg)"
 ---
 
 <!-- _class: title -->
 
-###### Fundamentals · 24 hours · 6 days
+###### Fundamentals
 
 # Temporal Fundamentals
 
-A Java-first 24-hour tour mapped to the course Agenda.
-
-Gaurav Agarwal
+###### Gaurav Agarwal
 
 <!--
 6 days × 4 hours. Each day mirrors a day in lecture_notes/Day-XX.md.
@@ -2338,7 +2336,7 @@ https://github.com/temporalio/sdk-java
 
 Slides
 
-https://temporal-training.slides.codermana.com/temporal-fundamentals/
+https://temporal-training.slides.algogrit.com/temporal-fundamentals/
 
 Course repo
 

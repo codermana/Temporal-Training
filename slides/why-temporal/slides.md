@@ -6,18 +6,18 @@ size: 16:9
 title: Why Temporal
 description: Durable execution for engineers tired of writing recovery runbooks.
 author: Gaurav Agarwal
-footer: "@codermana"
+footer: "![CoderMana](assets/codermana.svg)"
 ---
 
 <!-- _class: title -->
 
 ###### Why
 
-# Why Temporal
+# Temporal
 
 Durable execution for engineers tired of writing recovery runbooks.
 
-Gaurav Agarwal
+###### Gaurav Agarwal
 
 <!--
 Open with energy. Read the subtitle out loud - it's the hook.
@@ -658,7 +658,7 @@ https://github.com/temporalio/sdk-java
 
 Slides
 
-https://temporal-training.slides.codermana.com/why-temporal/
+https://temporal-training.slides.algogrit.com/why-temporal/
 
 Course repo
 

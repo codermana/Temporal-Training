@@ -5,7 +5,7 @@
   "description": "Temporal Fundamentals - Java-first technical deck (Marp).",
   "scripts": {
     "preview": "marp --server .",
-    "html": "marp slides.md --html --theme themes/base.css -o dist/index.html",
+    "html": "marp slides.md --html --theme themes/base.css -o dist/index.html && cp -R assets dist/assets",
     "pdf": "marp slides.md --pdf --allow-local-files --theme themes/base.css -o dist/slides.pdf",
     "pptx": "marp slides.md --pptx --allow-local-files --theme themes/base.css -o dist/slides.pptx"
   },
