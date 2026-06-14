@@ -14,7 +14,7 @@
 
 - Day 3's Kafka stack is still up.
 - Spring Boot 3.x (or 2.x with `temporal-spring-boot-starter` 1.32.1).
-- The runnable saga project compiles: `scripts/run-example.sh saga --dry-run` (or equivalent).
+- The runnable saga project starts a Worker on the `orders` Task Queue: `make run-saga` (or `scripts/run-example.sh saga`). Leave it running; start Workflows against it from the CLI.
 
 ---
 

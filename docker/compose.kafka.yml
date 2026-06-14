@@ -2,7 +2,10 @@ name: temporal-training-kafka
 
 services:
   kafka:
-    image: bitnami/kafka:3.7
+    # Bitnami relocated pre-existing image tags to the `bitnamilegacy` org in 2025;
+    # `bitnami/kafka:3.7` no longer resolves on Docker Hub. The legacy image keeps the
+    # /opt/bitnami paths used by the healthcheck below and the `make kafka-topic` target.
+    image: bitnamilegacy/kafka:3.7
     container_name: temporal-training-kafka
     ports:
       - "9092:9092"

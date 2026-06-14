@@ -13,7 +13,7 @@ public class OrderActivitiesImpl implements OrderActivities {
 
   @Override
   public void ship(String orderId) {
-    if (orderId.endsWith("FAIL")) {
+    if (orderId.toLowerCase().contains("fail")) {
       throw new IllegalStateException("shipping label service failed");
     }
   }

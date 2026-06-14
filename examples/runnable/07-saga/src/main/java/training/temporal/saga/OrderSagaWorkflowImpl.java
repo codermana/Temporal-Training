@@ -1,16 +1,27 @@
 package training.temporal.saga;
 
 import io.temporal.activity.ActivityOptions;
+import io.temporal.common.RetryOptions;
 import io.temporal.workflow.Workflow;
 import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
 public class OrderSagaWorkflowImpl implements OrderSagaWorkflow {
+  // Bound the retries so a permanent failure exhausts quickly and the catch block
+  // can run the compensations. Without a maximumAttempts the default policy retries
+  // forever and the saga would never reach compensation.
   private final OrderActivities activities =
       Workflow.newActivityStub(
           OrderActivities.class,
-          ActivityOptions.newBuilder().setStartToCloseTimeout(Duration.ofSeconds(30)).build());
+          ActivityOptions.newBuilder()
+              .setStartToCloseTimeout(Duration.ofSeconds(30))
+              .setRetryOptions(
+                  RetryOptions.newBuilder()
+                      .setInitialInterval(Duration.ofMillis(500))
+                      .setMaximumAttempts(3)
+                      .build())
+              .build());
 
   @Override
   public String process(String orderId) {

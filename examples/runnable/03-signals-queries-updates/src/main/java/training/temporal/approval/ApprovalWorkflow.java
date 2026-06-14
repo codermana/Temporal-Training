@@ -19,7 +19,7 @@ public interface ApprovalWorkflow {
   void reject(String reason);
 
   @QueryMethod
-  String status();
+  String currentState();
 
   @UpdateMethod
   String changeNote(String note);

@@ -10,7 +10,7 @@ public class ApprovalWorkflowImpl implements ApprovalWorkflow {
   @Override
   public String run(String requestId) {
     this.requestId = requestId;
-    Workflow.await(() -> status.equals("APPROVED") || status.equals("REJECTED"));
+    Workflow.await(() -> status.startsWith("APPROVED") || status.startsWith("REJECTED"));
     return requestId + " " + status + " (" + note + ")";
   }
 
@@ -25,14 +25,14 @@ public class ApprovalWorkflowImpl implements ApprovalWorkflow {
   }
 
   @Override
-  public String status() {
+  public String currentState() {
     return requestId + " " + status + " (" + note + ")";
   }
 
   @Override
   public String changeNote(String note) {
     this.note = note;
-    return status();
+    return currentState();
   }
 
   @Override

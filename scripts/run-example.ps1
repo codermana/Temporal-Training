@@ -47,8 +47,7 @@ switch ($example) {
   }
   { $_ -in @("kafka", "05", "05-kafka-bridge") } {
     $dir = "examples/runnable/05-kafka-bridge"
-    $mode = "compile"
-    $needsTemporal = $false
+    $mainClass = "training.temporal.kafka.KafkaWorker"
     break
   }
   { $_ -in @("testing", "test", "06", "06-testing") } {
@@ -59,14 +58,12 @@ switch ($example) {
   }
   { $_ -in @("saga", "07", "07-saga") } {
     $dir = "examples/runnable/07-saga"
-    $mode = "compile"
-    $needsTemporal = $false
+    $mainClass = "training.temporal.saga.SagaWorker"
     break
   }
   { $_ -in @("aws", "containers", "08", "08-aws-containers") } {
     $dir = "examples/runnable/08-aws-containers"
-    $mode = "compile"
-    $needsTemporal = $false
+    $mainClass = "training.temporal.aws.WorkerMain"
     break
   }
   default {
@@ -92,7 +89,11 @@ if ($needsTemporal) {
 Push-Location (Join-Path $root $dir)
 try {
   if ($mode -eq "exec") {
-    mvn -q compile exec:java
+    if ($mainClass) {
+      mvn -q compile exec:java "-Dexec.mainClass=$mainClass"
+    } else {
+      mvn -q compile exec:java
+    }
   } elseif ($mode -eq "test") {
     mvn -q test
   } elseif ($mainClass) {

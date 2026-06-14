@@ -847,16 +847,16 @@ return update.getResult();
 # Updates
 
 ```bash
-make run-approval     # same project; different test
+make run-approval     # same project; worker stays up
 ```
 
 ```bash
-# Sync update against a running workflow
-temporal workflow update --workflow-id cart-1001 \
-  --name addItem --input '"book"' --input 2
+# Sync update against the running workflow
+temporal workflow update execute --workflow-id approval-demo \
+  --name changeNote --input '"expedite before close of business"'
 ```
 
-> Verify the response is the **new item count**, not a generic 202.
+> Verify the response is the **new workflow state**, not a generic 202.
 
 <!--
 The blocking-call shape is what makes Updates the modern primitive.

@@ -47,8 +47,8 @@ case "$EXAMPLE" in
     ;;
   kafka|05|05-kafka-bridge)
     DIR="examples/runnable/05-kafka-bridge"
-    MODE="compile"
-    NEEDS_TEMPORAL="no"
+    MODE="exec"
+    MAIN_CLASS="training.temporal.kafka.KafkaWorker"
     ;;
   testing|test|06|06-testing)
     DIR="examples/runnable/06-testing"
@@ -57,8 +57,8 @@ case "$EXAMPLE" in
     ;;
   saga|07|07-saga)
     DIR="examples/runnable/07-saga"
-    MODE="compile"
-    NEEDS_TEMPORAL="no"
+    MODE="exec"
+    MAIN_CLASS="training.temporal.saga.SagaWorker"
     ;;
   aws|containers|transform|08|08-aws-containers)
     DIR="examples/runnable/08-aws-containers"
