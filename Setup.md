@@ -70,8 +70,9 @@ Notes:
 
 - Both targets use `sudo`. Read the Makefile if you'd rather do it by hand.
 - The Temporal CLI installs to `~/.temporalio/bin` via the official install
-  script. Add that to your `PATH`:
-  `export PATH="$HOME/.temporalio/bin:$PATH"`.
+  script. The target adds that directory to your `PATH` in `~/.bashrc` and
+  `~/.profile`, so open a new shell afterwards (or run
+  `export PATH="$HOME/.temporalio/bin:$PATH"` for the current one).
 - `setup-ubuntu-full` adds you to the `docker` group; log out and back in for
   it to take effect.
 - `kcat`'s package name changed: 22.04+ has `kcat`, older releases have

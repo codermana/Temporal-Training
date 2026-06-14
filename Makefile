@@ -39,9 +39,18 @@ setup-ubuntu: ## Install the required tools on Ubuntu/Debian (uses sudo)
 	@if ! command -v temporal >/dev/null 2>&1; then \
 		echo ">> Installing Temporal CLI to ~/.temporalio/bin"; \
 		curl -sSf https://temporal.download/cli.sh | sh; \
-		echo ">> Add ~/.temporalio/bin to your PATH (e.g. in ~/.bashrc):"; \
-		echo "   export PATH=\"\$$HOME/.temporalio/bin:\$$PATH\""; \
 	fi
+	@# Persist ~/.temporalio/bin on PATH (idempotent) for interactive shells.
+	@LINE='export PATH="$$HOME/.temporalio/bin:$$PATH"'; \
+	for RC in "$$HOME/.bashrc" "$$HOME/.profile"; do \
+		if [ -f "$$RC" ] || [ "$$RC" = "$$HOME/.bashrc" ]; then \
+			if ! grep -qsF '.temporalio/bin' "$$RC"; then \
+				echo "$$LINE" >> "$$RC"; \
+				echo ">> Added ~/.temporalio/bin to PATH in $$RC"; \
+			fi; \
+		fi; \
+	done
+	@echo ">> Open a new shell or run: export PATH=\"\$$HOME/.temporalio/bin:\$$PATH\""
 
 setup-ubuntu-full: setup-ubuntu ## Install required + optional tools on Ubuntu/Debian (uses sudo)
 	sudo apt-get install -y docker.io pipx
