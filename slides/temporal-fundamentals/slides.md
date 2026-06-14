@@ -40,6 +40,8 @@ Pace check: end of Day 1 should leave the room with one Workflow running.
 | 5 | Saga + Spring Boot + capstone | Capstone Workflow |
 | 6 | AWS migration + containers | Glue, K8s, KEDA |
 
+Build-it-yourself labs (starter code, no solutions) live in [`challenges/`](https://github.com/codermana/Temporal-Training/tree/master/challenges) — each lab slide links its own challenge.
+
 <!--
 Quick orientation slide.
 
@@ -57,16 +59,49 @@ Don't dwell - each Day cover slide opens the detailed agenda for that block.
 Rethinking orchestration as durable application code.
 
 <!--
-4 hours: 2 morning + 2 afternoon.
+4 hours. Morning interleaves concepts with the first hands-on labs;
+afternoon goes deeper on the event history.
 
-Morning is concepts; afternoon is the first hands-on Workflow.
+Get everyone's environment green before teaching anything else.
+-->
+
+---
+
+<!-- _class: lab -->
+
+###### Lab · Day 1
+
+# Local dev setup
+
+Challenge → [`day-01-foundations/lab-1-local-dev-setup`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-01-foundations/lab-1-local-dev-setup.md)
+
+```bash
+make check          # verify required tools
+make temporal       # start dev server (in this terminal)
+```
+
+In another terminal:
+
+```bash
+open http://127.0.0.1:8233
+temporal operator namespace list
+```
+
+> Goal: every laptop shows the `default` namespace in the Web UI.
+
+<!--
+Wait until every laptop is green.
+
+Pair the stragglers.
+
+Don't proceed without this; the rest of the day depends on it.
 -->
 
 ---
 
 <!-- _class: section -->
 
-###### Day 1 · Morning
+###### Day 1
 
 # Why Temporal exists
 
@@ -132,7 +167,7 @@ The point is the seam each leaves open, not that any is bad.
 
 <!-- _class: section -->
 
-###### Day 1 · Morning
+###### Day 1
 
 # Core concepts
 
@@ -247,9 +282,39 @@ XCom-becomes-a-return-value gets the biggest reaction.
 
 ---
 
+<!-- _class: lab -->
+
+###### Lab · Day 1
+
+# Hello Temporal
+
+Challenge → [`day-01-foundations/lab-2-hello-temporal`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-01-foundations/lab-2-hello-temporal.md)
+
+```bash
+make run-hello
+```
+
+What to look for:
+
+1. Workflow appears in the Web UI under `default` namespace.
+2. Click into it; open the Event History tab.
+3. Identify `WorkflowExecutionStarted`, `ActivityTaskScheduled`, `ActivityTaskCompleted`.
+
+> Restart the Worker mid-run; the Workflow resumes. That's the lesson.
+
+<!--
+Have one person KILL the Worker mid-run on purpose.
+
+The Workflow completes when the Worker restarts.
+
+This is the most important moment of Day 1.
+-->
+
+---
+
 <!-- _class: section -->
 
-###### Day 1 · Morning
+###### Day 1
 
 # Event sourcing & deterministic replay
 
@@ -331,7 +396,7 @@ Ask: "how would you wait 30 days for an email opt-in today?" Compare to one line
 
 <!-- _class: section -->
 
-###### Day 1 · Morning
+###### Day 1
 
 # Architecture
 
@@ -387,67 +452,11 @@ polls.
 
 <!-- _class: lab -->
 
-###### Lab · Day 1 PM
-
-# Local dev setup
-
-```bash
-make check          # verify required tools
-make temporal       # start dev server (in this terminal)
-```
-
-In another terminal:
-
-```bash
-open http://127.0.0.1:8233
-temporal operator namespace list
-```
-
-> Goal: every laptop shows the `default` namespace in the Web UI.
-
-<!--
-Wait until every laptop is green.
-
-Pair the stragglers.
-
-Don't proceed without this; the rest of the day depends on it.
--->
-
----
-
-<!-- _class: lab -->
-
-###### Lab · Day 1 PM
-
-# Hello Temporal
-
-```bash
-make run-hello
-```
-
-What to look for:
-
-1. Workflow appears in the Web UI under `default` namespace.
-2. Click into it; open the Event History tab.
-3. Identify `WorkflowExecutionStarted`, `ActivityTaskScheduled`, `ActivityTaskCompleted`.
-
-> Restart the Worker mid-run; the Workflow resumes. That's the lesson.
-
-<!--
-Have one person KILL the Worker mid-run on purpose.
-
-The Workflow completes when the Worker restarts.
-
-This is the most important moment of Day 1.
--->
-
----
-
-<!-- _class: lab -->
-
-###### Lab · Day 1 PM
+###### Lab · Day 1
 
 # Read the Event History
+
+Challenge → [`day-01-foundations/lab-3-reading-event-history`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-01-foundations/lab-3-reading-event-history.md)
 
 ```bash
 temporal workflow show \
@@ -505,7 +514,7 @@ Lots of code.
 
 <!-- _class: section -->
 
-###### Day 2 · Morning
+###### Day 2
 
 # Async and parallel Activity execution
 
@@ -608,9 +617,11 @@ Example: examples/02-reliability/partial_failure.java
 
 <!-- _class: lab -->
 
-###### Lab · Day 2 AM
+###### Lab · Day 2
 
 # Async + parallel activities
+
+Challenge → [`day-02-reliability/lab-1-async-parallel-activities`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-02-reliability/lab-1-async-parallel-activities.md)
 
 ```bash
 make run-async
@@ -632,7 +643,7 @@ Then run and verify their prediction was right (or wrong - even better).
 
 <!-- _class: section -->
 
-###### Day 2 · Morning
+###### Day 2
 
 # Retries, timeouts, heartbeats
 
@@ -735,7 +746,7 @@ Example: examples/02-reliability/cancellation_scope.java
 
 <!-- _class: section -->
 
-###### Day 2 · Morning
+###### Day 2
 
 # Determinism, reinforced
 
@@ -764,7 +775,7 @@ list.
 
 <!-- _class: section -->
 
-###### Day 2 · Afternoon
+###### Day 2
 
 # Signals and Queries
 
@@ -816,9 +827,11 @@ public String currentState() { return state; }
 
 <!-- _class: lab -->
 
-###### Lab · Day 2 PM
+###### Lab · Day 2
 
 # Signals + Queries
+
+Challenge → [`day-02-reliability/lab-2-signals-and-queries`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-02-reliability/lab-2-signals-and-queries.md)
 
 ```bash
 make run-approval
@@ -843,7 +856,7 @@ this explicit.
 
 <!-- _class: section -->
 
-###### Day 2 · Afternoon
+###### Day 2
 
 # Updates
 
@@ -943,9 +956,11 @@ return update.getResult();
 
 <!-- _class: lab -->
 
-###### Lab · Day 2 PM
+###### Lab · Day 2
 
 # Updates
+
+Challenge → [`day-02-reliability/lab-3-updates`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-02-reliability/lab-3-updates.md)
 
 ```bash
 make run-approval     # same project; worker stays up
@@ -970,7 +985,7 @@ when the caller wants the result.
 
 <!-- _class: section -->
 
-###### Day 2 · Afternoon
+###### Day 2
 
 # Schedules
 
@@ -1032,9 +1047,11 @@ Example: examples/03-interactions/schedule_cron_overlap.java
 
 <!-- _class: lab -->
 
-###### Lab · Day 2 PM
+###### Lab · Day 2
 
 # Schedules
+
+Challenge → [`day-02-reliability/lab-4-schedules`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-02-reliability/lab-4-schedules.md)
 
 ```bash
 make run-schedules
@@ -1058,7 +1075,7 @@ Here you set ScheduleOverlapPolicy.
 
 <!-- _class: section -->
 
-###### Day 2 · Afternoon
+###### Day 2
 
 # Child Workflows and timeouts
 
@@ -1143,7 +1160,7 @@ hands-on (full Kafka → Temporal → Kafka loop).
 
 <!-- _class: section -->
 
-###### Day 3 · Morning
+###### Day 3
 
 # Temporal + Kafka architecture
 
@@ -1243,7 +1260,7 @@ transactionTemplate.execute(status -> {
 
 <!-- _class: section -->
 
-###### Day 3 · Morning
+###### Day 3
 
 # Signal-driven Workflows
 
@@ -1282,7 +1299,7 @@ consumer.commitSync();
 
 <!-- _class: section -->
 
-###### Day 3 · Afternoon
+###### Day 3
 
 # End-to-end pipeline
 
@@ -1292,9 +1309,11 @@ Kafka → Temporal → Kafka.
 
 <!-- _class: lab -->
 
-###### Lab · Day 3 PM
+###### Lab · Day 3
 
 # Run the pipeline
+
+Challenge → [`day-03-kafka/lab-1-kafka-pipeline`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-03-kafka/lab-1-kafka-pipeline.md)
 
 ```bash
 make stack-kafka      # KRaft broker on :9092
@@ -1351,9 +1370,11 @@ Bound the fan-out: don't open 1,000 partitions inside one history.
 
 <!-- _class: lab -->
 
-###### Lab · Day 3 PM
+###### Lab · Day 3
 
 # Fan-out by partition
+
+Challenge → [`day-03-kafka/lab-2-partition-fanout`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-03-kafka/lab-2-partition-fanout.md)
 
 ```bash
 # Produce to multiple partitions (auto-create OR pre-create with 4)
@@ -1429,7 +1450,7 @@ Two big labs: metrics dashboard and replay tests.
 
 <!-- _class: section -->
 
-###### Day 4 · Morning
+###### Day 4
 
 # Workflow versioning
 
@@ -1488,7 +1509,7 @@ class SubscriptionLifecycleWorkflow implements SubscriptionWorkflow { ... }
 
 <!-- _class: section -->
 
-###### Day 4 · Morning
+###### Day 4
 
 # Worker sizing & Task Queue design
 
@@ -1578,7 +1599,7 @@ Example: examples/05-production/composite_tuner.java
 
 <!-- _class: section -->
 
-###### Day 4 · Morning
+###### Day 4
 
 # Observability
 
@@ -1673,9 +1694,11 @@ Example: examples/05-production/otel_tracing.java
 
 <!-- _class: lab -->
 
-###### Lab · Day 4 AM
+###### Lab · Day 4
 
 # Local dashboard
+
+Challenge → [`day-04-production/lab-1-observability`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-04-production/lab-1-observability.md)
 
 ```bash
 make stack-obs        # Prometheus + Grafana
@@ -1694,7 +1717,7 @@ In Grafana:
 
 <!-- _class: section -->
 
-###### Day 4 · Morning
+###### Day 4
 
 # Namespace strategy
 
@@ -1719,7 +1742,7 @@ Isolation boundary, not a routing primitive.
 
 <!-- _class: section -->
 
-###### Day 4 · Afternoon
+###### Day 4
 
 # Testing
 
@@ -1781,9 +1804,11 @@ Example: examples/05-production/junit5_extension_mockito_test.java
 
 <!-- _class: lab -->
 
-###### Lab · Day 4 PM
+###### Lab · Day 4
 
 # In-process tests
+
+Challenge → [`day-04-production/lab-2-testing-workflows`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-04-production/lab-2-testing-workflows.md)
 
 ```bash
 make run-testing
@@ -1797,7 +1822,7 @@ make run-testing
 
 <!-- _class: section -->
 
-###### Day 4 · Afternoon
+###### Day 4
 
 # Workflow replay testing
 
@@ -1830,9 +1855,11 @@ void replaysProductionHistory() throws Exception {
 
 <!-- _class: lab -->
 
-###### Lab · Day 4 PM
+###### Lab · Day 4
 
 # Build a replay corpus
+
+Challenge → [`day-04-production/lab-3-replay-testing`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-04-production/lab-3-replay-testing.md)
 
 For a Workflow you wrote on Day 1-2:
 
@@ -1852,7 +1879,7 @@ Encourage students to take this pattern back to their team and seed a corpus.
 
 <!-- _class: section -->
 
-###### Day 4 · Afternoon
+###### Day 4
 
 # Migrating Airflow DAGs
 
@@ -1918,7 +1945,7 @@ Afternoon is capstone (75 min of build time + 25 min review + 20 min Q&A).
 
 <!-- _class: section -->
 
-###### Day 5 · Morning
+###### Day 5
 
 # Order-processing saga
 
@@ -1952,32 +1979,6 @@ public String process(String orderId) {
 
 ---
 
-<!-- _class: lab -->
-
-###### Lab · Day 5 AM
-
-# Run the saga
-
-```bash
-make run-saga
-```
-
-Try two starts:
-
-```bash
-temporal workflow start --task-queue orders \
-  --type OrderSagaWorkflow --workflow-id order-OK \
-  --input '"order-1001"'
-
-temporal workflow start --task-queue orders \
-  --type OrderSagaWorkflow --workflow-id order-fail \
-  --input '"fail-at-ship"'
-```
-
-> In the Web UI, watch the compensations fire in reverse order.
-
----
-
 # Orchestration vs choreography
 
 - **Orchestration** - one central Workflow coordinates all steps & compensations. Single audit trail. **Temporal's natural shape.**
@@ -2003,9 +2004,37 @@ Temporal's log shows it immediately.
 
 ---
 
+<!-- _class: lab -->
+
+###### Lab · Day 5
+
+# Run the saga
+
+Challenge → [`day-05-saga-spring/lab-1-order-saga-walkthrough`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-05-saga-spring/lab-1-order-saga-walkthrough.md)
+
+```bash
+make run-saga
+```
+
+Try two starts:
+
+```bash
+temporal workflow start --task-queue orders \
+  --type OrderSagaWorkflow --workflow-id order-OK \
+  --input '"order-1001"'
+
+temporal workflow start --task-queue orders \
+  --type OrderSagaWorkflow --workflow-id order-fail \
+  --input '"fail-at-ship"'
+```
+
+> In the Web UI, watch the compensations fire in reverse order.
+
+---
+
 <!-- _class: section -->
 
-###### Day 5 · Morning
+###### Day 5
 
 # Saga in Spring Boot
 
@@ -2108,9 +2137,27 @@ public void run(String subscriptionId, int eventCount) {
 
 ---
 
+<!-- _class: lab -->
+
+###### Lab · Day 5
+
+# Saga in Spring Boot
+
+Challenge → [`day-05-saga-spring/lab-2-saga-spring-boot`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-05-saga-spring/lab-2-saga-spring-boot.md)
+
+Wire the saga into a Spring Boot app:
+
+1. Register the Worker as a `@Component` with `WorkerFactory` lifecycle bound to the app context.
+2. Drive the Workflow from a `@RestController` — start, signal, query.
+3. Inject Activity dependencies (DB, HTTP clients) as Spring beans.
+
+> Goal: the saga runs inside Spring Boot, started from an HTTP endpoint.
+
+---
+
 <!-- _class: section -->
 
-###### Day 5 · Afternoon
+###### Day 5
 
 # Capstone
 
@@ -2148,9 +2195,11 @@ Redesign it as a Saga. Demonstrate one compensation path.
 
 <!-- _class: lab -->
 
-###### Lab · Day 5 PM
+###### Lab · Day 5
 
 # Capstone
+
+Challenge → [`day-05-saga-spring/lab-3-capstone`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-05-saga-spring/lab-3-capstone.md)
 
 ```bash
 make stack-kafka
@@ -2229,7 +2278,7 @@ Two big labs: containerized Worker on kind, and KEDA autoscale.
 
 <!-- _class: section -->
 
-###### Day 6 · Morning
+###### Day 6
 
 # The AWS orchestration problem
 
@@ -2282,7 +2331,7 @@ Hidden complexity in Lambda + Glue + Step Functions.
 
 <!-- _class: section -->
 
-###### Day 6 · Morning
+###### Day 6
 
 # Glue Spark as an Activity
 
@@ -2319,9 +2368,11 @@ public String runGlueJob(String jobName, String inputS3Uri) {
 
 <!-- _class: lab -->
 
-###### Lab · Day 6 AM
+###### Lab · Day 6
 
 # Glue Activity (LocalStack)
+
+Challenge → [`day-06-aws-containers/lab-1-glue-activity`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-06-aws-containers/lab-1-glue-activity.md)
 
 ```bash
 make stack-aws        # LocalStack on :4566
@@ -2383,9 +2434,11 @@ Example: examples/07-aws-containers/codec_server.java
 
 <!-- _class: lab -->
 
-###### Lab · Day 6 AM
+###### Lab · Day 6
 
 # Replace S3 checkpoints
+
+Challenge → [`day-06-aws-containers/lab-2-s3-checkpointing`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-06-aws-containers/lab-2-s3-checkpointing.md)
 
 Take a hypothetical existing pipeline that writes a checkpoint S3 key after every step.
 
@@ -2415,9 +2468,27 @@ Compare to the equivalent ASL: ~30 lines of JSON state machine with `Resource` a
 
 ---
 
+<!-- _class: lab -->
+
+###### Lab · Day 6
+
+# Migrate a Step Functions pipeline
+
+Challenge → [`day-06-aws-containers/lab-3-stepfunctions-migration`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-06-aws-containers/lab-3-stepfunctions-migration.md)
+
+Take a four-state ASL state machine (validate → transform → load → notify):
+
+1. Map each `Task` state to an Activity; the state machine becomes Workflow code.
+2. Replace `Retry` / `Catch` blocks with Temporal `RetryOptions` + try/catch.
+3. Run it end-to-end against LocalStack.
+
+> Goal: the ASL JSON is gone; control flow lives in Workflow code.
+
+---
+
 <!-- _class: section -->
 
-###### Day 6 · Afternoon
+###### Day 6
 
 # Workers as containers
 
@@ -2456,9 +2527,11 @@ ENTRYPOINT ["java", "-jar", "/app/worker.jar"]
 
 <!-- _class: lab -->
 
-###### Lab · Day 6 PM
+###### Lab · Day 6
 
 # Docker build
+
+Challenge → [`day-06-aws-containers/lab-4-worker-container`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-06-aws-containers/lab-4-worker-container.md)
 
 ```bash
 cd examples/runnable/08-aws-containers
@@ -2502,7 +2575,7 @@ spec:
 
 <!-- _class: lab -->
 
-###### Lab · Day 6 PM
+###### Lab · Day 6
 
 # K8s deploy on kind
 
@@ -2546,9 +2619,11 @@ spec:
 
 <!-- _class: lab -->
 
-###### Lab · Day 6 PM
+###### Lab · Day 6
 
 # KEDA autoscale
+
+Challenge → [`day-06-aws-containers/lab-5-kubernetes-keda`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-06-aws-containers/lab-5-kubernetes-keda.md)
 
 ```bash
 kubectl apply -f examples/runnable/08-aws-containers/keda-scaledobject.yaml
@@ -2590,7 +2665,7 @@ kubectl get scaledobject,pods -l app=temporal-transform-worker -w
 
 <!-- _class: lab -->
 
-###### Lab · Day 6 PM
+###### Lab · Day 6
 
 # End-to-end S3 → Temporal → S3
 
@@ -2678,3 +2753,7 @@ https://temporal-training.slides.algogrit.com/temporal-fundamentals/
 Course repo
 
 https://github.com/CoderMana/temporal-training
+
+Hands-on labs
+
+https://github.com/codermana/Temporal-Training/tree/master/challenges
