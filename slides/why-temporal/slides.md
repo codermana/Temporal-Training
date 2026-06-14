@@ -455,8 +455,10 @@ func ProcessOrder(ctx workflow.Context, orderID string) (string, error) {
     Get(ctx, &reservationID)
   if err != nil { return "", err }
 
-  err = workflow.ExecuteActivity(ctx, Ship, orderID).Get(ctx, nil)
-  return "OK", err
+  if err := workflow.ExecuteActivity(ctx, Ship, orderID).Get(ctx, nil); err != nil {
+    return "", err
+  }
+  return "OK", nil
 }
 ```
 
