@@ -2115,7 +2115,7 @@ record TransformResult(String outputS3Uri, long rowCount) {}
 
 - Workflow history holds **URIs + counts**.
 - Activity owns the bytes.
-- Soft limit ~50 KB per payload; large data via S3.
+- Hard cap **2 MB** per payload (SDK warns ~256 KB); large data via S3.
 
 > Workflow history is small. URIs travel cheap.
 

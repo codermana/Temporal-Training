@@ -3,7 +3,7 @@
 # Action targets only. All targets call the underlying shell scripts so the
 # behavior is identical whether you invoke them via `make` or directly.
 
-SHELL := /usr/bin/env bash
+SHELL := /bin/bash
 .SHELLFLAGS := -eu -o pipefail -c
 .ONESHELL:
 .DEFAULT_GOAL := help
