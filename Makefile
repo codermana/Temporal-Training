@@ -44,7 +44,23 @@ setup-ubuntu: ## Install the required tools on Ubuntu/Debian (uses sudo)
 	fi
 
 setup-ubuntu-full: setup-ubuntu ## Install required + optional tools on Ubuntu/Debian (uses sudo)
-	sudo apt-get install -y docker.io docker-compose-plugin pipx
+	sudo apt-get install -y docker.io pipx
+	@if ! docker compose version >/dev/null 2>&1; then \
+		sudo apt-get install -y docker-compose-plugin || true; \
+	fi
+	@if ! docker compose version >/dev/null 2>&1; then \
+		echo ">> Installing Docker Compose v2 plugin from GitHub releases"; \
+		ARCH=$$(uname -m); \
+		case "$$ARCH" in \
+			x86_64|amd64) COMPOSE_ARCH=x86_64 ;; \
+			aarch64|arm64) COMPOSE_ARCH=aarch64 ;; \
+			*) echo "Unsupported CPU architecture for Docker Compose: $$ARCH" >&2; exit 1 ;; \
+		esac; \
+		sudo mkdir -p /usr/local/lib/docker/cli-plugins; \
+		curl -SL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-$$COMPOSE_ARCH" -o /tmp/docker-compose; \
+		sudo install -m 0755 /tmp/docker-compose /usr/local/lib/docker/cli-plugins/docker-compose; \
+		rm -f /tmp/docker-compose; \
+	fi
 	@# kcat: package name is `kcat` on 22.04+, `kafkacat` on older releases.
 	@sudo apt-get install -y kcat 2>/dev/null || sudo apt-get install -y kafkacat
 	@# Add the current user to the docker group (effective after re-login).
