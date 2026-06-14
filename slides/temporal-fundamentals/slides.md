@@ -555,6 +555,57 @@ Each one is just heap state, not a parked thread.
 
 ---
 
+<!-- _class: code -->
+
+## Async.procedure & first-to-finish
+
+```java
+// void Activities use Async.procedure (Async.function is for return values)
+List<Promise<Void>> sends =
+    userIds.stream().map(id -> Async.procedure(notify::send, id)).toList();
+Promise.allOf(sends).get();
+
+// race two providers; continue when the FIRST returns
+Promise<String> primary  = Async.function(notify::askPrimary, q);
+Promise<String> fallback = Async.function(notify::askFallback, q);
+Promise.anyOf(primary, fallback).get();
+```
+
+> `allOf` waits for every branch; `anyOf` wakes on the first.
+
+<!--
+Example: examples/02-reliability/async_procedure_and_race.java
+-->
+
+---
+
+<!-- _class: code -->
+
+## Partial failure in a fan-out
+
+```java
+Map<Integer, Promise<String>> futures = new LinkedHashMap<>();
+for (int p : partitions)
+  futures.put(p, Async.function(activities::processWithStatus, p));
+
+Map<Integer, String> result = new LinkedHashMap<>();
+for (var e : futures.entrySet()) {
+  try {
+    result.put(e.getKey(), e.getValue().get());
+  } catch (ActivityFailure failure) {
+    result.put(e.getKey(), "FAILED: " + failure.getMessage());
+  }
+}
+```
+
+> One branch failing doesn't sink the others - collect per-branch outcomes.
+
+<!--
+Example: examples/02-reliability/partial_failure.java
+-->
+
+---
+
 <!-- _class: lab -->
 
 ###### Lab · Day 2 AM
@@ -643,7 +694,7 @@ public String exportLargeTable(String tableName) {
     try {
       exportPage(tableName, page);
       Activity.getExecutionContext().heartbeat(page);
-    } catch (ActivityCanceledException stop) {
+    } catch (ActivityCanceledException | ActivityPausedException stop) {
       cleanupPartialExport(tableName, page);
       throw stop;
     }
@@ -653,6 +704,32 @@ public String exportLargeTable(String tableName) {
 ```
 
 > On retry, read the last heartbeat detail and *resume from page N*.
+
+---
+
+<!-- _class: code -->
+
+## CancellationScope - race against a deadline
+
+```java
+CompletablePromise<String> result = Workflow.newPromise();
+
+CancellationScope scope = Workflow.newCancellationScope(
+    () -> result.completeFrom(Async.function(exports::exportLargeTable, table)));
+scope.run();
+
+if (!Workflow.await(deadline, result::isCompleted)) {
+  scope.cancel("export deadline exceeded");   // Activity's next heartbeat throws
+  throw ApplicationFailure.newFailure("export timed out", "ExportTimeout");
+}
+return result.get();
+```
+
+> Cancellation flows to the Activity via heartbeat; it cleans up partial work.
+
+<!--
+Example: examples/02-reliability/cancellation_scope.java
+-->
 
 ---
 
@@ -797,6 +874,30 @@ interface CartWorkflow {
 
 <!-- _class: code -->
 
+## startUpdate - start now, get result later
+
+```java
+WorkflowStub stub = client.newUntypedWorkflowStub(workflowId);
+
+WorkflowUpdateHandle<Integer> handle =
+    stub.startUpdate("addItem", WorkflowUpdateStage.COMPLETED,
+        Integer.class, "book", 2);
+
+// ... do other work; the Update is already in flight ...
+int itemCount = handle.getResult();   // block only when you need the value
+```
+
+- `WorkflowUpdateStage` is **required**: `ACCEPTED` or `COMPLETED`.
+- A typed-stub `addItem(...)` call blocks outright; `startUpdate` hands back a handle.
+
+<!--
+Example: examples/03-interactions/update_completed.java
+-->
+
+---
+
+<!-- _class: code -->
+
 ## signalWithStart
 
 ```java
@@ -900,6 +1001,32 @@ scheduleClient.createSchedule("hourly-orders", schedule, ScheduleOptions.newBuil
 ```
 
 > Durable Temporal object. Survives redeploy. Overlap is *explicit*.
+
+---
+
+<!-- _class: dense -->
+
+## Cron, catchup & overlap
+
+```java
+ScheduleSpec.newBuilder()
+    .setCronExpressions(List.of("0 9 * * *"))  // = Airflow schedule_interval
+    .setJitter(Duration.ofMinutes(5)).build();
+SchedulePolicy.newBuilder()
+    .setCatchupWindow(Duration.ofHours(1))     // = Airflow catchup, but bounded
+    .setOverlap(ScheduleOverlapPolicy.SCHEDULE_OVERLAP_POLICY_SKIP).build();
+```
+
+| Overlap policy | When a run is still going |
+| --- | --- |
+| `SKIP` | drop the new run |
+| `BUFFER_ONE` / `BUFFER_ALL` | queue one / queue all |
+| `ALLOW_ALL` | run concurrently |
+| `CANCEL_OTHER` / `TERMINATE_OTHER` | stop the running one first |
+
+<!--
+Example: examples/03-interactions/schedule_cron_overlap.java
+-->
 
 ---
 
@@ -1378,6 +1505,8 @@ Sized for resource profile, not business domain.
 | `maxConcurrentWorkflowTaskExecutionSize` | In-flight workflow decisions on this Worker |
 | `maxConcurrentActivityExecutionSize` | In-flight Activity attempts |
 | `ResourceBasedTuner` | Auto-scale Worker slots vs CPU / memory targets |
+| `CompositeTuner` | Mix strategies: fixed workflow slots + resource-based activity slots |
+| Sticky execution | Worker caches workflows; skips full replay each task |
 | `setUsingVirtualThreads(true)` (JDK 21+) | Threads = cheaper; more Activity concurrency |
 | Number of Task Queues | One pool per resource profile |
 
@@ -1422,6 +1551,31 @@ Worker worker = factory.newWorker(
 
 ---
 
+<!-- _class: code -->
+
+## CompositeTuner - mix strategies
+
+```java
+ResourceBasedController controller =
+    ResourceBasedController.newSystemInfoController(
+        ResourceBasedControllerOptions.newBuilder()
+            .setTargetMemoryUsage(0.75).setTargetCpuUsage(0.80).build());
+
+WorkerTuner tuner = new CompositeTuner(
+    new FixedSizeSlotSupplier<>(20),                       // workflow task slots
+    ResourceBasedSlotSupplier.createForActivity(           // activity slots
+        controller, ResourceBasedSlotOptions.getDefaultInstance()),
+    new FixedSizeSlotSupplier<>(20));                      // local activity slots
+```
+
+> Fixed where load is predictable; resource-based where it isn't.
+
+<!--
+Example: examples/05-production/composite_tuner.java
+-->
+
+---
+
 <!-- _class: section -->
 
 ###### Day 4 · Morning
@@ -1463,6 +1617,57 @@ Scope scope = new RootScopeBuilder()
 WorkflowServiceStubs service = WorkflowServiceStubs.newServiceStubs(
     WorkflowServiceStubsOptions.newBuilder().setMetricsScope(scope).build());
 ```
+
+---
+
+<!-- _class: code -->
+
+## Custom Activity metric
+
+```java
+class InvoiceActivitiesImpl implements InvoiceActivities {
+  private final Counter invoices;
+
+  InvoiceActivitiesImpl(MeterRegistry registry) {
+    this.invoices = Counter.builder("training_invoices_generated_total").register(registry);
+  }
+
+  @Override public String generateInvoice(String orderId) {
+    invoices.increment();
+    return "s3://invoices/" + orderId + ".pdf";
+  }
+}
+```
+
+> Same Micrometer registry as the SDK metrics; your KPIs sit beside Temporal's.
+
+<!--
+Example: examples/05-production/custom_activity_metric.java
+-->
+
+---
+
+<!-- _class: code -->
+
+## Tracing with OpenTelemetry
+
+```java
+client = WorkflowClient.newInstance(service,
+    WorkflowClientOptions.newBuilder()
+        .setInterceptors(new OpenTracingClientInterceptor(otOptions))
+        .build());
+
+factory = WorkerFactory.newInstance(client,
+    WorkerFactoryOptions.newBuilder()
+        .setWorkerInterceptors(new OpenTracingWorkerInterceptor())
+        .build());
+```
+
+> One trace spans client → Workflow → Activity. Needs `temporal-opentracing`.
+
+<!--
+Example: examples/05-production/otel_tracing.java
+-->
 
 ---
 
@@ -1541,6 +1746,36 @@ String result = stub.run("hello");
 ```
 
 > No Docker. No network. *Time skipping* - a 30-day reminder completes in milliseconds.
+
+---
+
+<!-- _class: code -->
+
+## JUnit 5 extension + mocked Activities
+
+```java
+@RegisterExtension
+static final TestWorkflowExtension ext =
+    TestWorkflowExtension.newBuilder()
+        .setWorkflowTypes(ReminderWorkflowImpl.class)
+        .setDoNotStart(true).build();
+
+@Test
+void completes(TestWorkflowEnvironment env, Worker worker, ReminderWorkflow wf) {
+  ReminderActivities activities = mock(ReminderActivities.class);
+  when(activities.lookupEmail("u1")).thenReturn("u1@example.com");
+  worker.registerActivitiesImplementations(activities);
+  env.start();
+
+  assertEquals("sent to u1@example.com", wf.remind("u1"));
+}
+```
+
+> Extension injects env/worker/stub; Mockito mocks Activities - zero I/O.
+
+<!--
+Example: examples/05-production/junit5_extension_mockito_test.java
+-->
 
 ---
 
@@ -2121,6 +2356,31 @@ record TransformResult(String outputS3Uri, long rowCount) {}
 
 ---
 
+<!-- _class: code -->
+
+## Codec server - encrypt payloads
+
+```java
+class EncryptionCodec implements PayloadCodec {
+  public List<Payload> encode(List<Payload> p) { /* AES-GCM encrypt */ }
+  public List<Payload> decode(List<Payload> p) { /* decrypt        */ }
+}
+
+DataConverter converter = new CodecDataConverter(
+    DefaultDataConverter.newDefaultInstance(), List.of(new EncryptionCodec()));
+
+WorkflowClient.newInstance(service,
+    WorkflowClientOptions.newBuilder().setDataConverter(converter).build());
+```
+
+> Server stores ciphertext only. A standalone codec server lets the Web UI decode on demand.
+
+<!--
+Example: examples/07-aws-containers/codec_server.java
+-->
+
+---
+
 <!-- _class: lab -->
 
 ###### Lab · Day 6 AM
@@ -2169,7 +2429,7 @@ No HTTP server. Process-level probes. Graceful shutdown.
 
 - A Worker is a long-lived process polling Task Queues *outbound*.
 - **No inbound traffic.** No Service, no Ingress.
-- Health = "is the process polling?" Use exec or actuator probes.
+- Health = "is the process polling?" `pgrep` exec probe, or an HTTP `/health` (Actuator/`HttpServer`) returning 200 only after `WorkerFactory.start()`.
 - Graceful shutdown = drain in-flight Activities; SIGTERM, then heartbeat-cancel.
 
 ---

@@ -29,8 +29,8 @@ Audience: Software engineers transitioning from Airflow · Java · Kafka-heavy s
 
 ### Afternoon · 2 hrs
 
-- **Local dev setup — Temporal CLI, Docker Compose, Temporal Web UI** `[lab]`
-  - Run a local cluster; inspect the Web UI; compare to Airflow's UI mental model
+- **Local dev setup — Temporal CLI (`temporal server start-dev`), Temporal Web UI** `[lab]`
+  - Run the single-binary dev server (`make temporal`); inspect the Web UI; compare to Airflow's UI mental model
 
 - **First Workflow in Java — "Hello Temporal"** `[lab]`
   - SDK setup: `io.temporal:temporal-sdk` Gradle/Maven dependency
@@ -322,15 +322,15 @@ Audience: Software engineers transitioning from Airflow · Java · Kafka-heavy s
 
 ---
 
-## Docker Compose stack reference
+## Local stack reference
 
-All labs run on a laptop with Docker. Minimum recommended RAM: 8 GB.
+All labs run on a laptop. Day 1/2/5 need only the Temporal dev server; Day 3/4/6
+add Docker stacks. Minimum recommended RAM: 8 GB.
 
 | Service | Used from | Notes |
 |---|---|---|
-| `temporalio/auto-setup` | Day 1 | Temporal server + Web UI bundled |
-| PostgreSQL | Day 1 | Temporal persistence backend |
-| Kafka (KRaft, single broker) | Day 3 | Bitnami or Confluent image; no Zookeeper needed |
+| `temporal server start-dev` | Day 1+ | Single binary: Frontend/History/Matching + Web UI + in-memory/SQLite persistence (`make temporal`) |
+| Kafka (KRaft, single broker) | Day 3 | `bitnamilegacy/kafka` image; no Zookeeper needed |
 | Prometheus | Day 4 | Scrapes Worker metrics endpoint via Micrometer |
 | Grafana | Day 4 | Pre-loaded Temporal dashboard |
 | LocalStack | Day 6 | Mocks Glue, S3, SQS, and EventBridge for AWS labs |
