@@ -165,6 +165,29 @@ The point is the seam each leaves open, not that any is bad.
 
 ---
 
+<!-- _class: dense -->
+
+# DAGs vs durable execution
+
+| | Apache Airflow | Temporal |
+| --- | --- | --- |
+| Paradigm | A **DAG** of tasks you wire up | Idiomatic code that runs top-to-bottom |
+| Trigger | **Schedule-driven** — hourly, midnight, quarter-end | **Event-driven** — API call, webhook, message |
+| Recovery | Retry a task by its position in the graph | Replay history; resume mid-function |
+| Sweet spot | Move + transform data on a schedule | Coordinate microservices & business logic |
+
+> Airflow moves data A→B. Temporal runs a **durable function** that survives crashes.
+
+<!--
+This is the paradigm shift, stated once, early. Everything on Day 1 builds on
+"durable function," not "graph of tasks."
+
+Airflow is schedule-first and polls; Temporal reacts to events with sub-second
+latency - that's why it fits user-facing flows Airflow can't serve.
+-->
+
+---
+
 <!-- _class: section -->
 
 ###### Day 1
@@ -278,6 +301,31 @@ Workers connect outbound.
 For Airflow rooms, this slide is the moment of recognition.
 
 XCom-becomes-a-return-value gets the biggest reaction.
+-->
+
+---
+
+<!-- _class: dense -->
+
+# At a glance
+
+| Feature | Apache Airflow | Temporal |
+| --- | --- | --- |
+| Primary domain | Data engineering & batch | App development & microservices |
+| State management | Central metadata DB of task status | Event-sourced history, replayed |
+| Latency | High — polling, seconds to start | Low — gRPC, sub-second |
+| Waiting / sleep | Costs a worker slot or a sensor | Native & cheap — sleep for a year |
+| Scaling limit | Scheduler + metadata DB | Workflow history size |
+
+> Not better-or-worse — different problems. Match the tool to the shape of the work.
+
+<!--
+The scaling-limit row is the honest one: Temporal isn't free of limits, it just
+moves them. History size is the constraint you design around (continue-as-new on
+Day 5).
+
+Pair this with the migration framework on Day 4 - "migrate where Temporal earns
+its keep."
 -->
 
 ---
@@ -429,10 +477,101 @@ What's inside the box.
 Your Workers connect **outbound** to Frontend on `:7233`.
 
 <!--
-Trace one Workflow start.
+Simplified mental model first - the next slide shows the real topology.
 
-SDK → Frontend → History (write WorkflowExecutionStarted) → Matching → Worker
-polls.
+Trace one Workflow start: SDK → Frontend → History (write
+WorkflowExecutionStarted) → Matching → Worker polls.
+-->
+
+---
+
+<!-- _class: image image-credit -->
+
+## The cluster: four services + persistence
+
+![High-level Temporal architecture](assets/temporal-high-level.svg)
+
+Temporal Technologies — [temporal/docs/architecture](https://github.com/temporalio/temporal/blob/main/docs/architecture/README.md)
+
+<!--
+Frontend is a gateway in front of three peer services; History and Matching both
+own persistence. Your Workers live OUTSIDE this box and connect outbound to
+Frontend on :7233. Keep the source credit on the slide.
+-->
+
+---
+
+<!-- _class: cards -->
+
+# The four services
+
+| Frontend | History | Matching | Worker |
+| --- | --- | --- | --- |
+| Stateless gRPC gateway. Auth, rate-limiting, routing, request validation. Every SDK/CLI call lands here. | Owns Workflow Execution state. Writes the event history, runs the state machine, enqueues tasks. Sharded. | Hosts Task Queues. Matches tasks from History to Workers polling by queue name. | Internal background service: replication, archival, schedules, batch ops, cleanup. **Not** your Worker. |
+
+> Your application Worker is a *client* of this cluster, not part of it.
+
+<!--
+The naming trap: "Worker Service" inside the cluster is internal background work.
+The Worker YOU write and deploy is a separate process polling Matching via Frontend.
+-->
+
+---
+
+<!-- _class: dense -->
+
+# History Service & shards
+
+- Workflow state is partitioned into **shards** (e.g. 512 / 4096); each shard owns a slice of executions by hashed Workflow ID.
+- A shard is owned by exactly **one** History host at a time → single-writer, no contention per workflow.
+- Each shard drives its executions and processes internal **task queues**:
+
+| Internal queue | Drives |
+| --- | --- |
+| Transfer tasks | Push Workflow/Activity tasks to Matching; start child workflows |
+| Timer tasks | Fire durable timers, `Workflow.sleep`, timeouts, retries |
+| Visibility tasks | Update the searchable/visibility store |
+| Replication tasks | Ship events to other clusters (multi-cluster) |
+
+> Scaling History = more shards spread across more History hosts.
+
+---
+
+<!-- _class: dense -->
+
+# Three task types
+
+| Task | Worker does | Result |
+| --- | --- | --- |
+| **Workflow Task** | Resume Workflow code until it blocks or completes | Commands back to History (schedule activity, start timer, complete) |
+| **Activity Task** | Execute your Activity code (side effects allowed) | Success/failure reported to History |
+| **Query Task** | Run a read-only query over current state | Value returned; history **not** advanced |
+
+> History produces tasks; Matching dispatches them; your Worker pulls and runs them.
+
+---
+
+<!-- _class: code -->
+
+## Lifecycle: one Workflow start
+
+```
+1. Client ──StartWorkflowExecution──▶ Frontend ──▶ History (owning shard)
+2. History  appends WorkflowExecutionStarted + WorkflowTaskScheduled
+            └─ transfer task ──▶ Matching   (enqueue on Task Queue)
+3. Worker   long-polls Task Queue via Frontend ──▶ gets Workflow Task
+4. Worker   runs code, returns command: ScheduleActivityTask ──▶ History
+5. History  ──transfer task──▶ Matching ──▶ Worker gets Activity Task
+6. Worker   runs Activity, reports result ──▶ History (appends events)
+7. History  schedules next Workflow Task … repeat until completion
+```
+
+Everything durable is an **event appended by History** before any Worker sees it.
+
+<!--
+Walk this slowly on the whiteboard. The key insight: nothing the Worker does is
+trusted until History has written the resulting event. Crash anywhere and replay
+rebuilds from the persisted history.
 -->
 
 ---

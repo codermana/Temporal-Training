@@ -385,7 +385,7 @@ the Temporal section.
 
 <!-- _class: section -->
 
-###### Reframe
+###### Durable Execution
 
 # What Temporal does differently
 
@@ -404,6 +404,8 @@ The talk inflects here; if you're 11 minutes in, you're on schedule.
 <!-- _class: code -->
 
 ## Durable execution
+
+> **Durable Execution:** your code's progress is persisted automatically. Crashes, restarts, and deploys don't lose state - execution resumes exactly where it left off.
 
 A **Workflow** is application code (Java, Go, Python, TS, .NET, PHP, Ruby).
 
@@ -528,7 +530,7 @@ program made; you can replay those notes to recreate the program's state."
 
 ---
 
-# What you get for free
+# What Durable Execution gives you - for free
 
 - **Retries** with backoff per Activity
 - **Timeouts** with semantic names (start-to-close, schedule-to-close)
@@ -748,7 +750,7 @@ The AI agents bullet is newest and lands hardest in 2024+ rooms.
 
 # Who's running it
 
-A non-exhaustive sample of companies that talk publicly about Temporal in production:
+Temporal popularized **Durable Execution** as a category - now a non-exhaustive sample of companies that talk publicly about running it in production:
 
 - Snap (payments + ads)
 - Stripe (Workflow Engine)
@@ -1005,7 +1007,7 @@ For remote audiences, this is the screen they screenshot.
 
 # Takeaways
 
-- One model: durable functions with replay, retries, and timeouts built in.
+- One model: **Durable Execution** - functions with replay, retries, and timeouts built in.
 - One habit: when you write a runbook, write a Workflow instead.
 - One resource: docs.temporal.io plus the course repo from today.
 
