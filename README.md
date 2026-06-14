@@ -12,8 +12,9 @@ to run every lab on a laptop.
 | `outline/Agenda.md` | The 6-day outline. Start here.                                      |
 | `outline/detailed.md` | Long-form outline with extra context.                             |
 | `lecture_notes/`    | Per-day instructor notes (talking points, demos, discussion prompts). |
+| `challenges/`       | Hands-on lab instructions (no solutions), day by day. `make challenges` to list. |
 | `examples/`         | Teaching snippets, organized by day.                                |
-| `examples/runnable/`| Maven mini-projects for each lab.                                   |
+| `examples/runnable/`| Maven mini-projects for each lab (reference solutions).             |
 | `docker/`           | Compose stacks for Kafka, Prometheus + Grafana, LocalStack.         |
 | `scripts/`          | Bash + PowerShell entry points (the recommended way to drive labs). |
 | `Setup.md`          | Detailed install + per-platform setup.                              |
@@ -67,14 +68,14 @@ docker/kind helpers are bash-only; run them from WSL.
 Each day has lecture notes and an example folder. Days 3, 4, and 6 also pull in
 the corresponding Docker stack.
 
-| Day | Topic                          | Lecture Notes                                            | Stack required                            |
-| --- | ------------------------------ | -------------------------------------------------------- | ----------------------------------------- |
-| 1   | Foundations                    | [Day 1](lecture_notes/Day-01-foundations.md)             | Temporal only                             |
-| 2   | Reliability + interactions     | [Day 2](lecture_notes/Day-02-reliability.md)             | Temporal only                             |
-| 3   | Kafka integration              | [Day 3](lecture_notes/Day-03-kafka.md)                   | `make stack-kafka`                        |
-| 4   | Production engineering         | [Day 4](lecture_notes/Day-04-production.md)              | `make stack-obs`                          |
-| 5   | Saga, Spring Boot, capstone    | [Day 5](lecture_notes/Day-05-saga-spring.md)             | Temporal only                             |
-| 6   | AWS migration + containers     | [Day 6](lecture_notes/Day-06-aws-containers.md)          | `make stack-aws` + `make kind-up`         |
+| Day | Topic                          | Lecture Notes                                            | Labs                                                | Stack required                            |
+| --- | ------------------------------ | -------------------------------------------------------- | --------------------------------------------------- | ----------------------------------------- |
+| 1   | Foundations                    | [Day 1](lecture_notes/Day-01-foundations.md)             | [Challenges](challenges/day-01-foundations/)        | Temporal only                             |
+| 2   | Reliability + interactions     | [Day 2](lecture_notes/Day-02-reliability.md)             | [Challenges](challenges/day-02-reliability/)        | Temporal only                             |
+| 3   | Kafka integration              | [Day 3](lecture_notes/Day-03-kafka.md)                   | [Challenges](challenges/day-03-kafka/)              | `make stack-kafka`                        |
+| 4   | Production engineering         | [Day 4](lecture_notes/Day-04-production.md)              | [Challenges](challenges/day-04-production/)         | `make stack-obs`                          |
+| 5   | Saga, Spring Boot, capstone    | [Day 5](lecture_notes/Day-05-saga-spring.md)             | [Challenges](challenges/day-05-saga-spring/)        | Temporal only                             |
+| 6   | AWS migration + containers     | [Day 6](lecture_notes/Day-06-aws-containers.md)          | [Challenges](challenges/day-06-aws-containers/)     | `make stack-aws` + `make kind-up`         |
 
 ## Running a Day's Lab
 
@@ -108,6 +109,27 @@ make stack-down       # docker stacks (kafka, obs, localstack)
 make kind-down        # delete the kind cluster
 ```
 
+## Hands-on Challenges
+
+[`challenges/`](challenges/) holds the participant-facing lab instructions: a
+scenario, the starter code (interfaces + `// TODO` stubs), tasks, verification
+steps, and progressive hints for each `[lab]` in the outline — **without the
+finished solution** (those live in `examples/runnable/` for instructors).
+
+```bash
+make challenges       # list every lab, grouped by day
+```
+
+Work in a scratch area kept out of version control (`work/` is gitignored):
+
+```bash
+mkdir -p work/day-01
+# follow challenges/day-01-foundations/lab-2-hello-temporal.md
+```
+
+Start at [`challenges/README.md`](challenges/README.md) for conventions and the
+day index.
+
 ## Common Endpoints
 
 | Service             | URL / address                              |
@@ -136,6 +158,7 @@ make kind-up       # create kind cluster + install KEDA
 make kind-load     # build Worker image and load into kind
 make kind-status   # show cluster + KEDA + ScaledObject state
 make kind-down     # delete the kind cluster
+make challenges    # list every hands-on lab, grouped by day
 make list          # list every example
 make show FILE=... # print an example file
 make run-<name>    # run a lab (hello/async/approval/schedules/kafka/testing/saga/aws)

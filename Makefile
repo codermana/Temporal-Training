@@ -174,10 +174,24 @@ kind-down: ## Delete the kind cluster
 # Examples - list / show / run
 # ---------------------------------------------------------------------------
 
-.PHONY: list show
+.PHONY: list show challenges
 
 list: ## List every example (snippets + runnable projects)
 	scripts/list-examples.sh
+
+challenges: ## List the hands-on labs under challenges/
+	@echo "Hands-on challenges (see challenges/README.md):"
+	@echo
+	@for day in challenges/day-*/; do \
+		title=$$(awk 'NR==1{sub(/^# /,""); print; exit}' "$$day/README.md" 2>/dev/null); \
+		echo "  $${title:-$$day}"; \
+		for lab in "$$day"lab-*.md; do \
+			[ -e "$$lab" ] || continue; \
+			name=$$(awk 'NR==1{sub(/^# /,""); print; exit}' "$$lab"); \
+			printf "    - %-44s %s\n" "$$(basename "$$lab")" "$$name"; \
+		done; \
+		echo; \
+	done
 
 show: ## Print an example file (FILE=02-reliability/heartbeat_long_activity.java)
 	@if [ -z "$(FILE)" ]; then echo "Usage: make show FILE=<path-under-examples>"; exit 2; fi

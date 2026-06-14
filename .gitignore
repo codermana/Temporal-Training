@@ -38,6 +38,9 @@ slides/**/dist/
 # Local Temporal dev server state
 .temporal/
 
+# Scratch area for working the hands-on challenges (see challenges/README.md)
+work/
+
 # Standalone Marp template repo (kept for reference; lives in its own .git)
 slides-template/
 
