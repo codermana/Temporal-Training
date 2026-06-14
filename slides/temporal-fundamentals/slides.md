@@ -330,36 +330,6 @@ its keep."
 
 ---
 
-<!-- _class: lab -->
-
-###### Lab · Day 1
-
-# Hello Temporal
-
-Challenge → [`day-01-foundations/lab-2-hello-temporal`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-01-foundations/lab-2-hello-temporal.md)
-
-```bash
-make run-hello
-```
-
-What to look for:
-
-1. Workflow appears in the Web UI under `default` namespace.
-2. Click into it; open the Event History tab.
-3. Identify `WorkflowExecutionStarted`, `ActivityTaskScheduled`, `ActivityTaskCompleted`.
-
-> Restart the Worker mid-run; the Workflow resumes. That's the lesson.
-
-<!--
-Have one person KILL the Worker mid-run on purpose.
-
-The Workflow completes when the Worker restarts.
-
-This is the most important moment of Day 1.
--->
-
----
-
 <!-- _class: section -->
 
 ###### Day 1
@@ -416,10 +386,38 @@ for (var e : hashMap.entrySet()) { ... }       // risky
 ```
 
 <!--
-Reference card.
+Reference card. The throughline: anything whose value the Worker can't reproduce
+on replay must be sourced from history, not recomputed. Walk each family:
 
-Family 4 is the biggest aha - Workflow.sleep records a timer; the Worker FORGETS
-the workflow.
+1. TIME - System.currentTimeMillis() returns a new value every replay. The first
+   run records 10:00:00; a replay tomorrow recomputes 10:00:01 and the code
+   branches differently. Workflow.currentTimeMillis() returns the value recorded
+   in history, so every replay sees the same instant.
+
+2. RANDOM - same trap. new Random() reseeds from the system clock; replay gets a
+   different number. Workflow.newRandom() seeds deterministically from the run and
+   records the seed, so the sequence is reproducible. (Use this for jitter, IDs,
+   A/B bucketing - not java.util.Random.)
+
+3. I/O - reading a file, calling an HTTP endpoint, or hitting a DB gives a
+   different answer each replay AND fires the side effect twice. There is no
+   Workflow.* substitute - the fix is to MOVE it into an Activity. Activities run
+   once and their result is recorded; replay reads the result from history.
+
+4. CONCURRENCY - the biggest aha. Thread.sleep blocks a Worker thread for the full
+   duration; Workflow.sleep records a timer and the Worker FORGETS the Workflow
+   entirely (lead-in to the next slide). Same rule for threads/locks: use
+   Workflow.newThread / Async / Workflow primitives, never raw java.lang.Thread,
+   so the SDK controls scheduling deterministically.
+
+5. ITERATION ORDER - HashMap/HashSet have no guaranteed order, and it can differ
+   across JVM versions or runs. If you iterate one to make a decision (pick first,
+   sum in order, branch on order) replay can diverge. Fix: use a TreeMap /
+   LinkedHashMap or sort the keys before iterating. "risky," not "always wrong" -
+   it only breaks if order affects a recorded decision.
+
+Tie it back to the replay rule slide: every one of these makes the re-run reach a
+DIFFERENT decision than history = non-determinism error, Workflow stuck/failed.
 -->
 
 ---
@@ -438,6 +436,36 @@ Workflow.sleep(Duration.ofDays(30));
 
 <!--
 Ask: "how would you wait 30 days for an email opt-in today?" Compare to one line.
+-->
+
+---
+
+<!-- _class: lab -->
+
+###### Lab · Day 1
+
+# Hello Temporal
+
+Challenge → [`day-01-foundations/lab-2-hello-temporal`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-01-foundations/lab-2-hello-temporal.md)
+
+```bash
+make run-hello
+```
+
+What to look for:
+
+1. Workflow appears in the Web UI under `default` namespace.
+2. Click into it; open the Event History tab.
+3. Identify `WorkflowExecutionStarted`, `ActivityTaskScheduled`, `ActivityTaskCompleted`.
+
+> Restart the Worker mid-run; the Workflow resumes. That's the lesson.
+
+<!--
+Have one person KILL the Worker mid-run on purpose.
+
+The Workflow completes when the Worker restarts.
+
+This is the most important moment of Day 1.
 -->
 
 ---
