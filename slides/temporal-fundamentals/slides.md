@@ -117,10 +117,10 @@ Open in VSCode: examples/01-foundations/airflow_dag_vs_temporal_workflow.java + 
 
 # Every backend has these
 
-- "Charge the card, ship the order, send the receipt."
-- "Pull from S3, transform with Spark, write to Snowflake."
-- "Wait for the human approval, then provision the tenant."
-- "Retry the flaky API for an hour, then page the on-call."
+* "Charge the card, ship the order, send the receipt."
+* "Pull from S3, transform with Spark, write to Snowflake."
+* "Wait for the human approval, then provision the tenant."
+* "Retry the flaky API for an hour, then page the on-call."
 
 These are **workflows**. They look easy until one step fails.
 
@@ -134,11 +134,11 @@ Each shape will resonate with someone in the room.
 
 # What goes wrong
 
-- The third call timed out. Did it succeed?
-- The Lambda was killed at minute 14 of 15.
-- The Kafka consumer crashed *between* the DB write and the publish.
-- The cron didn't fire. Nobody noticed for two days.
-- The retry loop never had a budget.
+* The third call timed out. Did it succeed?
+* The Lambda was killed at minute 14 of 15.
+* The Kafka consumer crashed *between* the DB write and the publish.
+* The cron didn't fire. Nobody noticed for two days.
+* The retry loop never had a budget.
 
 > Recovery is a **runbook**, not a button.
 
@@ -363,10 +363,10 @@ Open in VSCode: examples/01-foundations/deterministic_replay_bad.java vs determi
 
 When a Worker resumes a Workflow:
 
-1. It re-runs the Workflow code from the start.
-2. Replays recorded events to reconstruct local state.
-3. Reaches the next undecided point.
-4. Continues from there.
+1) It re-runs the Workflow code from the start.
+2) Replays recorded events to reconstruct local state.
+3) Reaches the next undecided point.
+4) Continues from there.
 
 > Different decision than the recorded history = non-determinism error.
 
@@ -669,9 +669,9 @@ Show it now; it'll come back on Day 4 for replay tests.
 
 # Day 1 takeaways
 
-- One model: **Workflow code re-executes on replay; Activity results are recorded.**
-- One discipline: keep Workflow code deterministic; do all I/O in Activities.
-- One habit: pick Workflow IDs from business identity. They're durable handles.
+* One model: **Workflow code re-executes on replay; Activity results are recorded.**
+* One discipline: keep Workflow code deterministic; do all I/O in Activities.
+* One habit: pick Workflow IDs from business identity. They're durable handles.
 
 <!--
 The first slogan to repeat.
@@ -963,11 +963,11 @@ Open in VSCode: examples/02-reliability/workflow_time.java - durable sleep recor
 
 # Common traps
 
-- `Map.Entry.getKey()` iteration over `HashMap` - JVM-version-dependent.
-- `Instant.now()`, `LocalDateTime.now()`.
-- `UUID.randomUUID()` → use `Workflow.randomUUID()`.
-- `CompletableFuture`, `ExecutorService` → use `Async.function`, `Workflow.newPromise`.
-- Throwing checked exceptions across the Workflow boundary - prefer `ApplicationFailure`.
+* `Map.Entry.getKey()` iteration over `HashMap` - JVM-version-dependent.
+* `Instant.now()`, `LocalDateTime.now()`.
+* `UUID.randomUUID()` → use `Workflow.randomUUID()`.
+* `CompletableFuture`, `ExecutorService` → use `Async.function`, `Workflow.newPromise`.
+* Throwing checked exceptions across the Workflow boundary - prefer `ApplicationFailure`.
 
 > The replay tests on Day 4 catch all of these.
 
@@ -1368,9 +1368,9 @@ These are top-level execution caps, not per-attempt budgets.
 
 # Day 2 takeaways
 
-- One async pattern: `Async.function` + `Promise.allOf`. Yields the Workflow loop, not threads.
-- One Kafka/REST rule: **signalWithStart**, never bare start.
-- One sync RPC: **startUpdateWithStart** for "POST and wait for result."
+* One async pattern: `Async.function` + `Promise.allOf`. Yields the Workflow loop, not threads.
+* One Kafka/REST rule: **signalWithStart**, never bare start.
+* One sync RPC: **startUpdateWithStart** for "POST and wait for result."
 
 <!--
 Three slogans for Day 2.
@@ -1525,10 +1525,10 @@ Run: make run-kafka
 
 # The pattern
 
-1. One Workflow per business entity (e.g. per orderId).
-2. Workflow ID = `"order-" + orderId`.
-3. Kafka consumer is a thin bridge: `signalWithStart` for every event.
-4. Commit offsets after `signalWithStart` returns.
+1) One Workflow per business entity (e.g. per orderId).
+2) Workflow ID = `"order-" + orderId`.
+3) Kafka consumer is a thin bridge: `signalWithStart` for every event.
+4) Commit offsets after `signalWithStart` returns.
 
 > Bare `start()` throws `WorkflowExecutionAlreadyStarted` on event #2.
 
@@ -1603,8 +1603,8 @@ If it does, they're using bare start - debug it.
 
 Two strategies:
 
-- **Outside the Workflow** - one Workflow per partition. Many small histories.
-- **Inside the Workflow** - one Workflow processes a *range* of partitions in parallel Activities.
+* **Outside the Workflow** - one Workflow per partition. Many small histories.
+* **Inside the Workflow** - one Workflow processes a *range* of partitions in parallel Activities.
 
 > Pick based on whether the partitions share business state.
 
@@ -1688,9 +1688,9 @@ try {
 
 # Day 3 takeaways
 
-- `signalWithStart` is the only correct Kafka bridge primitive.
-- Commit Kafka offsets only after the unit of work is durably accepted.
-- DLQ catches what Temporal retries cannot fix. Different problems.
+* `signalWithStart` is the only correct Kafka bridge primitive.
+* Commit Kafka offsets only after the unit of work is durably accepted.
+* DLQ catches what Temporal retries cannot fix. Different problems.
 
 ---
 
@@ -2215,11 +2215,11 @@ A decision framework.
 
 # Migration order that works
 
-1. **Pick one** DAG that hurts in production.
-2. **Map operators → Activities** mechanically. Don't redesign.
-3. **Run side by side** for a release cycle.
-4. **Cut over** after the Temporal version is clean for two weeks.
-5. **Redesign** only after stable. Now use Signals, Updates, Schedules.
+1) **Pick one** DAG that hurts in production.
+2) **Map operators → Activities** mechanically. Don't redesign.
+3) **Run side by side** for a release cycle.
+4) **Cut over** after the Temporal version is clean for two weeks.
+5) **Redesign** only after stable. Now use Signals, Updates, Schedules.
 
 > Don't migrate everything. Migrate where Temporal earns its keep.
 
@@ -2229,10 +2229,10 @@ A decision framework.
 
 # Day 4 takeaways
 
-- Versioning is about preserving old histories, not just deploying new code.
-- Size Workers for **resource profile**, not business domain.
-- Replay tests are the single safety net for Workflow code changes.
-- Not everything is a Workflow. Migrate where Temporal earns its keep.
+* Versioning is about preserving old histories, not just deploying new code.
+* Size Workers for **resource profile**, not business domain.
+* Replay tests are the single safety net for Workflow code changes.
+* Not everything is a Workflow. Migrate where Temporal earns its keep.
 
 ---
 
@@ -2302,8 +2302,8 @@ public String process(String orderId) {
 
 # Orchestration vs choreography
 
-- **Orchestration** - one central Workflow coordinates all steps & compensations. Single audit trail. **Temporal's natural shape.**
-- **Choreography** - each service reacts to events, emits its own. No central state.
+* **Orchestration** - one central Workflow coordinates all steps & compensations. Single audit trail. **Temporal's natural shape.**
+* **Choreography** - each service reacts to events, emits its own. No central state.
 
 > For cross-team flows from Airflow + Kafka, orchestration wins.
 
@@ -2318,10 +2318,10 @@ Temporal's log shows it immediately.
 
 # Compensation rules
 
-1. Register compensation **immediately** after the forward step succeeds.
-2. Compensations are **business logic**, not generic undo.
-3. Compensations get their own retry policy. Test the failing case.
-4. Idempotency on forward AND compensation steps.
+1) Register compensation **immediately** after the forward step succeeds.
+2) Compensations are **business logic**, not generic undo.
+3) Compensations get their own retry policy. Test the failing case.
+4) Idempotency on forward AND compensation steps.
 
 ---
 
@@ -2596,10 +2596,10 @@ Anchor questions if the room is quiet:
 
 # Day 5 takeaways
 
-- Compensation is business logic, not generic undo. Design it on purpose.
-- Sync Updates via `startUpdateWithStart` for sync APIs.
-- Async Signals via `signalWithStart` for event-driven triggers.
-- Continue-as-new is a checkpoint, not a memory dump.
+* Compensation is business logic, not generic undo. Design it on purpose.
+* Sync Updates via `startUpdateWithStart` for sync APIs.
+* Async Signals via `signalWithStart` for event-driven triggers.
+* Continue-as-new is a checkpoint, not a memory dump.
 
 ---
 
@@ -2638,11 +2638,11 @@ Open in VSCode: examples/07-aws-containers/aws_mapping.md, step_functions_before
 
 # State scatters
 
-- **EventBridge** rule fires.
-- **Lambda** validates, transforms, sometimes orchestrates.
-- **Step Functions** declares state transitions in JSON.
-- **Glue** runs Spark / Python shell, writes results to S3.
-- **S3** is the handoff medium.
+* **EventBridge** rule fires.
+* **Lambda** validates, transforms, sometimes orchestrates.
+* **Step Functions** declares state transitions in JSON.
+* **Glue** runs Spark / Python shell, writes results to S3.
+* **S3** is the handoff medium.
 
 > Every handoff = a chance for state to disagree. Recovery is a runbook.
 
@@ -2861,10 +2861,10 @@ Open in VSCode: examples/07-aws-containers/Dockerfile, worker_deployment.yaml, k
 
 # Mental model
 
-- A Worker is a long-lived process polling Task Queues *outbound*.
-- **No inbound traffic.** No Service, no Ingress.
-- Health = "is the process polling?" `pgrep` exec probe, or an HTTP `/health` (Actuator/`HttpServer`) returning 200 only after `WorkerFactory.start()`.
-- Graceful shutdown = drain in-flight Activities; SIGTERM, then heartbeat-cancel.
+* A Worker is a long-lived process polling Task Queues *outbound*.
+* **No inbound traffic.** No Service, no Ingress.
+* Health = "is the process polling?" `pgrep` exec probe, or an HTTP `/health` (Actuator/`HttpServer`) returning 200 only after `WorkerFactory.start()`.
+* Graceful shutdown = drain in-flight Activities; SIGTERM, then heartbeat-cancel.
 
 ---
 
@@ -3004,10 +3004,10 @@ kubectl get scaledobject,pods -l app=temporal-transform-worker -w
 
 # Glue Activities in containers
 
-- Worker pod runs Glue-orchestration Activities.
-- **IRSA**, not access keys: `eks.amazonaws.com/role-arn` on the ServiceAccount.
-- Outbound to Temporal frontend (Cloud or self-hosted ELB).
-- Outbound to AWS APIs via VPC endpoints.
+* Worker pod runs Glue-orchestration Activities.
+* **IRSA**, not access keys: `eks.amazonaws.com/role-arn` on the ServiceAccount.
+* Outbound to Temporal frontend (Cloud or self-hosted ELB).
+* Outbound to AWS APIs via VPC endpoints.
 
 > No bundled access keys. IRSA + VPC endpoints is the production shape.
 
@@ -3056,10 +3056,10 @@ Verify:
 
 # Day 6 takeaways
 
-- Temporal replaces orchestration **state**, not all compute. Keep Glue Spark; replace Step Functions JSON.
-- Workers have no inbound traffic. Use `exec` probes or add Actuator deliberately.
-- KEDA's native Temporal scaler is the right one.
-- Cloud is the default for new deployments. Self-host only with a clear reason.
+* Temporal replaces orchestration **state**, not all compute. Keep Glue Spark; replace Step Functions JSON.
+* Workers have no inbound traffic. Use `exec` probes or add Actuator deliberately.
+* KEDA's native Temporal scaler is the right one.
+* Cloud is the default for new deployments. Self-host only with a clear reason.
 
 ---
 
@@ -3076,10 +3076,10 @@ A complete Temporal mental model and the patterns to ship with.
 
 # Where to go next
 
-- Take the **capstone** from Day 5 back to your team. Ship it side-by-side with the existing implementation.
-- Stand up the **observability stack** in your real env. Get the metrics flowing first.
-- Start the **replay corpus**. One captured history per non-trivial Workflow.
-- Pick one **Airflow DAG** to migrate using the framework.
+* Take the **capstone** from Day 5 back to your team. Ship it side-by-side with the existing implementation.
+* Stand up the **observability stack** in your real env. Get the metrics flowing first.
+* Start the **replay corpus**. One captured history per non-trivial Workflow.
+* Pick one **Airflow DAG** to migrate using the framework.
 
 ---
 
@@ -3087,10 +3087,10 @@ A complete Temporal mental model and the patterns to ship with.
 
 # The four habits
 
-1. When you'd write a runbook, write a Workflow instead.
-2. Workflow code is deterministic; all I/O lives in Activities.
-3. `signalWithStart` / `startUpdateWithStart` are the bridge primitives.
-4. Capture histories; replay them in CI.
+1) When you'd write a runbook, write a Workflow instead.
+2) Workflow code is deterministic; all I/O lives in Activities.
+3) `signalWithStart` / `startUpdateWithStart` are the bridge primitives.
+4) Capture histories; replay them in CI.
 
 ---
 

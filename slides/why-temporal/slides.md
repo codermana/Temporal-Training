@@ -77,21 +77,21 @@ production at companies with both Java and Go stacks - it lands trust faster.
 
 ## As an instructor
 
-- I promise to make this class as interactive as possible
-- I will use as many resources as available to keep you engaged
-- I will ensure everyone's questions are addressed
+* I promise to make this class as interactive as possible
+* I will use as many resources as available to keep you engaged
+* I will ensure everyone's questions are addressed
 
 ---
 
 ## What I need from you
 
-- Be vocal
+* Be vocal
   - Let me know if there are any audio/video issues ASAP
   - Feel free to interrupt me and ask questions
-- Be punctual
-- Give feedback
-- Work on the exercises
-- Be *on mute* unless you are speaking
+* Be punctual
+* Give feedback
+* Work on the exercises
+* Be *on mute* unless you are speaking
 
 ---
 
@@ -111,22 +111,22 @@ Here you are trying to *learn* something, while here your **brain** is doing you
 
 ### Some tips
 
-- Slow down: stop and think
+* Slow down: stop and think
   - Listen for the questions and answer
-- Do the exercises
+* Do the exercises
   - They are not add-ons; they are not optional
-- There are no dumb questions
-- Drink water. Lots of it.
+* There are no dumb questions
+* Drink water. Lots of it.
 
 ---
 
 ### Some tips (continued)
 
-- Take notes
+* Take notes
   - Try repetitive, spaced-out learning
-- Talk about it out loud
-- Listen to your brain
-- *Experiment*
+* Talk about it out loud
+* Listen to your brain
+* *Experiment*
 
 ---
 
@@ -215,10 +215,10 @@ through.
 
 # Every backend has these
 
-- "Charge the card, ship the order, send the receipt."
-- "Pull from S3, transform with Spark, write to Snowflake."
-- "Wait for the human approval, then provision the tenant."
-- "Retry the flaky API for an hour, then page the on-call."
+* "Charge the card, ship the order, send the receipt."
+* "Pull from S3, transform with Spark, write to Snowflake."
+* "Wait for the human approval, then provision the tenant."
+* "Retry the flaky API for an hour, then page the on-call."
 
 These are **workflows**. They look easy until one step fails.
 
@@ -237,11 +237,11 @@ Land the final line with weight: "look easy until one step fails."
 
 # What goes wrong
 
-- The third call timed out. Did it succeed?
-- The Lambda was killed at minute 14 of 15.
-- The Kafka consumer crashed *between* the database write and the publish.
-- The cron didn't fire. Nobody noticed for two days.
-- The retry loop never had a budget.
+* The third call timed out. Did it succeed?
+* The Lambda was killed at minute 14 of 15.
+* The Kafka consumer crashed *between* the database write and the publish.
+* The cron didn't fire. Nobody noticed for two days.
+* The retry loop never had a budget.
 
 > Recovery is a **runbook**, not a button.
 
@@ -349,10 +349,10 @@ for months.
 
 ## Kafka by itself
 
-- Excellent **transport**.
-- Bad place to keep *the state of order #4711*.
-- Consumers re-derive workflow state from scratch on every restart.
-- Out-of-order events + retries + idempotency = bespoke per-team code.
+* Excellent **transport**.
+* Bad place to keep *the state of order #4711*.
+* Consumers re-derive workflow state from scratch on every restart.
+* Out-of-order events + retries + idempotency = bespoke per-team code.
 
 > Kafka tells you *what happened*. Temporal tells you *where we are*.
 
@@ -515,10 +515,10 @@ decisions, side effects in Activities, result replay from history.
 
 ## The trick: event history
 
-1. Every decision the Workflow makes is recorded.
-2. When a Worker resumes, it replays history to reconstruct state.
-3. Reaches the next undecided point.
-4. Continues from there.
+1) Every decision the Workflow makes is recorded.
+2) When a Worker resumes, it replays history to reconstruct state.
+3) Reaches the next undecided point.
+4) Continues from there.
 
 > You write code. The runtime writes the journal.
 
@@ -804,10 +804,10 @@ neutral" row matters for Step Functions skeptics.
 
 # Where Temporal is *not* the answer
 
-- **Pure data transformation.** Use Spark / dbt; wrap them only if you need orchestration.
-- **Sub-millisecond serving.** Workflows have RPC overhead; not your hot path.
-- **Single, never-failing, one-step jobs.** A cron line is fine.
-- **Stateless event handlers** where Kafka + a function is the whole story.
+* **Pure data transformation.** Use Spark / dbt; wrap them only if you need orchestration.
+* **Sub-millisecond serving.** Workflows have RPC overhead; not your hot path.
+* **Single, never-failing, one-step jobs.** A cron line is fine.
+* **Stateless event handlers** where Kafka + a function is the whole story.
 
 > Use Temporal where you would have written a runbook.
 
@@ -866,8 +866,8 @@ pushed application state recovery onto humans.
 
 # Simple analogy
 
-- **Runbook** = "How to change a tire."
-- **Playbook** = "How to handle a roadside breakdown."
+* **Runbook** = "How to change a tire."
+* **Playbook** = "How to handle a roadside breakdown."
 
 The playbook may include the tire-change runbook, calling roadside assistance,
 moving passengers to safety, and deciding when to abandon the vehicle.
@@ -883,10 +883,10 @@ also carries scenario judgment, branching, and coordination.
 
 # What Temporal changes
 
-- A **runbook** often becomes a Workflow when it repairs half-finished state.
-- A **playbook** often becomes a Workflow when it is repeatable, cross-system, and auditable.
-- Keep the human decision; automate the waiting, retries, timers, and recovery.
-- If the steps depend on durable state, Temporal should be in the conversation.
+* A **runbook** often becomes a Workflow when it repairs half-finished state.
+* A **playbook** often becomes a Workflow when it is repeatable, cross-system, and auditable.
+* Keep the human decision; automate the waiting, retries, timers, and recovery.
+* If the steps depend on durable state, Temporal should be in the conversation.
 
 > The goal is not fewer operators. It is fewer manual state machines.
 
@@ -951,11 +951,11 @@ Recommend ONE workflow.
 
 # A two-week plan
 
-1. **Pick one workflow** that hurts in production.
-2. **Map operators / Lambdas → Activities** mechanically.
-3. **Run side by side** for a release cycle.
-4. **Cut over** when the Temporal version has been clean for two weeks.
-5. **Redesign** only after stable - now use Signals, Updates, Schedules.
+1) **Pick one workflow** that hurts in production.
+2) **Map operators / Lambdas → Activities** mechanically.
+3) **Run side by side** for a release cycle.
+4) **Cut over** when the Temporal version has been clean for two weeks.
+5) **Redesign** only after stable - now use Signals, Updates, Schedules.
 
 > Don't migrate everything. Migrate where Temporal earns its keep.
 
@@ -1010,9 +1010,9 @@ For remote audiences, this is the screen they screenshot.
 
 # Takeaways
 
-- One model: **Durable Execution** - functions with replay, retries, and timeouts built in.
-- One habit: when you write a runbook, write a Workflow instead.
-- One resource: docs.temporal.io plus the course repo from today.
+* One model: **Durable Execution** - functions with replay, retries, and timeouts built in.
+* One habit: when you write a runbook, write a Workflow instead.
+* One resource: docs.temporal.io plus the course repo from today.
 
 <!--
 The three things they should remember.
