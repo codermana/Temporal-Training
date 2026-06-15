@@ -686,6 +686,55 @@ physical attempt. continue-as-new keeps the ID, mints a new Run - the Day-5 lab.
 
 <!-- _class: dense -->
 
+## If starting a Workflow fails
+
+`StartWorkflowExecution` is a client RPC. Failure means different things:
+
+| Case | What happened |
+|---|---|
+| Server rejects request | No Workflow started: bad Namespace, auth, invalid options, ID conflict |
+| Connectivity / timeout | Ambiguous: request may not have reached Temporal, or response was lost after start |
+| Start accepted | `WorkflowExecutionStarted` is persisted; Workflow is durable from that point |
+| First Workflow Task fails | Start still succeeded; the running Workflow now follows retry/failure rules |
+
+- Use a stable **Workflow ID** for business idempotency.
+- On retry after an ambiguous client error, handle `AlreadyStarted` / `Use Existing` deliberately.
+- A Worker does **not** need to be online for start to succeed; the first Workflow Task waits on the Task Queue.
+
+> The commit point is the `WorkflowExecutionStarted` event, not the client's HTTP/gRPC response.
+
+---
+
+<!-- _class: code -->
+
+## Start retry pattern
+
+```java
+String workflowId = "order-" + orderId; // stable business id
+
+OrderWorkflow workflow =
+    client.newWorkflowStub(
+        OrderWorkflow.class,
+        WorkflowOptions.newBuilder()
+            .setWorkflowId(workflowId)
+            .setTaskQueue("orders")
+            .build());
+
+try {
+  WorkflowClient.start(workflow::run, orderId);
+  System.out.println("started " + workflowId);
+} catch (WorkflowExecutionAlreadyStarted e) {
+  // Previous attempt may have started it before the response was lost.
+  System.out.println("already running; treating start as success");
+}
+```
+
+> Retry the start with the same Workflow ID. Duplicate start becomes "already exists", not duplicate business work.
+
+---
+
+<!-- _class: dense -->
+
 ## Three names you'll conflate
 
 | Name | What it is | Here |
