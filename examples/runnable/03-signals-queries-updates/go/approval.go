@@ -1,8 +1,11 @@
-// Package main holds the approval lab: signal, query, and update on one running
-// execution. The Go equivalent of the Java ApprovalWorkflow lab. The Workflow
-// blocks in workflow.Await until an approve/reject Signal arrives, so a Query and
-// an Update run against a live execution.
-package main
+// Package approval holds the approval lab: signal, query, and update on one
+// running execution. The Go equivalent of the Java ApprovalWorkflow lab. The
+// Workflow blocks in workflow.Await until an approve/reject Signal arrives, so a
+// Query and an Update run against a live execution.
+//
+// The Workflow definition lives here so both standalone commands can import it:
+// ./worker (registers + polls) and ./starter (starts a run).
+package approval
 
 import (
 	"errors"

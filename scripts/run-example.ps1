@@ -2,7 +2,13 @@ $ErrorActionPreference = "Stop"
 
 function Show-Usage {
   Write-Host @"
-Usage: scripts/run-example.ps1 <example>
+Usage: scripts/run-example.ps1 <example> [role]   (Java SDK)
+
+  role is one of: worker (default), starter
+
+Split labs ship a standalone Worker and starter. Run them in two terminals:
+  scripts/run-example.ps1 async worker    # terminal 1: long-lived Worker
+  scripts/run-example.ps1 async starter   # terminal 2: starts one Workflow
 
 Examples:
   scripts/run-example.ps1 hello
@@ -18,13 +24,18 @@ Examples:
 "@
 }
 
-if ($args.Count -ne 1) {
+if ($args.Count -lt 1 -or $args.Count -gt 2) {
   Show-Usage
   exit 2
 }
 
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
 $example = $args[0]
+$role = if ($args.Count -ge 2) { $args[1] } else { "worker" }
+if ($role -notin @("worker", "starter")) {
+  Write-Error "Unknown role: $role (use worker or starter)"
+  exit 2
+}
 $dir = $null
 $mode = "exec"
 $needsTemporal = $true
@@ -108,7 +119,25 @@ if ($needsTemporal) {
   }
 }
 
-Push-Location (Join-Path $root $dir)
+# Migrated labs keep the Maven project under java/; prefer it when present.
+$projectDir = Join-Path $root $dir
+if (Test-Path (Join-Path $projectDir "java")) {
+  $projectDir = Join-Path $projectDir "java"
+}
+
+# For split labs the Worker is the pom's default mainClass (a *Worker class);
+# the starter is the matching *Starter class.
+if ($role -eq "starter") {
+  $workerClass = $mainClass
+  if (-not $workerClass) {
+    $pom = Join-Path $projectDir "pom.xml"
+    $match = Select-String -Path $pom -Pattern '<mainClass>(.*)</mainClass>' | Select-Object -First 1
+    if ($match) { $workerClass = $match.Matches[0].Groups[1].Value }
+  }
+  if ($workerClass) { $mainClass = ($workerClass -replace 'Worker$', 'Starter') }
+}
+
+Push-Location $projectDir
 try {
   if ($mode -eq "exec") {
     if ($mainClass) {

@@ -82,18 +82,23 @@ the dev server).
 ## Tasks
 
 1. Bring the stack up and confirm all three containers are healthy.
-2. Run the shared env-driven worker. With no `TEMPORAL_*` variables set, its
-   `Connections.fromEnv()` plaintext branch defaults to `127.0.0.1:7233` /
-   namespace `default` — exactly the Docker cluster:
+2. Run the shared env-driven worker, then start a Workflow from a second
+   terminal. With no `TEMPORAL_*` variables set, `Connections.fromEnv()`'s
+   plaintext branch defaults to `127.0.0.1:7233` / namespace `default` — exactly
+   the Docker cluster. The Worker and starter are separate processes; both read
+   the same env:
 
    ```bash
-   make run-connect          # examples/runnable/01b-hello-temporal-anywhere
+   make run-connect           # terminal A: long-lived Worker (polls forever)
+   make run-connect-starter   # terminal B: starts one Workflow, prints the greeting
    ```
 
-   <details><summary>Under the hood — what <code>make run-connect</code> runs</summary>
+   <details><summary>Under the hood — what these run</summary>
 
    ```bash
-   cd examples/runnable/01b-hello-temporal-anywhere && mvn -q compile exec:java
+   cd examples/runnable/01b-hello-temporal-anywhere
+   mvn -q compile exec:java                                              # Worker (HelloWorker)
+   mvn -q compile exec:java -Dexec.mainClass=training.temporal.hello.HelloStarter  # starter
    # Env-driven connection via Connections.fromEnv(). Reads:
    #   TEMPORAL_ADDRESS, TEMPORAL_NAMESPACE, TEMPORAL_API_KEY, TEMPORAL_TLS_CERT, TEMPORAL_TLS_KEY
    # With none set it defaults to plaintext 127.0.0.1:7233 / namespace default.
@@ -117,14 +122,15 @@ the dev server).
 ## Verification
 
 ```bash
-make run-connect
+make run-connect           # terminal A: Worker (logs "Connecting to local server at 127.0.0.1:7233")
+make run-connect-starter   # terminal B: starts the Workflow, prints the greeting
 ```
 
-Expected: the worker logs `Connecting to local server at 127.0.0.1:7233`, then
-the greeting prints to stdout. Then:
+Expected: the Worker logs the connection mode and polls; the starter prints the
+greeting to stdout. Then:
 
 ```bash
-temporal workflow list            # hello-temporal-demo, Status Completed
+temporal workflow list            # hello-anywhere-demo, Status Completed
 ```
 
 In the Web UI you'll see the usual `WorkflowExecutionStarted`, the
@@ -135,7 +141,8 @@ same server code, just deployed differently.
 ## Definition of done
 
 - [ ] `make stack-temporal` brings up auto-setup + PostgreSQL + UI, all healthy.
-- [ ] `make run-connect` connects via the plaintext branch and prints the greeting.
+- [ ] `make run-connect` (Worker) connects via the plaintext branch; `make
+      run-connect-starter` prints the greeting.
 - [ ] The Workflow shows **Completed** in `temporal workflow list` and the UI.
 - [ ] After `docker compose ... restart temporal`, the execution is still there
       (Postgres persistence, not in-memory).

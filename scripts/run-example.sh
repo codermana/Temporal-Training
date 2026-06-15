@@ -5,14 +5,24 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 usage() {
   cat <<'EOF'
-Usage: scripts/run-example.sh <example> [lang]
+Usage: scripts/run-example.sh <example> [lang] [role]
 
   lang is one of: java (default), python, go
+  role is one of: worker (default), starter
+
+Most labs now ship a standalone Worker and a standalone starter (client). Run
+the Worker in one terminal, then the starter in another:
+
+  scripts/run-example.sh async go worker    # terminal 1: long-lived Worker
+  scripts/run-example.sh async go starter   # terminal 2: starts one Workflow
+
+role is ignored for labs that are not split (e.g. saga/aws run the Worker and
+are driven from the Temporal CLI; testing/replay run a test suite).
 
 Examples:
   scripts/run-example.sh hello
   scripts/run-example.sh connect      # env-driven: Docker (1.2b) or Cloud (1.2c)
-  scripts/run-example.sh async        # Java (default)
+  scripts/run-example.sh async        # Java (default), Worker role
   scripts/run-example.sh async python # same lab, Python SDK
   scripts/run-example.sh async go     # same lab, Go SDK
   scripts/run-example.sh approval
@@ -28,13 +38,21 @@ Use scripts/list-examples.sh to see all examples.
 EOF
 }
 
-if [[ $# -lt 1 || $# -gt 2 ]]; then
+if [[ $# -lt 1 || $# -gt 3 ]]; then
   usage
   exit 2
 fi
 
 EXAMPLE="$1"
 LANG_CHOICE="${2:-java}"
+ROLE="${3:-worker}"
+case "$ROLE" in
+  worker|starter) ;;
+  *)
+    echo "Unknown role: $ROLE (use worker or starter)" >&2
+    exit 2
+    ;;
+esac
 DIR=""
 MODE="exec"
 MAIN_CLASS=""
@@ -123,6 +141,16 @@ case "$LANG_CHOICE" in
       echo "Maven is required. See Setup.md." >&2
       exit 1
     fi
+    # For split labs the Worker is the pom's default mainClass (a *Worker class);
+    # the starter is the matching *Starter class. Derive it so `role starter`
+    # works without per-lab config.
+    if [[ "$ROLE" == "starter" ]]; then
+      WORKER_CLASS="$MAIN_CLASS"
+      if [[ -z "$WORKER_CLASS" ]]; then
+        WORKER_CLASS="$(sed -n 's:.*<mainClass>\(.*\)</mainClass>.*:\1:p' pom.xml | head -1)"
+      fi
+      MAIN_CLASS="${WORKER_CLASS/%Worker/Starter}"
+    fi
     case "$MODE" in
       exec)
         if [[ -n "$MAIN_CLASS" ]]; then
@@ -150,11 +178,16 @@ case "$LANG_CHOICE" in
       exit 1
     fi
     cd "$PDIR"
-    # Conventional entrypoints, in order of preference.
+    # Conventional entrypoints, in order of preference. For split labs, prefer
+    # the entry that matches the requested role (worker.py / starter.py).
     ENTRY=""
-    for cand in worker.py main.py starter.py run.py; do
-      [[ -f "$cand" ]] && { ENTRY="$cand"; break; }
-    done
+    if [[ "$ROLE" == "starter" && -f "starter.py" ]]; then
+      ENTRY="starter.py"
+    else
+      for cand in worker.py main.py starter.py run.py; do
+        [[ -f "$cand" ]] && { ENTRY="$cand"; break; }
+      done
+    fi
     if [[ -z "$ENTRY" ]]; then
       echo "No worker.py/main.py entrypoint found in $DIR/python." >&2
       exit 1
@@ -183,7 +216,13 @@ case "$LANG_CHOICE" in
       echo "Go toolchain is required. See Setup.md." >&2
       exit 1
     fi
-    go run .
+    # Split labs have ./worker and ./starter command dirs; older single-binary
+    # labs keep main at the module root (go run .).
+    if [[ -d "$ROLE" ]]; then
+      go run "./$ROLE"
+    else
+      go run .
+    fi
     ;;
   *)
     echo "Unknown lang: $LANG_CHOICE (use java, python, or go)" >&2

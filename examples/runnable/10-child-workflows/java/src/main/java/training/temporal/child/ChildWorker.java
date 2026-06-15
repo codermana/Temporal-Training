@@ -1,13 +1,15 @@
 package training.temporal.child;
 
 import io.temporal.client.WorkflowClient;
-import io.temporal.client.WorkflowOptions;
-import io.temporal.client.WorkflowStub;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
-import java.util.List;
 
+/**
+ * Standalone Worker: registers the parent + child Workflows and polls the
+ * child-workflows Task Queue. Start a run from another terminal with {@link
+ * ChildStarter}.
+ */
 public class ChildWorker {
   private static final String TASK_QUEUE = "child-workflows";
 
@@ -19,22 +21,8 @@ public class ChildWorker {
     Worker worker = factory.newWorker(TASK_QUEUE);
     // Parent and child run on the same Worker here; in production they can poll different queues.
     worker.registerWorkflowImplementationTypes(BatchWorkflowImpl.class, ItemWorkflowImpl.class);
+
     factory.start();
-
-    BatchWorkflow workflow =
-        client.newWorkflowStub(
-            BatchWorkflow.class,
-            WorkflowOptions.newBuilder()
-                .setTaskQueue(TASK_QUEUE)
-                .setWorkflowId("batch-parent-demo")
-                .build());
-
-    WorkflowClient.start(workflow::run, List.of("A", "B", "C"));
-    String result = WorkflowStub.fromTyped(workflow).getResult(String.class);
-    System.out.println("Parent result:\n" + result);
-    System.out.println(
-        "In the Web UI you'll see one parent execution plus child executions item-A / item-B / item-C.");
-
-    factory.shutdown();
+    System.out.println("Worker started on task queue '" + TASK_QUEUE + "'. Ctrl-C to stop.");
   }
 }

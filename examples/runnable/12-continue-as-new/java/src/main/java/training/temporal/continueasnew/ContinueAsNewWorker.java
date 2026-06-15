@@ -1,12 +1,14 @@
 package training.temporal.continueasnew;
 
 import io.temporal.client.WorkflowClient;
-import io.temporal.client.WorkflowOptions;
-import io.temporal.client.WorkflowStub;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
 
+/**
+ * Standalone Worker: registers the Workflow and polls the continue-as-new Task
+ * Queue. Start a run from another terminal with {@link ContinueAsNewStarter}.
+ */
 public class ContinueAsNewWorker {
   private static final String TASK_QUEUE = "continue-as-new";
 
@@ -17,23 +19,8 @@ public class ContinueAsNewWorker {
 
     Worker worker = factory.newWorker(TASK_QUEUE);
     worker.registerWorkflowImplementationTypes(CounterWorkflowImpl.class);
+
     factory.start();
-
-    CounterWorkflow workflow =
-        client.newWorkflowStub(
-            CounterWorkflow.class,
-            WorkflowOptions.newBuilder()
-                .setTaskQueue(TASK_QUEUE)
-                .setWorkflowId("continue-as-new-demo")
-                .build());
-
-    // getResult transparently follows the chain of continue-as-new runs to the final result.
-    WorkflowClient.start(workflow::count, 0);
-    String result = WorkflowStub.fromTyped(workflow).getResult(String.class);
-    System.out.println("Result: " + result);
-    System.out.println(
-        "In the Web UI, the single Workflow ID shows multiple Runs chained by ContinueAsNew.");
-
-    factory.shutdown();
+    System.out.println("Worker started on task queue '" + TASK_QUEUE + "'. Ctrl-C to stop.");
   }
 }

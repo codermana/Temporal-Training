@@ -1,4 +1,5 @@
-"""Run the Worker and kick off one BatchWorkflow, mirroring ChildWorker.java.
+"""Run the child-workflows Worker (standalone). Polls the 'child-workflows' Task
+Queue forever; kick off a Workflow with starter.py in another terminal.
 
     python worker.py        # needs a Temporal dev server on 127.0.0.1:7233
 """
@@ -16,22 +17,13 @@ async def main() -> None:
 
     # Parent and child run on the same Worker here; in production they can poll
     # different queues.
-    async with Worker(
+    worker = Worker(
         client,
         task_queue=TASK_QUEUE,
         workflows=[BatchWorkflow, ItemWorkflow],
-    ):
-        result = await client.execute_workflow(
-            BatchWorkflow.run,
-            ["A", "B", "C"],
-            id="batch-parent-demo",
-            task_queue=TASK_QUEUE,
-        )
-        print("Parent result:\n" + result)
-        print(
-            "In the Web UI you'll see one parent execution plus child executions"
-            " item-A / item-B / item-C."
-        )
+    )
+    print(f"Worker started on task queue '{TASK_QUEUE}'. Ctrl-C to stop.")
+    await worker.run()
 
 
 if __name__ == "__main__":

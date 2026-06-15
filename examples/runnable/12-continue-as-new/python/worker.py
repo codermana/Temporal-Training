@@ -1,9 +1,8 @@
-"""Run the worker and kick off one CounterWorkflow, mirroring ContinueAsNewWorker.java.
+"""Run the continue-as-new counter Worker (standalone). Polls the
+'continue-as-new' Task Queue forever; kick off a Workflow with starter.py in
+another terminal.
 
     python worker.py        # needs a Temporal dev server on 127.0.0.1:7233
-
-get_result transparently follows the chain of continue-as-new runs to the final
-result, so the client sees a single Workflow ID with multiple chained Runs.
 """
 
 import asyncio
@@ -17,17 +16,9 @@ from counter import TASK_QUEUE, CounterWorkflow
 async def main() -> None:
     client = await Client.connect("127.0.0.1:7233")
 
-    async with Worker(client, task_queue=TASK_QUEUE, workflows=[CounterWorkflow]):
-        result = await client.execute_workflow(
-            CounterWorkflow.count,
-            0,
-            id="continue-as-new-demo",
-            task_queue=TASK_QUEUE,
-        )
-        print(f"Result: {result}")
-        print(
-            "In the Web UI, the single Workflow ID shows multiple Runs chained by ContinueAsNew."
-        )
+    worker = Worker(client, task_queue=TASK_QUEUE, workflows=[CounterWorkflow])
+    print(f"Worker started on task queue '{TASK_QUEUE}'. Ctrl-C to stop.")
+    await worker.run()
 
 
 if __name__ == "__main__":

@@ -202,18 +202,32 @@ show: ## Print an example file (FILE=02-reliability/heartbeat_long_activity.java
 
 .PHONY: run-hello run-connect run-async run-approval run-schedules run-kafka run-testing run-saga run-aws
 .PHONY: run-retries run-child run-replay run-continue
+.PHONY: run-hello-starter run-connect-starter run-async-starter run-approval-starter
+.PHONY: run-retries-starter run-child-starter run-continue-starter
 
-run-hello:     ## Day 1: Hello Temporal
+# Split labs ship a standalone Worker and a standalone starter (client). The
+# run-* target launches the long-lived Worker; the run-*-starter target starts
+# one Workflow from a second terminal.
+
+run-hello:     ## Day 1: Hello Temporal (Worker)
 	scripts/run-example.sh hello
+run-hello-starter:    ## Day 1: Hello Temporal (starter)
+	scripts/run-example.sh hello java starter
 
-run-connect:   ## Day 1 variant: env-driven connection (Docker 1.2b / Cloud 1.2c)
+run-connect:   ## Day 1 variant: env-driven connection Worker (Docker 1.2b / Cloud 1.2c)
 	scripts/run-example.sh connect
+run-connect-starter:  ## Day 1 variant: env-driven connection starter
+	scripts/run-example.sh connect java starter
 
-run-async:     ## Day 2 AM: async + parallel activities
+run-async:     ## Day 2 AM: async + parallel activities (Worker)
 	scripts/run-example.sh async
+run-async-starter:    ## Day 2 AM: async + parallel activities (starter)
+	scripts/run-example.sh async java starter
 
-run-approval:  ## Day 2 PM: signals/queries/updates
+run-approval:  ## Day 2 PM: signals/queries/updates (Worker)
 	scripts/run-example.sh approval
+run-approval-starter: ## Day 2 PM: signals/queries/updates (starter)
+	scripts/run-example.sh approval java starter
 
 run-schedules: ## Day 2 PM: Schedules
 	scripts/run-example.sh schedules
@@ -224,23 +238,29 @@ run-kafka:     ## Day 3: Kafka bridge (needs stack-kafka)
 run-testing:   ## Day 4: in-process Workflow tests (no server needed)
 	scripts/run-example.sh testing
 
-run-saga:      ## Day 5: Saga
+run-saga:      ## Day 5: Saga (Worker; start Workflows from the Temporal CLI)
 	scripts/run-example.sh saga
 
 run-aws:       ## Day 6: Import Worker (needs stack-aws + temporal)
 	scripts/run-example.sh aws
 
-run-retries:   ## Day 2: retries + heartbeat (deep-dive runnable)
+run-retries:   ## Day 2: retries + heartbeat (Worker, deep-dive runnable)
 	scripts/run-example.sh retries
+run-retries-starter:  ## Day 2: retries + heartbeat (starter)
+	scripts/run-example.sh retries java starter
 
-run-child:     ## Day 2: child Workflows (deep-dive runnable)
+run-child:     ## Day 2: child Workflows (Worker, deep-dive runnable)
 	scripts/run-example.sh child
+run-child-starter:    ## Day 2: child Workflows (starter)
+	scripts/run-example.sh child java starter
 
 run-replay:    ## Day 1/4: determinism replay test (no server needed)
 	scripts/run-example.sh replay
 
-run-continue:  ## Day 5: continue-as-new (deep-dive runnable)
+run-continue:  ## Day 5: continue-as-new (Worker, deep-dive runnable)
 	scripts/run-example.sh continue
+run-continue-starter: ## Day 5: continue-as-new (starter)
+	scripts/run-example.sh continue java starter
 
 # ---------------------------------------------------------------------------
 # Per-day bundles - bring everything required for that day up / down

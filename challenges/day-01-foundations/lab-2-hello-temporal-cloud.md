@@ -162,15 +162,18 @@ export TEMPORAL_TLS_KEY="/path/to/client.key"
 ## Verification
 
 ```bash
-# from your module (or examples/runnable/01b-hello-temporal-anywhere)
-mvn -q compile exec:java         # or, from the repo root: make run-connect
+# from your module (or examples/runnable/01b-hello-temporal-anywhere) — two terminals
+make run-connect           # terminal A: Worker (or: mvn -q compile exec:java)
+make run-connect-starter   # terminal B: starts the Workflow, prints the greeting
 ```
 
-<details><summary>Under the hood — what <code>make run-connect</code> runs</summary>
+<details><summary>Under the hood — what these run</summary>
 
 ```bash
-cd examples/runnable/01b-hello-temporal-anywhere && mvn -q compile exec:java
-# Env-driven connection via Connections.fromEnv(). Reads:
+cd examples/runnable/01b-hello-temporal-anywhere
+mvn -q compile exec:java                                              # Worker (HelloWorker)
+mvn -q compile exec:java -Dexec.mainClass=training.temporal.hello.HelloStarter  # starter
+# Env-driven connection via Connections.fromEnv(). Both processes read:
 #   TEMPORAL_ADDRESS, TEMPORAL_NAMESPACE, TEMPORAL_API_KEY, TEMPORAL_TLS_CERT, TEMPORAL_TLS_KEY
 # API key path uses the regional endpoint + HTTPS; mTLS uses the *.tmprl.cloud endpoint + PKCS#8 cert/key.
 # With none set it falls back to plaintext 127.0.0.1:7233 / namespace default.
@@ -178,7 +181,8 @@ cd examples/runnable/01b-hello-temporal-anywhere && mvn -q compile exec:java
 
 </details>
 
-Expected: the log prints which mode it connected with, then the greeting string.
+Expected: the Worker logs which mode it connected with and polls; the starter
+(same connection mode) prints the greeting string.
 
 Point the CLI at the same namespace to see the execution:
 

@@ -1,4 +1,5 @@
-"""Run the Worker and kick off one ProcessingWorkflow, mirroring RetriesWorker.java.
+"""Run the ProcessingWorkflow Worker (standalone). Polls the 'retries-heartbeats'
+Task Queue forever; kick off a Workflow with starter.py in another terminal.
 
     python worker.py        # needs a Temporal dev server on 127.0.0.1:7233
 """
@@ -15,23 +16,14 @@ async def main() -> None:
     client = await Client.connect("127.0.0.1:7233")
 
     activities = FlakyActivities()
-    async with Worker(
+    worker = Worker(
         client,
         task_queue=TASK_QUEUE,
         workflows=[ProcessingWorkflow],
         activities=[activities.charge_card, activities.export_large_report],
-    ):
-        result = await client.execute_workflow(
-            ProcessingWorkflow.process,
-            "order-42",
-            id="retries-heartbeats-demo",
-            task_queue=TASK_QUEUE,
-        )
-        print(f"Result: {result}")
-        print(
-            "Open the Web UI and look for two ActivityTaskFailed events before charge_card succeeds,"
-        )
-        print("and the heartbeats recorded on export_large_report.")
+    )
+    print(f"Worker started on task queue '{TASK_QUEUE}'. Ctrl-C to stop.")
+    await worker.run()
 
 
 if __name__ == "__main__":

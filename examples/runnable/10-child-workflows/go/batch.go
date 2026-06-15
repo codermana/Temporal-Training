@@ -1,8 +1,11 @@
-// Package main holds the parent/child lab. The Go equivalent of the Java
+// Package child holds the parent/child lab. The Go equivalent of the Java
 // child-workflows lab. The parent starts one child per item - each with its own
 // stable Workflow ID, so it is separately queryable / signalable / cancelable -
 // then waits for all of them.
-package main
+//
+// The Workflow definitions live here so both standalone commands can import
+// them: ./worker (registers + polls) and ./starter (starts a run).
+package child
 
 import (
 	"strings"

@@ -1,5 +1,10 @@
-// Hello Temporal — the Go equivalent of the Java GreetingWorkflow lab.
-package main
+// Package hello holds the Hello Temporal lab: a Workflow that calls one
+// Activity and returns its greeting. The Go equivalent of the Java
+// GreetingWorkflow lab.
+//
+// The Workflow and Activity definitions live here so both standalone commands
+// can import them: ./worker (registers + polls) and ./starter (starts a run).
+package hello
 
 import (
 	"context"

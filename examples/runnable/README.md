@@ -15,6 +15,22 @@ scripts/run-example.sh hello python   # Python SDK
 scripts/run-example.sh hello go       # Go SDK
 ```
 
+Most labs run the **Worker** and the **client (starter)** as two separate,
+standalone processes — as you'd deploy them in production. Run the Worker in one
+terminal and the starter in another with the optional `role` arg:
+
+```bash
+scripts/run-example.sh hello go worker     # terminal 1: long-lived Worker
+scripts/run-example.sh hello go starter    # terminal 2: starts one Workflow
+```
+
+Per language the split is: Go `go run ./worker` / `go run ./starter` (shared defs
+in a package at the module root); Python `worker.py` / `starter.py`; Java a
+`*Worker` class / a `*Starter` class. A few labs aren't split: `04-schedules`
+and `05-kafka-bridge` are driven differently, `07-saga` and `08-aws-containers`
+run the Worker and are started from the Temporal CLI, and `06-testing` /
+`11-determinism-replay` run a test suite instead.
+
 | Lab | Day | Topic |
 | --- | --- | --- |
 | `01-hello-temporal` | 1 | Workflow + Activity + Worker |

@@ -1017,8 +1017,9 @@ Then pull this repo:
 ```bash
 git clone <this-repo>
 make setup-mac
-make temporal       # in one terminal
-make run-hello      # in another
+make temporal           # one terminal: the dev server
+make run-hello          # another: the Worker
+make run-hello-starter  # a third: starts a Workflow
 ```
 
 <!--

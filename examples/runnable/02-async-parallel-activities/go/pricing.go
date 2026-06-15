@@ -1,7 +1,10 @@
-// Package main holds the order pricing lab: price every SKU in parallel, then
-// sum. The Go equivalent of the Java OrderPricingWorkflow lab. Activities run
-// concurrently because we collect every Future before calling Get on any.
-package main
+// Package parallel holds the order pricing lab: price every SKU in parallel,
+// then sum. The Go equivalent of the Java OrderPricingWorkflow lab. Activities
+// run concurrently because we collect every Future before calling Get on any.
+//
+// The Workflow and Activity definitions live here so both standalone commands
+// can import them: ./worker (registers + polls) and ./starter (starts a run).
+package parallel
 
 import (
 	"context"

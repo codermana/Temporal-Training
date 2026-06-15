@@ -72,8 +72,9 @@ and one `lab-N-*.md` per hands-on exercise.
   | `make stack-obs` | `docker compose -f docker/compose.observability.yml up -d` (Prometheus :9091 + Grafana :3000) |
   | `make stack-aws` | `docker compose -f docker/compose.localstack.yml up -d` (LocalStack on :4566) |
   | `make stack-down` | `docker compose -f <files> down -v` (tears down + removes volumes) |
-  | `make run-<name>` | `cd examples/runnable/<module> && mvn -q compile exec:java` (see `scripts/run-example.sh`) |
-  | `make run-connect` | the env-driven worker — reads `TEMPORAL_ADDRESS` / `TEMPORAL_NAMESPACE` / `TEMPORAL_API_KEY` / `TEMPORAL_TLS_CERT` / `TEMPORAL_TLS_KEY`; defaults to plaintext `127.0.0.1:7233` / `default` |
+  | `make run-<name>` | runs the lab's **Worker** (`cd examples/runnable/<module> && mvn -q compile exec:java`; see `scripts/run-example.sh`) |
+  | `make run-<name>-starter` | runs the lab's standalone **starter** (client) in a second terminal, for the split labs (`hello`, `connect`, `async`, `approval`, `retries`, `child`, `continue`) |
+  | `make run-connect` | the env-driven Worker — reads `TEMPORAL_ADDRESS` / `TEMPORAL_NAMESPACE` / `TEMPORAL_API_KEY` / `TEMPORAL_TLS_CERT` / `TEMPORAL_TLS_KEY`; defaults to plaintext `127.0.0.1:7233` / `default` (start a Workflow with `make run-connect-starter`) |
   | `make run-testing`, `run-replay` | `mvn -q test` in the module (no server needed) |
   | `make start-workflow QUEUE=q ID=n` | `temporal workflow start --task-queue q --type ImportWorkflow --workflow-id importworkflow-n --input "..."` |
   | `make kafka-topic TOPIC=t` | `docker exec temporal-training-kafka .../kafka-topics.sh --bootstrap-server localhost:9092 --create --topic t ...` |

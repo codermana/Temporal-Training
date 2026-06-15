@@ -1,5 +1,10 @@
-// Env-driven Hello Temporal (Lab 1.2b Docker / 1.2c Cloud), Go version.
-package main
+// Package hello holds the env-driven Hello lab (Lab 1.2b Docker / 1.2c Cloud),
+// Go version. The connection is built from environment variables so the same
+// code targets a local dev server, a Dockerized cluster, or Temporal Cloud.
+//
+// The Workflow and Activity definitions live here so both standalone commands
+// can import them: ./worker (registers + polls) and ./starter (starts a run).
+package hello
 
 import (
 	"context"

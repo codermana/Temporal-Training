@@ -12,28 +12,67 @@ code change. The connection mode is chosen by which variables are set:
 
 Shared: `TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE` (default `default`).
 
-## Run
+The Worker and the client (starter) are **separate, standalone processes** — as
+they are in production. They never talk to each other directly; both only talk
+to the Temporal server, agreeing on a Task Queue name and the Workflow
+definition. Run the Worker in one terminal and the starter in another. Order
+doesn't matter: start the Workflow first and the server holds it on the queue
+until a Worker polls. The **same env-driven connection applies to both** — set
+the same `TEMPORAL_*` variables for the Worker and the starter so they dial the
+same server. The starter additionally reads `GREET_NAME` (default `Ada`) to
+choose the greeting input.
+
+## Java (`io.temporal:temporal-sdk`)
 
 ```bash
-# Java
-scripts/run-example.sh connect                       # == cd java && mvn -q compile exec:java
-
-# Python (uv reads pyproject.toml and provisions the env)
-cd python && uv run worker.py
-#   scripts/run-example.sh connect python
-
-# Go
-cd go && go run .
-#   scripts/run-example.sh connect go
+cd java
+mvn -q compile exec:java                                       # terminal 1: Worker (default mainClass)
+mvn -q compile exec:java -Dexec.mainClass=training.temporal.hello.HelloStarter   # terminal 2: starts one Workflow
 ```
 
-Cloud example:
+Entry points: `java/.../hello/HelloWorker.java` (Worker) and `HelloStarter.java`
+(client). Workflow + Activities are the shared `GreetingWorkflowImpl` /
+`GreetingActivitiesImpl`; the connection is built by `Connections.fromEnv()`.
+
+## Python (`temporalio`)
 
 ```bash
+cd python
+uv run worker.py      # terminal 1: Worker
+uv run starter.py     # terminal 2: starts one Workflow
+```
+
+Entry points: `python/worker.py` and `python/starter.py` (workflow + activity in
+`python/greeting.py`, connection helper in `python/connections.py`).
+
+## Go (`go.temporal.io/sdk`)
+
+```bash
+cd go
+go run ./worker       # terminal 1: Worker
+go run ./starter      # terminal 2: starts one Workflow
+```
+
+Entry points: `go/worker/main.go` and `go/starter/main.go`. The Workflow and
+Activity live in `go/greeting.go` (package `hello`) and the connection helper in
+`go/connections.go`, so both commands import them.
+
+Cloud example (set the same env on **both** the Worker and the starter, in their
+respective terminals):
+
+```bash
+# terminal 1 — Worker
 TEMPORAL_ADDRESS=us-east-1.aws.api.temporal.io:7233 \
 TEMPORAL_NAMESPACE=your-ns.acct \
 TEMPORAL_API_KEY=$(cat key.txt) \
   uv run worker.py
+
+# terminal 2 — starter
+TEMPORAL_ADDRESS=us-east-1.aws.api.temporal.io:7233 \
+TEMPORAL_NAMESPACE=your-ns.acct \
+TEMPORAL_API_KEY=$(cat key.txt) \
+GREET_NAME=Grace \
+  uv run starter.py
 ```
 
 The connection helpers (`Connections.java`, `connections.py`, `connections.go`)

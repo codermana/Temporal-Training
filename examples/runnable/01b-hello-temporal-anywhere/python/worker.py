@@ -1,4 +1,7 @@
-"""Env-driven Hello Temporal (Lab 1.2b Docker / 1.2c Cloud), Python version.
+"""Run the env-driven Hello Worker (standalone). Polls the 'hello-anywhere' Task
+Queue forever; kick off a Workflow with starter.py in another terminal. The
+connection is built from environment variables, so the same Worker targets a
+local dev server, a Dockerized cluster (Lab 1.2b), or Temporal Cloud (Lab 1.2c).
 
     python worker.py
     # local:  (nothing to set — defaults to 127.0.0.1:7233)
@@ -6,7 +9,6 @@
 """
 
 import asyncio
-import os
 
 from temporalio.worker import Worker
 
@@ -17,19 +19,14 @@ from greeting import TASK_QUEUE, GreetingWorkflow, compose_greeting
 async def main() -> None:
     client = await from_env()
 
-    async with Worker(
+    worker = Worker(
         client,
         task_queue=TASK_QUEUE,
         workflows=[GreetingWorkflow],
         activities=[compose_greeting],
-    ):
-        result = await client.execute_workflow(
-            GreetingWorkflow.greet,
-            os.environ.get("GREET_NAME", "Ada"),
-            id="hello-anywhere-demo",
-            task_queue=TASK_QUEUE,
-        )
-        print(result)
+    )
+    print(f"Worker started on task queue '{TASK_QUEUE}'. Ctrl-C to stop.")
+    await worker.run()
 
 
 if __name__ == "__main__":

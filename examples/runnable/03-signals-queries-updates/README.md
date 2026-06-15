@@ -7,8 +7,12 @@ decision, so while it is alive you can:
 - **Update** the attached note (synchronous, *validated*, returns a result),
 - **Signal** an approve/reject decision (fire-and-forget, unblocks the Workflow).
 
-Each entry point starts a long-lived Worker plus one waiting `approval-demo`
-Workflow, then stays running so you can drive it from the CLI.
+The Worker and the client (starter) are **separate, standalone processes** — as
+they are in production. They never talk to each other directly; both only talk
+to the Temporal server, agreeing on a Task Queue name (`approval`) and the
+Workflow definition. Run the Worker in one terminal and the starter in another.
+The starter kicks off one waiting `approval-demo` Workflow; the Worker keeps
+polling so the Workflow stays alive and queryable while you drive it from the CLI.
 
 All three connect to a local dev server. Start one first:
 
@@ -19,28 +23,40 @@ scripts/start-temporal.sh      # or: make temporal
 ## Java (`io.temporal:temporal-sdk`)
 
 ```bash
-cd java && mvn -q compile exec:java
+scripts/run-example.sh approval java worker     # terminal 1: Worker (polls forever)
+scripts/run-example.sh approval java starter    # terminal 2: starts one Workflow
 ```
 
-Entry point: `java/src/main/java/training/temporal/approval/ApprovalWorker.java`.
+Entry points: `java/.../approval/ApprovalWorker.java` (Worker) and
+`ApprovalStarter.java` (client). Workflow lives in `ApprovalWorkflowImpl`.
 
 ## Python (`temporalio`)
 
 ```bash
 cd python
-uv run worker.py
+uv run worker.py      # terminal 1: Worker
+uv run starter.py     # terminal 2: starts one Workflow
+# or, from the repo root:
+#   scripts/run-example.sh approval python worker
+#   scripts/run-example.sh approval python starter
 ```
 
-Entry point: `python/worker.py` (Workflow in `python/approval.py`).
+Entry points: `python/worker.py` and `python/starter.py` (Workflow in
+`python/approval.py`).
 
 ## Go (`go.temporal.io/sdk`)
 
 ```bash
 cd go
-go run .
+go run ./worker       # terminal 1: Worker
+go run ./starter      # terminal 2: starts one Workflow
+# or, from the repo root:
+#   scripts/run-example.sh approval go worker
+#   scripts/run-example.sh approval go starter
 ```
 
-Entry point: `go/main.go` (Workflow in `go/approval.go`).
+Entry points: `go/worker/main.go` and `go/starter/main.go`. The Workflow lives
+in `go/approval.go` (package `approval`) so both commands import it.
 
 ## Drive it from another terminal
 

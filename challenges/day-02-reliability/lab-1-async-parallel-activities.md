@@ -123,9 +123,11 @@ public class OrderPricingWorkflowImpl implements OrderPricingWorkflow {
 }
 ```
 
-**Worker/starter** — fill the registration + start (same shape as Lab 1.2's
-`HelloWorker`). Start the Workflow with, e.g., `List.of("book","lamp","desk")`
-and print the total.
+**Worker + starter** — two separate processes, same shape as Lab 1.2. Fill a
+`PricingWorker` that registers `OrderPricingWorkflowImpl` + `PricingActivitiesImpl`
+and polls the `pricing` Task Queue, and a separate `PricingStarter` that starts
+the Workflow with, e.g., `List.of("book","lamp","desk")` and prints the total.
+Leave the pom's default `mainClass` at `PricingWorker`.
 
 <details><summary><b>Doing this lab in Python or Go?</b> Starter scaffolds</summary>
 
@@ -188,17 +190,21 @@ before you wait on any of them.** Awaiting inside the loop serializes them.
 2. In `total(...)`: map each SKU to `Async.function(activities::price, sku)`,
    collect into a `List<Promise<Integer>>`, block on `Promise.allOf(...).get()`,
    then sum each promise's value.
-3. Register and run; print the total.
+3. Register on the Worker and run it; start the Workflow from the starter and
+   print the total.
 4. Open the Web UI and confirm the Activities ran **concurrently** (their
    scheduled/started times overlap), not one after another.
 
 ## Verification
 
+Worker and starter are separate processes — run them in two terminals:
+
 ```bash
-mvn -q compile exec:java
+mvn -q compile exec:java                                                       # terminal 1: Worker
+mvn -q compile exec:java -Dexec.mainClass=training.temporal.parallel.PricingStarter  # terminal 2: starter
 ```
 
-Expected: prints the summed total (e.g. `Total price: 355` for book+lamp+desk).
+Expected: the starter prints the summed total (e.g. `Total price: 355` for book+lamp+desk).
 In the Web UI history you should see all `ActivityTaskScheduled` events emitted
 in the **same** Workflow Task, before any results come back.
 

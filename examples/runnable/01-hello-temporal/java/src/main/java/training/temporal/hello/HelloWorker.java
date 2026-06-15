@@ -1,12 +1,15 @@
 package training.temporal.hello;
 
 import io.temporal.client.WorkflowClient;
-import io.temporal.client.WorkflowOptions;
-import io.temporal.client.WorkflowStub;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
 
+/**
+ * Standalone Worker: registers the Workflow + Activities and polls the
+ * hello-temporal Task Queue. Start a run from another terminal with {@link
+ * HelloStarter}.
+ */
 public class HelloWorker {
   private static final String TASK_QUEUE = "hello-temporal";
 
@@ -18,21 +21,8 @@ public class HelloWorker {
     Worker worker = factory.newWorker(TASK_QUEUE);
     worker.registerWorkflowImplementationTypes(GreetingWorkflowImpl.class);
     worker.registerActivitiesImplementations(new GreetingActivitiesImpl());
+
     factory.start();
-
-    GreetingWorkflow workflow =
-        client.newWorkflowStub(
-            GreetingWorkflow.class,
-            WorkflowOptions.newBuilder()
-                .setTaskQueue(TASK_QUEUE)
-                .setWorkflowId("hello-temporal-demo")
-                .build());
-
-    WorkflowClient.start(workflow::greet, "Ada");
-    String result = WorkflowStub.fromTyped(workflow).getResult(String.class);
-    System.out.println(result);
-
-    factory.shutdown();
+    System.out.println("Worker started on task queue '" + TASK_QUEUE + "'. Ctrl-C to stop.");
   }
 }
-

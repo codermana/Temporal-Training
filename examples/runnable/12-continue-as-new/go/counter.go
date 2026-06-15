@@ -1,8 +1,11 @@
-// Package main holds the continue-as-new counter lab: process work in bounded
-// batches per run. The Go equivalent of the Java CounterWorkflow lab. Each run
-// processes a small batch, then returns a ContinueAsNew error to start a fresh run
-// with a clean history — carrying forward only what the next run needs.
-package main
+// Package continueasnew holds the continue-as-new counter lab: process work in
+// bounded batches per run. The Go equivalent of the Java CounterWorkflow lab.
+// Each run processes a small batch, then returns a ContinueAsNew error to start
+// a fresh run with a clean history — carrying forward only what the next run needs.
+//
+// The Workflow definition lives here so both standalone commands can import it:
+// ./worker (registers + polls) and ./starter (starts a run).
+package continueasnew
 
 import (
 	"strconv"

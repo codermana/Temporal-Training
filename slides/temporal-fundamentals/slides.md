@@ -468,8 +468,25 @@ Ask: "how would you wait 30 days for an email opt-in today?" Compare to one line
 Challenge → [`day-01-foundations/lab-2-hello-temporal`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-01-foundations/lab-2-hello-temporal.md)
 
 ```bash
-make run-hello
+make run-hello           # terminal 1: the Worker (stays up, polls the queue)
+make run-hello-starter   # terminal 2: the starter — starts one Workflow
 ```
+
+Worker and starter are **separate processes**, as in production — they share only the Task Queue name. Order doesn't matter: start the Workflow first and the server holds it on the queue until a Worker polls.
+
+<!--
+This is the real production topology, not a toy wiring: the Worker is a
+long-lived deployment; the starter is whatever fires work - an HTTP handler, a
+cron, a CLI. Both only ever talk to the server.
+-->
+
+---
+
+<!-- _class: lab -->
+
+###### Lab · Day 1
+
+# Hello Temporal — read the history
 
 1. Workflow appears in the Web UI under `default` namespace.
 2. Click into it; open the Event History tab.
@@ -648,17 +665,20 @@ Challenge → [`day-01-foundations/lab-2-hello-temporal-docker`](https://github.
 Same Workflow, real cluster. Only the **environment** changes:
 
 ```bash
-make stack-temporal     # auto-setup + PostgreSQL + UI on :7233 / :8233
-make run-connect        # one env-driven worker: Connections.fromEnv()
+make stack-temporal       # auto-setup + Postgres + UI on :7233 / :8233
+make run-connect          # terminal 1: env-driven Worker
+make run-connect-starter  # terminal 2: start one Workflow
 ```
 
 - Single binary → **four services + PostgreSQL**, each its own container.
 - No env, no creds → the **plaintext** branch defaults to `127.0.0.1:7233`.
 - State now survives restarts — **durable Postgres**, not in-memory.
 
-> `Connections.fromEnv()` is the shared base; Cloud (next) feeds it credentials and takes the TLS branch.
-
 <!--
+Connections.fromEnv() is the shared base; Cloud (next) feeds it credentials and
+takes the TLS branch. Worker and starter are separate processes, both reading
+the same env.
+
 Mirror of the Cloud slide and built on the SAME worker - here the plaintext
 branch, Cloud the TLS branch. Stop 'make temporal' first; the stack binds :7233.
 Good moment to restart the temporal container and show the Workflow survived.
@@ -674,21 +694,21 @@ Good moment to restart the temporal container and show the Workflow survived.
 
 Challenge → [`day-01-foundations/lab-2-hello-temporal-cloud`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-01-foundations/lab-2-hello-temporal-cloud.md)
 
-Same worker as Docker — feed `Connections.fromEnv()` credentials and it takes the TLS branch:
+Same worker — Cloud creds make `Connections.fromEnv()` take the TLS branch:
 
 ```bash
 export TEMPORAL_ADDRESS=...:7233   TEMPORAL_NAMESPACE=my-ns.acct
 export TEMPORAL_API_KEY=...        # or TEMPORAL_TLS_CERT / _KEY
-make run-connect
+make run-connect           # Worker (terminal 1)
+make run-connect-starter   # starter (terminal 2)
 ```
 
-- Plaintext branch → **target + TLS + auth** (API key or mTLS).
 - Set the **namespace** explicitly (`my-ns.acct`), not `default`.
-- The execution lands in the **Cloud** UI, not your laptop.
-
-> Your code is decoupled from the cluster — laptop → Docker → Cloud is all env, not a rewrite.
+- Execution lands in the **Cloud** UI, not your laptop.
 
 <!--
+Punchline to say out loud: laptop -> Docker -> Cloud is all env, not a rewrite.
+
 Optional - demo-only if attendees have no Cloud creds. Same shared module as the
 Docker slide (examples/runnable/01b-hello-temporal-anywhere); with no creds it
 falls back to plaintext, so it still compiles and runs against make temporal.
@@ -877,7 +897,8 @@ Example: examples/02-reliability/partial_failure.java
 Challenge → [`day-02-reliability/lab-1-async-parallel-activities`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-02-reliability/lab-1-async-parallel-activities.md)
 
 ```bash
-make run-async
+make run-async           # terminal 1: the Worker
+make run-async-starter   # terminal 2: start one Workflow
 ```
 
 In the Web UI:
@@ -1107,9 +1128,10 @@ public String currentState() { return state; }
 Challenge → [`day-02-reliability/lab-2-signals-and-queries`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-02-reliability/lab-2-signals-and-queries.md)
 
 ```bash
-make run-approval
+make run-approval           # terminal 1: the Worker (stays up)
+make run-approval-starter   # terminal 2: start the approval-demo Workflow
 
-# in another terminal
+# then drive it from the CLI
 temporal workflow signal --workflow-id approval-demo \
   --name approve --input '"alice"'
 temporal workflow query --workflow-id approval-demo \
@@ -1245,7 +1267,8 @@ return update.getResult();
 Challenge → [`day-02-reliability/lab-3-updates`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-02-reliability/lab-3-updates.md)
 
 ```bash
-make run-approval     # same project; worker stays up
+make run-approval           # Worker stays up
+make run-approval-starter   # start the approval-demo Workflow
 ```
 
 ```bash

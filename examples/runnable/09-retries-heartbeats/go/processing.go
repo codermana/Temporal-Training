@@ -1,8 +1,11 @@
-// Package main holds the retries + heartbeat lab. The Go equivalent of the Java
-// retries lab. ChargeCard fails its first two attempts so the RetryPolicy is
+// Package retries holds the retries + heartbeat lab. The Go equivalent of the
+// Java retries lab. ChargeCard fails its first two attempts so the RetryPolicy is
 // visible in history; ExportLargeReport heartbeats once per page so a Worker
 // restart resumes mid-flight from the last recorded page instead of starting over.
-package main
+//
+// The Workflow and Activity definitions live here so both standalone commands
+// can import them: ./worker (registers + polls) and ./starter (starts a run).
+package retries
 
 import (
 	"context"

@@ -153,13 +153,18 @@ public class GreetingWorkflowImpl implements GreetingWorkflow {
 }
 ```
 
-**`HelloWorker.java`**
+The Worker and the starter (client) are **two separate, standalone
+processes** — exactly as you'd deploy them in production. They never talk to
+each other directly; both connect to the Temporal server and agree on the
+`hello-temporal` Task Queue. You'll run the Worker in one terminal and the
+starter in another.
+
+**`HelloWorker.java`** — the standalone Worker (registers + polls forever):
 
 ```java
 package training.temporal.hello;
 
 import io.temporal.client.WorkflowClient;
-import io.temporal.client.WorkflowOptions;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.worker.WorkerFactory;
 
@@ -176,28 +181,51 @@ public class HelloWorker {
     // TODO 3: register a new GreetingActivitiesImpl() as an activities implementation.
     // TODO 4: start the factory.
 
-    // TODO 5: create a typed workflow stub with WorkflowOptions
-    //         (set the task queue, and a workflowId of your choice).
-    // TODO 6: start it / call greet("Ada"), then print the result.
-
-    factory.shutdown();
+    System.out.println("Worker started on task queue '" + TASK_QUEUE + "'. Ctrl-C to stop.");
   }
 }
 ```
+
+**`HelloStarter.java`** — the standalone client (starts one Workflow, prints
+its result, then exits):
+
+```java
+package training.temporal.hello;
+
+import io.temporal.client.WorkflowClient;
+import io.temporal.serviceclient.WorkflowServiceStubs;
+
+public class HelloStarter {
+  private static final String TASK_QUEUE = "hello-temporal";
+
+  public static void main(String[] args) {
+    WorkflowServiceStubs service = WorkflowServiceStubs.newLocalServiceStubs();
+    WorkflowClient client = WorkflowClient.newInstance(service);
+
+    // TODO 5: create a typed workflow stub with WorkflowOptions
+    //         (set the task queue, and a workflowId of your choice).
+    // TODO 6: call greet("Ada"), print the result, then System.exit(0).
+  }
+}
+```
+
+> The Worker doesn't have `factory.shutdown()` — it stays alive polling the
+> queue. The starter is short-lived: it fires the Workflow and exits.
 
 <details><summary><b>Doing this lab in Python or Go?</b> Starter scaffolds</summary>
 
 Reference solution: [`examples/runnable/01-hello-temporal/python`](../../examples/runnable/01-hello-temporal/python)
 and [`.../go`](../../examples/runnable/01-hello-temporal/go).
 
-**Python** (`temporalio`):
+Same split: the Worker definitions live in a shared module, with a worker
+process and a separate starter process importing them.
+
+**Python** (`temporalio`) — shared defs in `greeting.py`, then `worker.py` and
+`starter.py`:
 
 ```python
-from datetime import timedelta
-import asyncio
+# greeting.py — shared by both processes
 from temporalio import activity, workflow
-from temporalio.client import Client
-from temporalio.worker import Worker
 
 TASK_QUEUE = "hello-temporal"
 
@@ -212,19 +240,25 @@ class GreetingWorkflow:
         # TODO: execute_activity(compose_greeting, name, start_to_close_timeout=...)
         ...
 
+# worker.py — standalone Worker (polls forever)
 async def main() -> None:
     client = await Client.connect("127.0.0.1:7233")
-    async with Worker(client, task_queue=TASK_QUEUE,
-                      workflows=[GreetingWorkflow], activities=[compose_greeting]):
-        # TODO: execute_workflow(GreetingWorkflow.greet, "Ada", id=..., task_queue=TASK_QUEUE)
-        ...
+    worker = Worker(client, task_queue=TASK_QUEUE,
+                    workflows=[GreetingWorkflow], activities=[compose_greeting])
+    print(f"Worker started on task queue '{TASK_QUEUE}'. Ctrl-C to stop.")
+    await worker.run()
 
-asyncio.run(main())
+# starter.py — standalone client (starts one Workflow, prints, exits)
+async def main() -> None:
+    client = await Client.connect("127.0.0.1:7233")
+    # TODO: execute_workflow(GreetingWorkflow.greet, "Ada", id=..., task_queue=TASK_QUEUE)
 ```
 
-**Go** (`go.temporal.io/sdk`):
+**Go** (`go.temporal.io/sdk`) — shared defs in a `hello` package, with `./worker`
+and `./starter` command dirs importing it:
 
 ```go
+// greeting.go (package hello) — shared by both commands
 const TaskQueue = "hello-temporal"
 
 func ComposeGreeting(ctx context.Context, name string) (string, error) {
@@ -239,7 +273,8 @@ func GreetingWorkflow(ctx workflow.Context, name string) (string, error) {
     // TODO: ExecuteActivity(ctx, ComposeGreeting, name).Get(ctx, &greeting)
     return greeting, nil
 }
-// In main(): client.Dial → worker.New + Register* → w.Start() → ExecuteWorkflow → run.Get
+// worker/main.go:  client.Dial → worker.New + Register* → w.Run(worker.InterruptCh())
+// starter/main.go: client.Dial → ExecuteWorkflow → run.Get → print
 ```
 
 The three pieces — Workflow, Activity, Worker — are the same everywhere; only the
@@ -253,19 +288,27 @@ SDK surface differs.
    Temporal Activity"`.
 2. In `GreetingWorkflowImpl`, build the Activity stub with `ActivityOptions`
    (set a `startToCloseTimeout`, e.g. 10s) and call the Activity from `greet`.
-3. Fill in the six TODOs in `HelloWorker` to register and start the Worker, then
-   start the Workflow and print the result.
-4. Run it and confirm the greeting prints.
-5. Open the Web UI and find your Workflow execution.
+3. Fill in TODOs 1–4 in `HelloWorker` to register and start the Worker.
+4. Fill in TODOs 5–6 in `HelloStarter` to start the Workflow and print the
+   result.
+5. Run the Worker, then the starter, and confirm the greeting prints.
+6. Open the Web UI and find your Workflow execution.
 
 ## Verification
 
+The Worker and starter are separate processes — run them in two terminals:
+
 ```bash
-# Terminal 3, from work/day-01/hello
+# Terminal 3, from work/day-01/hello — the long-lived Worker (default mainClass)
 mvn -q compile exec:java
+
+# Terminal 4, from work/day-01/hello — the starter
+mvn -q compile exec:java -Dexec.mainClass=training.temporal.hello.HelloStarter
 ```
 
-Expected: the greeting string prints to stdout. Then:
+Expected: the starter prints the greeting string to stdout. (Order doesn't
+matter — start the Workflow first and the server holds it on the queue until the
+Worker polls.) Then:
 
 ```bash
 temporal workflow list                 # your workflow appears, Status Completed
@@ -277,8 +320,9 @@ an `ActivityTaskScheduled`/`Started`/`Completed` trio, and
 
 ## Definition of done
 
-- [ ] Worker starts and polls the `hello-temporal` Task Queue.
-- [ ] Running the program prints the greeting.
+- [ ] The Worker starts and polls the `hello-temporal` Task Queue (and stays up).
+- [ ] The starter is a separate process that starts the Workflow and prints the
+      greeting.
 - [ ] The Workflow shows **Completed** in `temporal workflow list` and the UI.
 - [ ] The greeting was produced by the Activity, called via the stub (not a
       direct method call on the impl).

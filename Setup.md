@@ -224,7 +224,16 @@ argument:
 
 ```bash
 scripts/run-example.sh hello python   # runs python/worker.py via uv
-scripts/run-example.sh hello go        # runs go/main.go via `go run .`
+scripts/run-example.sh hello go        # runs the Go Worker via `go run ./worker`
+```
+
+Most labs split the Worker and the client (starter) into two standalone
+processes. Add a `role` (`worker` default, or `starter`) as a third argument and
+run each in its own terminal:
+
+```bash
+scripts/run-example.sh hello go worker     # terminal 1: long-lived Worker
+scripts/run-example.sh hello go starter    # terminal 2: starts one Workflow
 ```
 
 Toolchains (only needed for the language you use):
@@ -234,8 +243,9 @@ Toolchains (only needed for the language you use):
   manual `venv`/`pip`. Install: `brew install uv` (macOS) or
   `curl -LsSf https://astral.sh/uv/install.sh | sh`. Then, in any lab:
   `cd python && uv run worker.py` (or `uv run pytest` for the testing labs).
-- **Go** — install Go 1.23+ (`brew install go`). Then `cd go && go run .`; the
-  first run resolves the SDK from the committed `go.mod`/`go.sum`.
+- **Go** — install Go 1.23+ (`brew install go`). Then `cd go && go run ./worker`
+  (or `go run .` for the few single-binary labs); the first run resolves the SDK
+  from the committed `go.mod`/`go.sum`.
 
 ## Generate Workflow Load (Day 6 KEDA Demo)
 
