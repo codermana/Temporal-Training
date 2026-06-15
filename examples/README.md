@@ -1,9 +1,24 @@
-# Temporal Java Examples
+# Temporal Examples (Java · Python · Go)
 
 Small examples that line up with the training outline. Most directories are
 explanation snippets: they are meant to be shown during lectures before students
 turn the idea into a complete lab. Runnable mini-projects are included where the
 outline calls for hands-on work.
+
+The course is Java-first, but from **Day 2 onward** each example day is split
+into per-language subfolders so students on other stacks can follow along:
+
+```
+examples/02-reliability/
+  java/    io.temporal:temporal-sdk   (the canonical version)
+  python/  temporalio                 (asyncio)
+  go/      go.temporal.io/sdk
+```
+
+Runnable labs follow the same shape — `examples/runnable/<lab>/{java,python,go}/`
+— each with its own build file (`pom.xml`, `requirements.txt`, `go.mod`). The
+snippets teach one concept and are intentionally incomplete (see **Format**);
+the runnable labs are complete, build, and run against a local dev server.
 
 ## Running
 
@@ -15,17 +30,20 @@ List examples:
 scripts/list-examples.sh
 ```
 
-Show a teaching snippet:
+Show a teaching snippet (the path includes the language subfolder):
 
 ```bash
-scripts/show-example.sh 02-reliability/heartbeat_long_activity.java
+scripts/show-example.sh 02-reliability/java/heartbeat_long_activity.java
+scripts/show-example.sh 02-reliability/go/heartbeat_long_activity.go
 ```
 
-Run a Maven example:
+Run a runnable example — Java by default, or pass a language:
 
 ```bash
 scripts/start-temporal.sh
-scripts/run-example.sh hello
+scripts/run-example.sh hello            # Java
+scripts/run-example.sh async python     # same lab, Python SDK
+scripts/run-example.sh async go         # same lab, Go SDK
 ```
 
 ## Map to the Outline
@@ -43,4 +61,8 @@ scripts/run-example.sh hello
 
 Snippet files intentionally optimize for teaching clarity over complete
 application structure. They often omit package declarations, imports, or concrete
-infrastructure setup so the important Temporal concept stays visible.
+infrastructure setup so the important Temporal concept stays visible. This holds
+in every language: the Python and Go snippets reference activity functions that
+aren't defined in the file, the same way the Java snippets assume their
+interfaces exist. The **runnable** projects, by contrast, are complete and
+compile/run as-is.

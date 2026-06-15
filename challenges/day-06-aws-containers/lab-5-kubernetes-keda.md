@@ -141,6 +141,41 @@ kubectl create configmap temporal-worker-config \
   --from-literal=temporal-namespace=default
 ```
 
+<details><summary><b>Doing this lab in Python or Go?</b> Manifest scaffolds</summary>
+
+The `Deployment` and `ScaledObject` are **language-neutral** — KEDA's Temporal
+scaler watches Task Queue backlog on the server, not the Worker process, so the
+same `ScaledObject` works for any image. Two things change per language:
+
+1. **The image** you build and `kind load` (Java fat-JAR vs Python vs Go — see
+   the per-language Dockerfiles in
+   [`examples/runnable/08-aws-containers`](../../examples/runnable/08-aws-containers)).
+2. **The exec probe's process name**, since the Worker is not an HTTP server:
+
+```yaml
+# Java
+readinessProbe:
+  exec: { command: ["sh", "-c", "pgrep -f worker.jar > /dev/null"] }
+# Python
+readinessProbe:
+  exec: { command: ["sh", "-c", "pgrep -f worker.py > /dev/null"] }
+# Go (the binary is named "worker")
+readinessProbe:
+  exec: { command: ["sh", "-c", "pgrep -f '^/worker' > /dev/null"] }
+```
+
+Everything else — `maxUnavailable: 0`, `terminationGracePeriodSeconds` aligned
+with your longest `startToCloseTimeout`, the KEDA `temporal` trigger on
+`taskQueue: transform` with `queueType: ActivityTaskQueue` — is identical across
+languages. (Or add an HTTP `/health` endpoint in any language and switch all
+three to an `httpGet` probe.)
+
+The rule is identical in all three SDKs: **scale on Task Queue backlog, not CPU**,
+and keep Workflow workers at `minReplicaCount ≥ 1` so timers and sticky execution
+keep making progress.
+
+</details>
+
 ## Tasks
 
 1. Complete the Deployment: image (your kind-loaded tag), resources, probes, and

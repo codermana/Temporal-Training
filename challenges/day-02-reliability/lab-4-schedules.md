@@ -92,6 +92,57 @@ You'll also need a Worker polling the `reports` Task Queue and registering
 `DailyReportWorkflowImpl` so scheduled runs actually execute. (Reuse the
 Worker pattern from earlier labs, or run `make`-style in a second `main`.)
 
+<details><summary><b>Doing this lab in Python or Go?</b> Starter scaffolds</summary>
+
+A Schedule = an **action** (which Workflow to start) + a **spec** (when) + a
+**policy** (overlap). The three SDKs expose the same three pieces.
+
+**Python** (`temporalio`) — `client.create_schedule(...)`:
+
+```python
+from temporalio.client import (
+    Client, Schedule, ScheduleActionStartWorkflow, ScheduleSpec,
+    ScheduleCalendarSpec, ScheduleRange, SchedulePolicy, ScheduleOverlapPolicy,
+)
+
+client = await Client.connect("127.0.0.1:7233")
+await client.create_schedule(
+    "daily-sales-report-schedule",
+    Schedule(
+        action=ScheduleActionStartWorkflow(
+            DailyReportWorkflow.run, "daily-sales",
+            id="daily-sales-report", task_queue="reports",
+        ),
+        spec=ScheduleSpec(calendars=[ScheduleCalendarSpec(
+            hour=[ScheduleRange(9)], minute=[ScheduleRange(0)])]),
+        policy=SchedulePolicy(overlap=ScheduleOverlapPolicy.SKIP),  # TODO: try others
+    ),
+)
+```
+
+**Go** (`go.temporal.io/sdk`) — `client.ScheduleClient().Create(...)`:
+
+```go
+_, err := c.ScheduleClient().Create(ctx, client.ScheduleOptions{
+    ID: "daily-sales-report-schedule",
+    Spec: client.ScheduleSpec{
+        Calendars: []client.ScheduleCalendarSpec{{
+            Hour:   []client.ScheduleRange{{Start: 9}},
+            Minute: []client.ScheduleRange{{Start: 0}},
+        }},
+    },
+    Action: &client.ScheduleWorkflowAction{
+        ID: "daily-sales-report", Workflow: DailyReportWorkflow,
+        Args: []any{"daily-sales"}, TaskQueue: "reports",
+    },
+    Overlap: enums.SCHEDULE_OVERLAP_POLICY_SKIP, // TODO: try BUFFER_ONE / ALLOW_ALL
+})
+```
+
+The `temporal schedule ...` CLI commands below are SDK-agnostic.
+
+</details>
+
 ## Tasks
 
 1. Build the action, spec (09:00 daily), and policy; create the Schedule.

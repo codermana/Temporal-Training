@@ -105,6 +105,83 @@ public class OrderSagaWorkflowImpl implements OrderSagaWorkflow {
 **Worker** — register impls on the `orders` Task Queue and stay alive so you can
 start Workflows from the CLI.
 
+<details><summary><b>Doing this lab in Python or Go?</b> Starter scaffolds</summary>
+
+Reference solution: [`examples/runnable/07-saga/python`](../../examples/runnable/07-saga/python)
+and [`.../go`](../../examples/runnable/07-saga/go). Try the TODOs yourself before
+peeking. Neither SDK has a built-in `Saga` helper — you keep the compensation
+stack by hand (a list/slice) and unwind it in reverse on failure.
+
+**Python** (`temporalio`) — manual compensation stack with try/except:
+
+```python
+from datetime import timedelta
+from temporalio import activity, workflow
+from temporalio.common import RetryPolicy
+
+@activity.defn
+async def ship(order_id: str) -> None:
+    if "fail" in order_id.lower():            # fail on demand
+        raise RuntimeError("shipping label service failed")
+# authorize_payment -> "payment-"+id ; reserve_inventory -> "reservation-"+id
+# cancel_payment / restore_inventory / send_failure_notification: log what they undo
+
+@workflow.defn
+class OrderSagaWorkflow:
+    @workflow.run
+    async def process(self, order_id: str) -> str:
+        opts = dict(
+            start_to_close_timeout=timedelta(seconds=30),
+            # IMPORTANT: bound retries or a permanent failure retries forever
+            # and compensation never runs.
+            retry_policy=RetryPolicy(maximum_attempts=3),
+        )
+        compensations: list = []            # each entry: (activity_fn, arg)
+        try:
+            # TODO 1: authorize_payment; append (cancel_payment, payment_id)
+            # TODO 2: reserve_inventory; append (restore_inventory, reservation_id)
+            # TODO 3: await ship(order_id); return "COMPLETED"
+            raise NotImplementedError
+        except Exception as failure:
+            # TODO 4: for fn, arg in reversed(compensations): execute_activity(fn, arg, **opts)
+            # TODO 5: send_failure_notification(order_id, str(failure)); return "COMPENSATED"
+            raise NotImplementedError
+```
+
+**Go** (`go.temporal.io/sdk`) — compensation slice run in reverse on error:
+
+```go
+func Ship(ctx context.Context, orderID string) error {
+    if strings.Contains(strings.ToLower(orderID), "fail") {
+        return errors.New("shipping label service failed")
+    }
+    return nil
+}
+
+func OrderSagaWorkflow(ctx workflow.Context, orderID string) (string, error) {
+    ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+        StartToCloseTimeout: 30 * time.Second,
+        // IMPORTANT: bound retries or compensation never runs.
+        RetryPolicy: &temporal.RetryPolicy{MaximumAttempts: 3},
+    })
+    var compensations []func()
+    compensate := func() {
+        for i := len(compensations) - 1; i >= 0; i-- { compensations[i]() }
+    }
+    // TODO 1: AuthorizePayment; append a closure that runs CancelPayment(paymentID)
+    // TODO 2: ReserveInventory; append a closure that runs RestoreInventory(reservationID)
+    // TODO 3: Ship(orderID); on error -> compensate(), SendFailureNotification, return "COMPENSATED"
+    // TODO 4: success -> return "COMPLETED"
+    return "", nil
+}
+```
+
+The rule is identical in all three SDKs: **register a compensation only after its
+forward step succeeds, and unwind in reverse on failure.** Java's `Saga` helper
+automates the stack; Python/Go do it by hand.
+
+</details>
+
 ## Tasks
 
 1. Implement the Activities (with the `ship` failure trigger).

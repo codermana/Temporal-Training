@@ -7,7 +7,8 @@ if [[ $# -ne 1 ]]; then
   echo "Usage: scripts/show-example.sh <relative-example-path>"
   echo
   echo "Example:"
-  echo "  scripts/show-example.sh 02-reliability/heartbeat_long_activity.java"
+  echo "  scripts/show-example.sh 02-reliability/java/heartbeat_long_activity.java"
+  echo "  scripts/show-example.sh 02-reliability/go/heartbeat_long_activity.go"
   exit 2
 fi
 
@@ -22,6 +23,7 @@ fi
 case "$FILE" in
   *.java) lexer="java" ;;
   *.py) lexer="python" ;;
+  *.go) lexer="go" ;;
   *.sh) lexer="bash" ;;
   *.yaml|*.yml) lexer="yaml" ;;
   *.json) lexer="json" ;;

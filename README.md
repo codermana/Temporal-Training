@@ -13,8 +13,8 @@ to run every lab on a laptop.
 | `outline/detailed.md` | Long-form outline with extra context.                             |
 | `lecture_notes/`    | Per-day instructor notes (talking points, demos, discussion prompts). |
 | `challenges/`       | Hands-on lab instructions (no solutions), day by day. `make challenges` to list. |
-| `examples/`         | Teaching snippets, organized by day.                                |
-| `examples/runnable/`| Maven mini-projects for each lab (reference solutions).             |
+| `examples/`         | Teaching snippets, organized by day — each in `java/`, `python/`, `go/` subfolders. |
+| `examples/runnable/`| Mini-project reference solutions per lab, in Java (`temporal-sdk`), Python (`temporalio`), and Go (`go.temporal.io/sdk`). |
 | `docker/`           | Compose stacks for Kafka, Prometheus + Grafana, LocalStack.         |
 | `scripts/`          | Bash + PowerShell entry points (the recommended way to drive labs). |
 | `Setup.md`          | Detailed install + per-platform setup.                              |

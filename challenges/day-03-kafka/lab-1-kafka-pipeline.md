@@ -159,6 +159,94 @@ package training.temporal.kafka;
 //       Read bootstrap/topics from env with sensible localhost defaults.
 ```
 
+<details><summary><b>Doing this lab in Python or Go?</b> Starter scaffolds</summary>
+
+Reference solution: [`examples/runnable/05-kafka-bridge/python`](../../examples/runnable/05-kafka-bridge/python)
+and [`.../go`](../../examples/runnable/05-kafka-bridge/go). Try the TODOs yourself
+before peeking.
+
+**Python** (`temporalio` + `kafka-python`) — a class-based producer Activity, a
+Signal-fed Workflow, and a consumer bridge that uses `start_signal`:
+
+```python
+from datetime import timedelta
+from temporalio import activity, workflow
+
+class OutcomeActivities:
+    def __init__(self, bootstrap_servers: str, topic: str):
+        from kafka import KafkaProducer
+        self._topic = topic
+        self._producer = KafkaProducer(
+            bootstrap_servers=bootstrap_servers,
+            enable_idempotence=True, acks="all",
+            key_serializer=lambda s: s.encode(), value_serializer=lambda s: s.encode(),
+        )
+
+    @activity.defn
+    async def publish_outcome(self, order_id: str, outcome: str) -> None:
+        # TODO: block on the send so a failure raises and Temporal retries
+        self._producer.send(self._topic, key=order_id, value=outcome).get(timeout=10)
+
+@workflow.defn
+class OrderWorkflow:
+    def __init__(self) -> None:
+        self._events: list[str] = []
+
+    @workflow.run
+    async def run(self, order_id: str) -> str:
+        processed = 0
+        while True:
+            # TODO 1: await workflow.wait_condition(lambda: len(self._events) > 0)
+            # TODO 2: drain self._events, calling execute_activity_method(
+            #         OutcomeActivities.publish_outcome, args=[order_id, f"accepted:{order_id}:{e}"], ...)
+            # TODO 3: after ~1000 processed, workflow.continue_as_new(order_id)
+            raise NotImplementedError
+
+    @workflow.signal
+    def order_event(self, payload: str) -> None:
+        self._events.append(payload)
+
+# Bridge (plain consumer, NOT workflow code): poll the orders topic, then
+#   await client.start_workflow(OrderWorkflow.run, order_id, id=f"order-{order_id}",
+#       task_queue="orders", start_signal="order_event", start_signal_args=[value])
+#   and consumer.commit() ONLY after start_workflow returns.
+```
+
+**Go** (`go.temporal.io/sdk` + `segmentio/kafka-go`) — a Signal-channel Workflow
+and a `SignalWithStartWorkflow` bridge:
+
+```go
+type OutcomeActivities struct{ writer *kafka.Writer }
+
+func (a *OutcomeActivities) PublishOutcome(ctx context.Context, orderID, outcome string) error {
+    // TODO: WriteMessages with RequiredAcks=RequireAll; a failure returns err so Temporal retries
+    return a.writer.WriteMessages(ctx, kafka.Message{Key: []byte(orderID), Value: []byte(outcome)})
+}
+
+func OrderWorkflow(ctx workflow.Context, orderID string) error {
+    ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{StartToCloseTimeout: 10 * time.Second})
+    eventCh := workflow.GetSignalChannel(ctx, "orderEvent")
+    var a *OutcomeActivities
+    for processed := 0; ; processed++ {
+        var payload string
+        eventCh.Receive(ctx, &payload) // blocks until the next signal
+        // TODO 1: ExecuteActivity(ctx, a.PublishOutcome, orderID, "accepted:"+orderID+":"+payload).Get(ctx, nil)
+        // TODO 2: after ~1000, return workflow.NewContinueAsNewError(ctx, OrderWorkflow, orderID)
+        _ = payload
+    }
+}
+
+// Bridge: reader.FetchMessage; c.SignalWithStartWorkflow(ctx, "order-"+id, "orderEvent",
+//   value, StartWorkflowOptions{ID: "order-"+id, TaskQueue: "orders"}, OrderWorkflow, id);
+//   then reader.CommitMessages(ctx, msg) ONLY after the signal lands.
+```
+
+The rules are identical in all three SDKs: **`signalWithStart` (not start) keyed
+by the record key, and commit the offset only after the signal is durably
+accepted.**
+
+</details>
+
 ## Tasks
 
 1. Implement the producer Activity (`KafkaOutcomeActivities`).

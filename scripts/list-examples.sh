@@ -3,8 +3,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-echo "Explanation snippets:"
-find "$ROOT_DIR/examples" -maxdepth 2 -type f \
+echo "Explanation snippets (path includes the language subfolder where present):"
+find "$ROOT_DIR/examples" -maxdepth 3 -type f \
   ! -path "$ROOT_DIR/examples/runnable/*" \
   ! -name "README.md" \
   | sed "s#^$ROOT_DIR/examples/##" \

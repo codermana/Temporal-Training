@@ -93,6 +93,52 @@ class ReminderWorkflowTest {
 }
 ```
 
+<details><summary><b>Doing this lab in Python or Go?</b> Starter scaffolds</summary>
+
+Reference solution: [`examples/runnable/06-testing/python`](../../examples/runnable/06-testing/python)
+and [`.../go`](../../examples/runnable/06-testing/go). Try the TODOs before peeking.
+
+**Python** (`temporalio.testing`) — `start_time_skipping()` skips the sleep; mock
+an Activity by registering a same-named fake `@activity.defn`:
+
+```python
+import uuid
+from temporalio.testing import WorkflowEnvironment
+from temporalio.worker import Worker
+
+async def test_skips_workflow_time():
+    async with await WorkflowEnvironment.start_time_skipping() as env:
+        async with Worker(env.client, task_queue="test-reminder",
+                          workflows=[ReminderWorkflow]):
+            # TODO: execute_workflow(...) — the one-day sleep returns instantly
+            result = await env.client.execute_workflow(
+                ReminderWorkflow.remind_after_one_day, "ship report",
+                id=f"r-{uuid.uuid4()}", task_queue="test-reminder")
+    assert result == "Reminder: ship report"
+```
+
+**Go** (`go.temporal.io/sdk/testsuite`) — `TestWorkflowEnvironment` skips time;
+`env.OnActivity(...).Return(...)` is the testify-mock stand-in for Mockito:
+
+```go
+func TestSkipsWorkflowTime(t *testing.T) {
+    var ts testsuite.WorkflowTestSuite
+    env := ts.NewTestWorkflowEnvironment()
+    // TODO: env.ExecuteWorkflow(ReminderWorkflow, "ship report")
+    require.True(t, env.IsWorkflowCompleted())
+    require.NoError(t, env.GetWorkflowError())
+    var result string
+    require.NoError(t, env.GetWorkflowResult(&result))
+    require.Equal(t, "Reminder: ship report", result)
+}
+```
+
+To mock an Activity: `env.OnActivity(LookupEmail, mock.Anything, "u1").Return("u1@example.com", nil)`
+before `ExecuteWorkflow`. The principle is identical to Java's Mockito test —
+stub the Activity, keep the test hermetic.
+
+</details>
+
 ## Tasks
 
 1. Complete `skipsWorkflowTime` and confirm it passes in **well under a second**

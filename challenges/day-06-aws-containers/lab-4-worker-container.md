@@ -64,6 +64,73 @@ WORKDIR /app
 > If your jar isn't runnable on its own, add the Maven Shade plugin (or set the
 > `Main-Class` manifest) so `java -jar worker.jar` works.
 
+<details><summary><b>Doing this lab in Python or Go?</b> Container scaffolds</summary>
+
+The Worker entrypoint is identical in spirit everywhere — env-driven config, a
+graceful shutdown on `SIGTERM` — but the **container build differs** (fat-JAR vs
+`pip install` vs `go build`). Reference Dockerfiles + workers:
+[`examples/runnable/08-aws-containers/python`](../../examples/runnable/08-aws-containers/python)
+and [`.../go`](../../examples/runnable/08-aws-containers/go).
+
+**Python** — no build stage; install deps and run. `SIGTERM` drains the `async
+with Worker(...)` block on its own:
+
+```dockerfile
+FROM python:3.12-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+ENTRYPOINT ["python", "worker.py"]   # no inbound port to EXPOSE
+```
+
+```python
+# worker.py — env-driven, blocks until SIGTERM, drains gracefully
+import asyncio, os
+from temporalio.client import Client
+from temporalio.worker import Worker
+
+async def main():
+    client = await Client.connect(os.getenv("TEMPORAL_ADDRESS", "127.0.0.1:7233"),
+                                  namespace=os.getenv("TEMPORAL_NAMESPACE", "default"))
+    async with Worker(client, task_queue=os.getenv("TASK_QUEUE", "transform"),
+                      workflows=[ImportWorkflow], activities=[validate, transform, load]):
+        await asyncio.Future()   # block; the worker drains on shutdown
+```
+
+**Go** — multi-stage: build a static binary, ship it on a tiny base. Catch
+`SIGTERM` and `w.Stop()` to drain:
+
+```dockerfile
+FROM golang:1.23 AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 go build -o /worker .
+
+FROM gcr.io/distroless/static-debian12
+COPY --from=build /worker /worker
+ENTRYPOINT ["/worker"]            # no inbound port to EXPOSE
+```
+
+```go
+// main.go — env-driven; block on SIGTERM, then w.Stop() drains in-flight work
+w := worker.New(c, taskQueue, worker.Options{})
+// register workflow + activities ...
+_ = w.Start()
+defer w.Stop()
+stop := make(chan os.Signal, 1)
+signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+<-stop
+```
+
+The rule is identical in all three SDKs: **env-driven config, outbound-only (no
+`EXPOSE`), and a `SIGTERM` handler that drains** rather than aborting mid-Activity.
+For the k8s probe (Lab 6.5), adjust `pgrep -f worker.jar` to `worker.py` / `worker`.
+
+</details>
+
 ## Tasks
 
 1. Make the jar runnable (`java -jar` finds `WorkerMain`).

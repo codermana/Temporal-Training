@@ -93,6 +93,68 @@ public class ImportWorkflowImpl implements ImportWorkflow {
 }
 ```
 
+<details><summary><b>Doing this lab in Python or Go?</b> Starter scaffolds</summary>
+
+Reference ports: [`examples/07-aws-containers/python/step_functions_after_temporal.py`](../../examples/07-aws-containers/python/step_functions_after_temporal.py)
+and [`.../go/step_functions_after_temporal.go`](../../examples/07-aws-containers/go/step_functions_after_temporal.go).
+The JSON state graph becomes straight-line code; `Retry` → retry policy;
+`Catch(NotifyFailure)` → try/except (Python) or a deferred error check (Go).
+
+**Python** (`temporalio`):
+
+```python
+from datetime import timedelta
+from temporalio import workflow
+from temporalio.common import RetryPolicy
+
+@workflow.defn
+class ImportWorkflow:
+    @workflow.run
+    async def run(self, input_s3_uri: str) -> None:
+        opts = dict(
+            start_to_close_timeout=timedelta(minutes=2),
+            retry_policy=RetryPolicy(initial_interval=timedelta(seconds=2),
+                                     backoff_coefficient=2.0, maximum_attempts=3),
+        )
+        try:
+            clean = await workflow.execute_activity(validate, input_s3_uri, **opts)
+            transformed = await workflow.execute_activity(transform, clean, **opts)
+            result = await workflow.execute_activity(load, transformed, **opts)
+            await workflow.execute_activity(notify, result, **opts)        # NotifySuccess
+        except Exception:
+            await workflow.execute_activity(notify, "import failed", **opts)  # Catch -> NotifyFailure
+            raise
+```
+
+**Go** (`go.temporal.io/sdk`):
+
+```go
+func ImportWorkflow(ctx workflow.Context, inputS3URI string) (err error) {
+    ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+        StartToCloseTimeout: 2 * time.Minute,
+        RetryPolicy: &temporal.RetryPolicy{
+            InitialInterval: 2 * time.Second, BackoffCoefficient: 2.0, MaximumAttempts: 3},
+    })
+    var a *ImportActivities
+    defer func() {
+        if err != nil {   // Step Functions Catch(NotifyFailure)
+            _ = workflow.ExecuteActivity(ctx, a.Notify, "import failed").Get(ctx, nil)
+        }
+    }()
+    var clean, transformed, result string
+    if err = workflow.ExecuteActivity(ctx, a.Validate, inputS3URI).Get(ctx, &clean); err != nil { return err }
+    if err = workflow.ExecuteActivity(ctx, a.Transform, clean).Get(ctx, &transformed); err != nil { return err }
+    if err = workflow.ExecuteActivity(ctx, a.Load, transformed).Get(ctx, &result); err != nil { return err }
+    return workflow.ExecuteActivity(ctx, a.Notify, result).Get(ctx, nil)   // NotifySuccess
+}
+```
+
+The rule is identical in all three SDKs: **don't recreate the state-machine
+shape** — `Retry`/`Catch` JSON collapses into a retry policy plus a try/catch, and
+straight-line branching is just an `if`.
+
+</details>
+
 ## Tasks
 
 1. Map each state → Activity call; map `Retry` → `RetryOptions`; map `Catch` →

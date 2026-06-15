@@ -127,6 +127,61 @@ public class OrderPricingWorkflowImpl implements OrderPricingWorkflow {
 `HelloWorker`). Start the Workflow with, e.g., `List.of("book","lamp","desk")`
 and print the total.
 
+<details><summary><b>Doing this lab in Python or Go?</b> Starter scaffolds</summary>
+
+Reference solution: [`examples/runnable/02-async-parallel-activities/python`](../../examples/runnable/02-async-parallel-activities/python)
+and [`.../go`](../../examples/runnable/02-async-parallel-activities/go). Try the
+TODOs yourself before peeking.
+
+**Python** (`temporalio`) — fan out with `asyncio.gather`:
+
+```python
+from datetime import timedelta
+import asyncio
+from temporalio import activity, workflow
+from temporalio.common import RetryPolicy
+
+@activity.defn
+async def price(sku: str) -> int:
+    activity.heartbeat(f"pricing {sku}")
+    # TODO: return a price for the sku (a dict lookup with a default is fine)
+    raise NotImplementedError
+
+@workflow.defn
+class OrderPricingWorkflow:
+    @workflow.run
+    async def total(self, skus: list[str]) -> int:
+        # TODO 1: start one execute_activity(price, sku, ...) per sku (don't await yet)
+        # TODO 2: await asyncio.gather(*...) to join them all
+        # TODO 3: return the sum
+        raise NotImplementedError
+```
+
+**Go** (`go.temporal.io/sdk`) — collect Futures, then `Get` each:
+
+```go
+func Price(ctx context.Context, sku string) (int, error) {
+    activity.RecordHeartbeat(ctx, "pricing "+sku)
+    // TODO: return a price for the sku
+    return 0, nil
+}
+
+func OrderPricingWorkflow(ctx workflow.Context, skus []string) (int, error) {
+    ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+        StartToCloseTimeout: 30 * time.Second,
+        RetryPolicy:         &temporal.RetryPolicy{MaximumAttempts: 3},
+    })
+    // TODO 1: start one workflow.ExecuteActivity(ctx, Price, sku) per sku, collecting Futures
+    // TODO 2: Get each Future and sum
+    return 0, nil
+}
+```
+
+The parallelism rule is identical in all three SDKs: **start every Activity
+before you wait on any of them.** Awaiting inside the loop serializes them.
+
+</details>
+
 ## Tasks
 
 1. Implement `price(...)` with a heartbeat and a price lookup.

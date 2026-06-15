@@ -55,6 +55,63 @@ public class ImportActivitiesImpl implements ImportActivities {
 }
 ```
 
+<details><summary><b>Doing this lab in Python or Go?</b> Starter scaffolds</summary>
+
+Reference ports: [`examples/07-aws-containers/python/s3_reference_payload.py`](../../examples/07-aws-containers/python/s3_reference_payload.py)
+and [`.../go/s3_reference_payload.go`](../../examples/07-aws-containers/go/s3_reference_payload.go).
+Each step returns the **next URI**, never the bytes.
+
+**Python** (`temporalio`) — module-level Activities, lazy `boto3`:
+
+```python
+from temporalio import activity, workflow
+
+@activity.defn
+async def validate(input_s3_uri: str) -> str:
+    s3 = boto3.client("s3")  # import boto3 lazily
+    # read input, write to /validated/, heartbeat, RETURN the new URI (not the bytes)
+    activity.heartbeat("validated")
+    return input_s3_uri.replace("/incoming/", "/validated/")
+# transform: /validated/ -> /transformed/ ; load: read transformed, return row count
+
+@workflow.defn
+class ImportWorkflow:
+    @workflow.run
+    async def run(self, input_s3_uri: str) -> str:
+        from datetime import timedelta
+        opts = dict(start_to_close_timeout=timedelta(minutes=2))
+        validated = await workflow.execute_activity(validate, input_s3_uri, **opts)
+        transformed = await workflow.execute_activity(transform, validated, **opts)
+        rows = await workflow.execute_activity(load, transformed, **opts)
+        return f"{transformed}?rows={rows}"
+```
+
+**Go** (`go.temporal.io/sdk`) — Activities return URIs; the Workflow sequences them:
+
+```go
+func Validate(ctx context.Context, inputS3URI string) (string, error) {
+    activity.RecordHeartbeat(ctx, "validated")
+    // read input, write to /validated/, RETURN the new URI (not the bytes)
+    return strings.Replace(inputS3URI, "/incoming/", "/validated/", 1), nil
+}
+
+func ImportWorkflow(ctx workflow.Context, inputS3URI string) (string, error) {
+    ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{StartToCloseTimeout: 2 * time.Minute})
+    var validated, transformed string
+    var rows int64
+    _ = workflow.ExecuteActivity(ctx, Validate, inputS3URI).Get(ctx, &validated)
+    _ = workflow.ExecuteActivity(ctx, Transform, validated).Get(ctx, &transformed)
+    _ = workflow.ExecuteActivity(ctx, Load, transformed).Get(ctx, &rows)
+    return fmt.Sprintf("%s?rows=%d", transformed, rows), nil
+}
+```
+
+The rule is identical in all three SDKs: **pass S3 references (URIs) between
+steps, never file contents**, so Workflow history stays under the payload-size
+limit.
+
+</details>
+
 ## Tasks
 
 1. Configure an `S3Client` for LocalStack (same endpoint override as Lab 6.1).

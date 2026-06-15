@@ -94,6 +94,87 @@ public class OrderController {
 }
 ```
 
+<details><summary><b>Doing this lab in Python or Go?</b> Starter scaffolds</summary>
+
+Spring Boot autoconfig is **Java-only** — there is no direct equivalent in the
+other SDKs. The idiomatic analogue is:
+
+- **Python:** a FastAPI/Flask **lifespan** that owns the client + worker (no DI
+  container; you register workflows/activities explicitly). See the module factory
+  in [`examples/06-saga-spring/python/worker.py`](../../examples/06-saga-spring/python/worker.py).
+- **Go:** a plain service **`main`** that dials the client, builds the worker, and
+  registers everything. See [`examples/06-saga-spring/go/worker_setup.go`](../../examples/06-saga-spring/go/worker_setup.go).
+
+Reuse the saga itself from Lab 5.1
+([`examples/runnable/07-saga/python`](../../examples/runnable/07-saga/python) /
+[`.../go`](../../examples/runnable/07-saga/go)); this lab only changes the
+*trigger* and *lifecycle*.
+
+**Python** — start the worker in a FastAPI lifespan; trigger via a route:
+
+```python
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from temporalio.client import Client
+from temporalio.worker import Worker
+from saga import OrderSagaWorkflow, authorize_payment, ship  # ...etc
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    client = await Client.connect("127.0.0.1:7233")
+    worker = Worker(client, task_queue="orders",
+                    workflows=[OrderSagaWorkflow],
+                    activities=[authorize_payment, ship])  # ...register all
+    async with worker:          # graceful drain on shutdown is automatic
+        app.state.client = client
+        yield
+
+app = FastAPI(lifespan=lifespan)
+
+@app.post("/orders/{order_id}")            # SYNC: block for the outcome
+async def submit(order_id: str):
+    return await app.state.client.execute_workflow(
+        OrderSagaWorkflow.process, order_id,
+        id=f"order-{order_id}", task_queue="orders")
+
+@app.post("/orders/{order_id}/async")      # ASYNC: start + return id, query later
+async def submit_async(order_id: str):
+    h = await app.state.client.start_workflow(
+        OrderSagaWorkflow.process, order_id,
+        id=f"order-{order_id}", task_queue="orders")
+    return {"workflow_id": h.id}
+```
+
+**Go** — a plain `main` with an HTTP handler that calls the client:
+
+```go
+func main() {
+    c, _ := client.Dial(client.Options{HostPort: "127.0.0.1:7233"})
+    defer c.Close()
+
+    w := worker.New(c, "orders", worker.Options{})
+    w.RegisterWorkflow(OrderSagaWorkflow)
+    w.RegisterActivity(AuthorizePayment) // ...register all
+    _ = w.Start(); defer w.Stop()        // Stop() drains in-flight work
+
+    http.HandleFunc("/orders/", func(rw http.ResponseWriter, req *http.Request) {
+        id := strings.TrimPrefix(req.URL.Path, "/orders/")
+        run, _ := c.ExecuteWorkflow(req.Context(),
+            client.StartWorkflowOptions{ID: "order-" + id, TaskQueue: "orders"},
+            OrderSagaWorkflow, id)
+        var result string
+        _ = run.Get(req.Context(), &result)   // SYNC; use Start + no Get for ASYNC
+        fmt.Fprintln(rw, result)
+    })
+    log.Fatal(http.ListenAndServe(":8080", nil))
+}
+```
+
+**Inject failures** the same way in every SDK: an `orderId` containing `"fail"`
+makes `ship` throw, so compensation fires — no per-language failure flag needed.
+
+</details>
+
 ## Tasks
 
 1. Stand up the Spring app so the Worker registers on the `orders` queue at

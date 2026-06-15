@@ -97,6 +97,66 @@ public class GlueJobActivitiesImpl implements GlueJobActivities {
 Point the `GlueClient` at LocalStack: override the endpoint to
 `http://127.0.0.1:4566` and region `us-east-1` with dummy credentials.
 
+<details><summary><b>Doing this lab in Python or Go?</b> Starter scaffolds</summary>
+
+Reference ports: [`examples/07-aws-containers/python/glue_activity.py`](../../examples/07-aws-containers/python/glue_activity.py)
+and [`.../go/glue_activity.go`](../../examples/07-aws-containers/go/glue_activity.go).
+Try the TODOs yourself before peeking. (`boto3` / `aws-sdk-go-v2` may be absent
+offline — the Temporal-side submit/heartbeat/poll loop is the deliverable.)
+
+**Python** (`temporalio`) — module-level Activity, lazy `boto3`:
+
+```python
+import asyncio
+from datetime import timedelta
+from temporalio import activity
+from temporalio.exceptions import ApplicationError
+
+@activity.defn
+async def run_glue_job(job_name: str, input_s3_uri: str) -> str:
+    glue = boto3.client("glue")  # import boto3 lazily
+    run_id = glue.start_job_run(JobName=job_name, Arguments={"--input": input_s3_uri})["JobRunId"]
+    while True:
+        activity.heartbeat(run_id)
+        state = glue.get_job_run(JobName=job_name, RunId=run_id)["JobRun"]["JobRunState"]
+        if state == "SUCCEEDED":
+            return run_id
+        if state in {"FAILED", "TIMEOUT", "STOPPED"}:
+            raise ApplicationError(f"Glue job {job_name} ended as {state}", type="GlueJobFailed")
+        await asyncio.sleep(timedelta(seconds=15).total_seconds())   # back off between polls
+```
+
+**Go** (`go.temporal.io/sdk`) — heartbeat, then map terminal state to a typed failure:
+
+```go
+func (a *GlueActivities) RunGlueJob(ctx context.Context, jobName, inputS3URI string) (string, error) {
+    runID, err := a.Glue.StartJobRun(ctx, jobName, inputS3URI) // wrap aws-sdk-go-v2 glue
+    if err != nil { return "", err }
+    for {
+        activity.RecordHeartbeat(ctx, runID)
+        state, errMsg, err := a.Glue.JobRunState(ctx, jobName, runID)
+        if err != nil { return "", err }
+        switch state {
+        case "SUCCEEDED":
+            return runID, nil
+        case "FAILED", "TIMEOUT", "STOPPED":
+            return "", temporal.NewApplicationError(
+                fmt.Sprintf("Glue job %s ended as %s: %s", jobName, state, errMsg), "GlueJobFailed")
+        }
+        select {
+        case <-ctx.Done(): return "", ctx.Err()
+        case <-time.After(15 * time.Second):   // back off between polls
+        }
+    }
+}
+```
+
+The rule is identical in all three SDKs: **heartbeat the run id every poll** so a
+Worker restart can resume polling, and **map terminal states** to success vs. a
+typed `ApplicationFailure`/`ApplicationError`.
+
+</details>
+
 ## Tasks
 
 1. Build a `GlueClient` configured for LocalStack.

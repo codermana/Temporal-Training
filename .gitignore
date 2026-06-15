@@ -46,3 +46,28 @@ slides-template/
 
 # End of https://www.toptal.com/developers/gitignore/api/java
 *.pdf
+
+### Python (polyglot examples — temporalio) ###
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+### Go (polyglot examples — go.temporal.io/sdk) ###
+# `go build` in a main-package dir drops an extensionless binary named after the
+# dir. Prefer `go run .`. These get ignored so they never get committed.
+# (go.mod / go.sum ARE committed for reproducible lab builds.)
+examples/**/go/*.test
+*.out
+examples/runnable/*/go/parallel
+examples/runnable/*/go/kafka-bridge
+examples/runnable/*/go/saga
+examples/runnable/*/go/continueasnew
+examples/runnable/*/go/aws
+examples/runnable/*/go/signals-queries-updates
+examples/runnable/*/go/schedules
+examples/runnable/*/go/retries-heartbeats
+examples/runnable/*/go/child-workflows
+examples/runnable/*/go/testing
+examples/runnable/*/go/determinism-replay

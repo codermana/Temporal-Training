@@ -24,6 +24,38 @@ You receive (or pick) a DAG like one of these:
 
 Pick one (or bring a real DAG from your own systems — encouraged).
 
+<details><summary><b>Doing this capstone in Python or Go?</b> Starter scaffolds</summary>
+
+The capstone is language-agnostic — pick the SDK you'll ship in. Two **new
+real-world saga** references are provided in all three languages to copy the shape
+from:
+
+- **Travel booking** (flight → hotel → car, cancel in reverse):
+  [`examples/06-saga-spring/python/travel_booking_saga.py`](../../examples/06-saga-spring/python/travel_booking_saga.py)
+  · [`.../go/travel_booking_saga.go`](../../examples/06-saga-spring/go/travel_booking_saga.go)
+  · [`.../java/saga_compensation.java`](../../examples/06-saga-spring/java/saga_compensation.java)
+- **Money-transfer ledger** (debit → credit, refund on failure):
+  [`.../python/money_transfer_saga.py`](../../examples/06-saga-spring/python/money_transfer_saga.py)
+  · [`.../go/money_transfer_saga.go`](../../examples/06-saga-spring/go/money_transfer_saga.go)
+
+Wiring/lifecycle and triggers follow Lab 5.2's polyglot scaffold (FastAPI/Flask
+lifespan for Python, plain service `main` for Go — Spring Boot autoconfig is
+Java-only). The compensation pattern is identical to Lab 5.1: a manual stack
+(Python `list`) or slice of closures (Go) unwound in reverse.
+
+The `continueAsNew` stretch maps directly:
+- **Python:** `workflow.continue_as_new(args=[...])`
+  — see [`examples/runnable/12-continue-as-new/python`](../../examples/runnable/12-continue-as-new/python).
+- **Go:** `return workflow.NewContinueAsNewError(ctx, Workflow, ...)`
+  — see [`.../12-continue-as-new/go`](../../examples/runnable/12-continue-as-new/go).
+
+For the required **test**, use each SDK's in-process test env:
+`WorkflowEnvironment` (Python, `temporalio.testing`) or
+`testsuite.TestWorkflowEnvironment` (Go) to assert a failure at a chosen step runs
+the correct compensations.
+
+</details>
+
 ## Requirements
 
 Your implementation **must** include:

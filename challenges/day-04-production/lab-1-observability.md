@@ -79,6 +79,65 @@ PrometheusMeterRegistry registry =
 //   (a tiny com.sun.net.httpserver.HttpServer on /metrics is enough).
 ```
 
+<details><summary><b>Doing this lab in Python or Go?</b> Starter scaffolds</summary>
+
+Reference snippets: [`examples/05-production/python`](../../examples/05-production/python)
+(`prometheus_metrics.py`, `custom_activity_metric.py`) and
+[`.../go`](../../examples/05-production/go) (`prometheus_metrics.go`,
+`custom_activity_metric.go`). Neither SDK uses Micrometer — the Core runtime
+exposes Prometheus directly.
+
+**Python** (`temporalio`) — the runtime serves `/metrics` itself; no `HttpServer`:
+
+```python
+from temporalio.client import Client
+from temporalio.runtime import Runtime, TelemetryConfig, PrometheusConfig
+from temporalio import activity
+
+async def make_client() -> Client:
+    # TODO 1: build a Runtime whose TelemetryConfig.metrics is a PrometheusConfig
+    #         bound to the host/port Prometheus scrapes.
+    # TODO 2: pass runtime=... into Client.connect — SDK metrics now flow.
+    runtime = Runtime(telemetry=TelemetryConfig(
+        metrics=PrometheusConfig(bind_address="0.0.0.0:9090")))
+    return await Client.connect("127.0.0.1:7233", runtime=runtime)
+
+@activity.defn
+async def price(sku: str) -> int:
+    # TODO 3: custom metric — same runtime, queryable in Prometheus.
+    activity.metric_meter().create_counter("orders_priced_total").add(1)
+    return 0
+```
+
+**Go** (`go.temporal.io/sdk`) — set a `client.MetricsHandler` (built from the
+`go.temporal.io/sdk/contrib/tally` module + a Prometheus reporter):
+
+```go
+import (
+    "go.temporal.io/sdk/activity"
+    "go.temporal.io/sdk/client"
+)
+
+func makeClient(handler client.MetricsHandler) (client.Client, error) {
+    // TODO 1: build handler from sdktally.NewMetricsHandler(scope) where scope
+    //         uses a tally Prometheus reporter on the scraped port.
+    // TODO 2: pass it as client.Options{MetricsHandler: handler}.
+    return client.Dial(client.Options{HostPort: "127.0.0.1:7233", MetricsHandler: handler})
+}
+
+func Price(ctx context.Context, sku string) (int, error) {
+    // TODO 3: custom metric via the activity's handler.
+    activity.GetMetricsHandler(ctx).Counter("orders_priced_total").Inc(1)
+    return 0, nil
+}
+```
+
+The principle is the same in all three: attach the metrics sink at the
+**client/runtime** level (not the worker), then read your custom Activity metric
+in Prometheus. In Go the resource-based tuner is not exposed; size slots manually.
+
+</details>
+
 ## Tasks
 
 1. Add the dependency and wire `MicrometerClientStatsReporter` into the service

@@ -185,6 +185,68 @@ public class HelloWorker {
 }
 ```
 
+<details><summary><b>Doing this lab in Python or Go?</b> Starter scaffolds</summary>
+
+Reference solution: [`examples/runnable/01-hello-temporal/python`](../../examples/runnable/01-hello-temporal/python)
+and [`.../go`](../../examples/runnable/01-hello-temporal/go).
+
+**Python** (`temporalio`):
+
+```python
+from datetime import timedelta
+import asyncio
+from temporalio import activity, workflow
+from temporalio.client import Client
+from temporalio.worker import Worker
+
+TASK_QUEUE = "hello-temporal"
+
+@activity.defn
+async def compose_greeting(name: str) -> str:
+    return f"Hello, {name} from a Temporal Activity"
+
+@workflow.defn
+class GreetingWorkflow:
+    @workflow.run
+    async def greet(self, name: str) -> str:
+        # TODO: execute_activity(compose_greeting, name, start_to_close_timeout=...)
+        ...
+
+async def main() -> None:
+    client = await Client.connect("127.0.0.1:7233")
+    async with Worker(client, task_queue=TASK_QUEUE,
+                      workflows=[GreetingWorkflow], activities=[compose_greeting]):
+        # TODO: execute_workflow(GreetingWorkflow.greet, "Ada", id=..., task_queue=TASK_QUEUE)
+        ...
+
+asyncio.run(main())
+```
+
+**Go** (`go.temporal.io/sdk`):
+
+```go
+const TaskQueue = "hello-temporal"
+
+func ComposeGreeting(ctx context.Context, name string) (string, error) {
+    return "Hello, " + name + " from a Temporal Activity", nil
+}
+
+func GreetingWorkflow(ctx workflow.Context, name string) (string, error) {
+    ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+        StartToCloseTimeout: 10 * time.Second,
+    })
+    var greeting string
+    // TODO: ExecuteActivity(ctx, ComposeGreeting, name).Get(ctx, &greeting)
+    return greeting, nil
+}
+// In main(): client.Dial → worker.New + Register* → w.Start() → ExecuteWorkflow → run.Get
+```
+
+The three pieces — Workflow, Activity, Worker — are the same everywhere; only the
+SDK surface differs.
+
+</details>
+
 ## Tasks
 
 1. Implement `composeGreeting` to return something like `"Hello, Ada from a

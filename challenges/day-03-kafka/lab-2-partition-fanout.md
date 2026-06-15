@@ -81,6 +81,79 @@ The Activity impl can consume that partition with a `KafkaConsumer` assigned to
 the specific `TopicPartition` (use `assign`, not `subscribe`) and return a count.
 Keep it simple — the focus is the fan-out, not the consumer.
 
+<details><summary><b>Doing this lab in Python or Go?</b> Starter scaffolds</summary>
+
+The capped fan-out pattern from [`examples/04-kafka`](../../examples/04-kafka)
+(`partition_fanout.py` / `.go`) — process partitions in chunks of `MAX_PARALLEL`
+so no more than that many Activities are in flight at once.
+
+**Python** (`temporalio`) — chunked `asyncio.gather`:
+
+```python
+import asyncio
+from datetime import timedelta
+from temporalio import activity, workflow
+
+MAX_PARALLEL = 4
+
+@activity.defn
+async def process_partition(topic: str, partition: int) -> int:
+    # TODO: assign a KafkaConsumer to (topic, partition) and return a count
+    raise NotImplementedError
+
+@workflow.defn
+class PartitionFanoutWorkflow:
+    @workflow.run
+    async def process_all_partitions(self, topic: str, partition_count: int) -> int:
+        total = 0
+        for start in range(0, partition_count, MAX_PARALLEL):
+            chunk = range(start, min(start + MAX_PARALLEL, partition_count))
+            counts = [
+                workflow.execute_activity(
+                    process_partition, args=[topic, p],
+                    start_to_close_timeout=timedelta(minutes=20),
+                )
+                for p in chunk
+            ]
+            # TODO: await asyncio.gather(*counts) and add to total (in chunk order)
+        return total
+```
+
+**Go** (`go.temporal.io/sdk`) — collect Futures per chunk, then `Get` each:
+
+```go
+const MaxParallel = 4
+
+func ProcessPartition(ctx context.Context, topic string, partition int) (int, error) {
+    // TODO: assign a reader to (topic, partition) and return a count
+    return 0, nil
+}
+
+func PartitionFanoutWorkflow(ctx workflow.Context, topic string, partitionCount int) (int, error) {
+    ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{StartToCloseTimeout: 20 * time.Minute})
+    total := 0
+    for start := 0; start < partitionCount; start += MaxParallel {
+        end := start + MaxParallel
+        if end > partitionCount {
+            end = partitionCount
+        }
+        var futures []workflow.Future
+        for p := start; p < end; p++ {
+            futures = append(futures, workflow.ExecuteActivity(ctx, ProcessPartition, topic, p))
+        }
+        // TODO: Get each Future in order and add to total
+        _ = futures
+    }
+    return total, nil
+}
+```
+
+The cap is the point: launch a chunk, join it, accumulate, then start the next —
+never all partitions at once. Sum in a fixed (partition) order so the result is
+replay-stable.
+
+</details>
+
 ## Tasks
 
 1. Implement `processPartition` to read one partition and return a number.

@@ -51,6 +51,55 @@ class ReplayTest {
 }
 ```
 
+<details><summary><b>Doing this lab in Python or Go?</b> Starter scaffolds</summary>
+
+Reference solution: [`examples/runnable/11-determinism-replay/python`](../../examples/runnable/11-determinism-replay/python)
+and [`.../go`](../../examples/runnable/11-determinism-replay/go). Try the TODOs
+before peeking.
+
+**Python** (`temporalio.worker.Replayer`) — record a history, then replay it:
+
+```python
+from temporalio.testing import WorkflowEnvironment
+from temporalio.worker import Replayer, Worker
+
+async def record_history():
+    async with await WorkflowEnvironment.start_time_skipping() as env:
+        async with Worker(env.client, task_queue="replay-demo",
+                          workflows=[DataPipelineWorkflow], activities=[extract, load]):
+            handle = await env.client.start_workflow(
+                DataPipelineWorkflow.run, id="pipeline-1", task_queue="replay-demo")
+            await handle.result()
+            return await handle.fetch_history()
+
+async def test_replays_clean():
+    history = await record_history()
+    # TODO 1: Replayer(workflows=[DataPipelineWorkflow]) — clean.
+    # TODO 2 (break it): replay the reordered impl -> pytest.raises(Exception).
+    await Replayer(workflows=[DataPipelineWorkflow]).replay_workflow(history)
+```
+
+The fix is `workflow.patched("change-id")` (the analogue of `Workflow.getVersion`):
+gate the new path so old histories return the original command stream.
+
+**Go** (`go.temporal.io/sdk/worker.WorkflowReplayer`) — record against an
+in-process dev server, then replay:
+
+```go
+replayer := worker.NewWorkflowReplayer()
+replayer.RegisterWorkflowWithOptions(DataPipelineWorkflow,
+    workflow.RegisterOptions{Name: "DataPipelineWorkflow"})
+// TODO 1: ReplayWorkflowHistory(nil, history) -> require.NoError (clean).
+// TODO 2 (break it): register the reordered impl under the SAME name ->
+//         require.Error (non-determinism caught).
+```
+
+Both impls must register under the **same** Workflow type name. The Go fix is
+`workflow.GetVersion(ctx, "change-id", workflow.DefaultVersion, 1)` — gate the new
+branch so replayed histories keep their recorded order.
+
+</details>
+
 ## Tasks
 
 1. Capture a history JSON from a real execution into `src/test/resources/`.

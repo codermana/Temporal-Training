@@ -132,6 +132,70 @@ alive (`new CountDownLatch(1).await();`) so you can drive it from the CLI.
 Handle `WorkflowExecutionAlreadyStarted` so re-running the Worker reuses the
 execution.
 
+<details><summary><b>Doing this lab in Python or Go?</b> Starter scaffolds</summary>
+
+The shape is the same in every SDK: the Workflow parks on a wait condition;
+a **signal** handler mutates state; a **query** handler reads it (read-only).
+
+**Python** (`temporalio`):
+
+```python
+@workflow.defn
+class ApprovalWorkflow:
+    def __init__(self) -> None:
+        self._status = "WAITING"
+        self._note = "initial request"
+
+    @workflow.run
+    async def run(self, request_id: str) -> str:
+        # TODO: await a condition that the status is APPROVED or REJECTED
+        await workflow.wait_condition(lambda: self._status in ("APPROVED", "REJECTED"))
+        return f"{request_id} {self._status} {self._note}"
+
+    @workflow.signal
+    def approve(self, approver: str) -> None:
+        self._status = f"APPROVED by {approver}"
+
+    @workflow.signal
+    def reject(self, reason: str) -> None:
+        self._status = f"REJECTED: {reason}"
+
+    @workflow.query
+    def current_state(self) -> str:        # read-only: never mutate here
+        return self._status
+```
+
+**Go** (`go.temporal.io/sdk`) — signals arrive on a channel; queries are
+registered handlers:
+
+```go
+func ApprovalWorkflow(ctx workflow.Context, requestID string) (string, error) {
+    status, note := "WAITING", "initial request"
+
+    // Query handler — read-only.
+    _ = workflow.SetQueryHandler(ctx, "currentState", func() (string, error) {
+        return status, nil
+    })
+
+    approve := workflow.GetSignalChannel(ctx, "approve")
+    reject := workflow.GetSignalChannel(ctx, "reject")
+    sel := workflow.NewSelector(ctx)
+    sel.AddReceive(approve, func(c workflow.ReceiveChannel, _ bool) {
+        var who string; c.Receive(ctx, &who); status = "APPROVED by " + who
+    })
+    sel.AddReceive(reject, func(c workflow.ReceiveChannel, _ bool) {
+        var why string; c.Receive(ctx, &why); status = "REJECTED: " + why
+    })
+    sel.Select(ctx) // park until a signal arrives
+    return requestID + " " + status + " " + note, nil
+}
+```
+
+CLI commands (`temporal workflow signal` / `query`) are identical regardless of
+the Worker's language.
+
+</details>
+
 ## Tasks
 
 1. Implement `run` to park on `Workflow.await(() -> /* approved or rejected */)`

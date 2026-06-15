@@ -48,6 +48,48 @@ Continue in the Lab 2.2 module. Replace the two stubbed methods in
 The `@UpdateValidatorMethod(updateName = "changeNote")` annotation on the
 interface already binds this validator to the `changeNote` update.
 
+<details><summary><b>Doing this lab in Python or Go?</b> Starter scaffolds</summary>
+
+An Update is a request/response handler with an optional **validator**. A
+validator that raises rejects the update *before* it is written to history.
+
+**Python** (`temporalio`) — `@workflow.update` with a paired validator:
+
+```python
+    @workflow.update
+    def change_note(self, note: str) -> str:
+        self._note = note
+        return self.current_state()
+
+    @change_note.validator
+    def validate_note(self, note: str) -> None:
+        # raise to reject — nothing is recorded in history
+        if not note or not note.strip():
+            raise ValueError("note must not be blank")
+```
+
+**Go** (`go.temporal.io/sdk`) — register a handler with a validator option:
+
+```go
+    err := workflow.SetUpdateHandlerWithOptions(ctx, "changeNote",
+        func(ctx workflow.Context, note string) (string, error) {
+            noteVar = note
+            return status, nil
+        },
+        workflow.UpdateHandlerOptions{Validator: func(ctx workflow.Context, note string) error {
+            if strings.TrimSpace(note) == "" {
+                return errors.New("note must not be blank") // rejected, not recorded
+            }
+            return nil
+        }},
+    )
+```
+
+The CLI (`temporal workflow update execute --name changeNote ...`) is the same
+across SDKs, including the rejection behavior you verify below.
+
+</details>
+
 ## Tasks
 
 1. Implement `validateNote` to throw `IllegalArgumentException` on a null/blank
