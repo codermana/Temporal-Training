@@ -3,6 +3,7 @@ marp: true
 theme: base
 paginate: true
 size: 16:9
+transition: fade 0.4s
 title: Why Temporal
 description: Durable execution for engineers tired of writing recovery runbooks.
 author: Gaurav Agarwal
@@ -10,6 +11,7 @@ footer: "![CoderMana](assets/codermana.svg)"
 ---
 
 <!-- _class: title -->
+<!-- _transition: coverflow 0.7s -->
 
 ###### Why
 
@@ -190,6 +192,7 @@ Keep it short - orientation, not detail.
 ---
 
 <!-- _class: section -->
+<!-- _transition: slide 0.5s -->
 
 ###### Setup
 
@@ -254,6 +257,7 @@ Closing line is the slogan to repeat: "runbook, not a button."
 ---
 
 <!-- _class: section -->
+<!-- _transition: slide 0.5s -->
 
 ###### Today
 
@@ -384,6 +388,7 @@ the Temporal section.
 ---
 
 <!-- _class: section -->
+<!-- _transition: slide 0.5s -->
 
 ###### Durable Execution
 
@@ -447,19 +452,13 @@ The state lives in the cluster, not on a host."
 
 ```go
 func ProcessOrder(ctx workflow.Context, orderID string) (string, error) {
-  var paymentID string
-  err := workflow.ExecuteActivity(ctx, AuthorizePayment, orderID).
-    Get(ctx, &paymentID)
+  var paymentID, reservationID string
+  err := workflow.ExecuteActivity(ctx, AuthorizePayment, orderID).Get(ctx, &paymentID)
   if err != nil { return "", err }
-
-  var reservationID string
-  err = workflow.ExecuteActivity(ctx, ReserveInventory, orderID).
-    Get(ctx, &reservationID)
+  err = workflow.ExecuteActivity(ctx, ReserveInventory, orderID).Get(ctx, &reservationID)
   if err != nil { return "", err }
-
-  if err := workflow.ExecuteActivity(ctx, Ship, orderID).Get(ctx, nil); err != nil {
-    return "", err
-  }
+  err = workflow.ExecuteActivity(ctx, Ship, orderID).Get(ctx, nil)
+  if err != nil { return "", err }
   return "OK", nil
 }
 ```
@@ -585,6 +584,7 @@ This often confuses people coming from message-queue thinking.
 ---
 
 <!-- _class: section -->
+<!-- _transition: slide 0.5s -->
 
 ###### Concretely
 
@@ -710,6 +710,7 @@ different one) picks up the Workflow and the await unblocks.
 ---
 
 <!-- _class: section -->
+<!-- _transition: slide 0.5s -->
 
 ###### Production
 
@@ -822,6 +823,7 @@ a runbook to recover, it's a Workflow."
 ---
 
 <!-- _class: section -->
+<!-- _transition: slide 0.5s -->
 
 ###### Operations
 
@@ -925,6 +927,7 @@ Online ILT flow:
 ---
 
 <!-- _class: section -->
+<!-- _transition: slide 0.5s -->
 
 ###### Adoption
 

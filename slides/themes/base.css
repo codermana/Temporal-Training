@@ -704,3 +704,55 @@ section.day {
 section.day h6 { font-size: 20px; }
 section.day h1 { font-size: 88px; max-width: 1000px; }
 section.day p  { color: var(--muted); font-size: 28px; max-width: 880px; }
+
+/* ---------------------------------------------------------------------------
+   Motion - on-enter content animation (live HTML / Bespoke deck only)
+   ---------------------------------------------------------------------------
+   Slide-to-slide transitions are driven by the `transition:` directive in each
+   deck's front-matter (see slides.md). This block adds the per-element entrance:
+   headings drop in, body content rises in just behind them, and divider slides
+   (title / section / day / exercise / takeaway) get a slight overshoot "pop".
+
+   Marp's bespoke template intentionally neutralises author keyframe animations
+   on the active slide by force-setting `animation-name: __bespoke_marp__
+   !important` (an undefined keyframe) on every slide descendant. We re-enable
+   them: Marp scopes every theme rule under `div#<deck-id> > svg > foreignObject
+   > section`, so our `section > ...` selectors inherit an ID in their
+   specificity, which out-ranks the guard's three classes. The entrance then
+   replays every time a slide becomes active, because Marp toggles
+   `content-visibility` per slide (hidden -> visible restarts the animation) -
+   suppressing exactly that replay is what the guard was there to do.
+
+   This only affects the live HTML deck; PDF/PPTX exports render the final
+   (settled) frame, so static exports are unchanged.
+   --------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes marpRiseIn {
+    from { opacity: 0; transform: translateY(26px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes marpHeadingIn {
+    from { opacity: 0; transform: translateY(-16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes marpPopIn {
+    from { opacity: 0; transform: scale(0.92); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  /* Body content - rises in, slightly delayed so it trails the heading. */
+  section > :is(p, ul, ol, blockquote, pre, table, img, .content-time-rule) {
+    animation: marpRiseIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both !important;
+  }
+
+  /* Headings - drop in first, no delay. */
+  section > :is(h1, h2, h3, h6) {
+    animation: marpHeadingIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0s both !important;
+  }
+
+  /* Divider / accent slides - the big headline pops with a gentle overshoot. */
+  section:is(.title, .section, .day, .exercise, .takeaway) > :is(h1, h2) {
+    animation: marpPopIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.05s both !important;
+  }
+}
