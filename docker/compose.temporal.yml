@@ -1,0 +1,61 @@
+name: temporal-training-server
+
+# A real multi-service Temporal cluster in Docker: Frontend/History/Matching
+# (temporalio/auto-setup) backed by PostgreSQL, plus the standalone Web UI.
+# Closer to production than `temporal server start-dev` (one binary, in-memory).
+#
+# Binds host :7233 — the SAME gRPC port as `make temporal`, so run EITHER this
+# stack OR the dev server, never both. Your Worker code is identical either way.
+
+services:
+  postgresql:
+    image: postgres:16
+    container_name: temporal-training-postgres
+    environment:
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - temporal-postgres:/var/lib/postgresql/data
+
+  temporal:
+    image: temporalio/auto-setup:1.25.2
+    container_name: temporal-training-frontend
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=postgresql
+    ports:
+      - "7233:7233"
+    healthcheck:
+      test: ["CMD", "temporal", "operator", "cluster", "health", "--address", "temporal:7233"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  temporal-ui:
+    image: temporalio/ui:2.31.2
+    container_name: temporal-training-ui
+    depends_on:
+      temporal:
+        condition: service_healthy
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:8233
+    ports:
+      # Host :8233 → container :8080, matching the dev-server UI port you already know.
+      - "8233:8080"
+
+volumes:
+  temporal-postgres:

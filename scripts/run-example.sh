@@ -9,6 +9,7 @@ Usage: scripts/run-example.sh <example>
 
 Examples:
   scripts/run-example.sh hello
+  scripts/run-example.sh connect      # env-driven: Docker (1.2b) or Cloud (1.2c)
   scripts/run-example.sh async
   scripts/run-example.sh approval
   scripts/run-example.sh schedules
@@ -37,6 +38,12 @@ NEEDS_TEMPORAL="yes"
 case "$EXAMPLE" in
   hello|01|01-hello-temporal)
     DIR="examples/runnable/01-hello-temporal"
+    ;;
+  connect|anywhere|01b|01b-hello-temporal-anywhere)
+    # Env-driven connection (Lab 1.2b Docker / 1.2c Cloud). Skip the local :7233
+    # precheck — TEMPORAL_ADDRESS may point at Docker or Cloud, not localhost.
+    DIR="examples/runnable/01b-hello-temporal-anywhere"
+    NEEDS_TEMPORAL="no"
     ;;
   async|parallel|02|02-async-parallel-activities)
     DIR="examples/runnable/02-async-parallel-activities"

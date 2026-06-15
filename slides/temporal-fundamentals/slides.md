@@ -639,6 +639,65 @@ rebuilds from the persisted history.
 
 <!-- _class: lab -->
 
+###### Lab · Day 1 · optional
+
+# Hello Temporal on Docker
+
+Challenge → [`day-01-foundations/lab-2-hello-temporal-docker`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-01-foundations/lab-2-hello-temporal-docker.md)
+
+Same Workflow, real cluster. Only the **environment** changes:
+
+```bash
+make stack-temporal     # auto-setup + PostgreSQL + UI on :7233 / :8233
+make run-connect        # one env-driven worker: Connections.fromEnv()
+```
+
+- Single binary → **four services + PostgreSQL**, each its own container.
+- No env, no creds → the **plaintext** branch defaults to `127.0.0.1:7233`.
+- State now survives restarts — **durable Postgres**, not in-memory.
+
+> `Connections.fromEnv()` is the shared base; Cloud (next) feeds it credentials and takes the TLS branch.
+
+<!--
+Mirror of the Cloud slide and built on the SAME worker - here the plaintext
+branch, Cloud the TLS branch. Stop 'make temporal' first; the stack binds :7233.
+Good moment to restart the temporal container and show the Workflow survived.
+-->
+
+---
+
+<!-- _class: lab -->
+
+###### Lab · Day 1 · optional
+
+# Hello Temporal on the Cloud
+
+Challenge → [`day-01-foundations/lab-2-hello-temporal-cloud`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-01-foundations/lab-2-hello-temporal-cloud.md)
+
+Same worker as Docker — feed `Connections.fromEnv()` credentials and it takes the TLS branch:
+
+```bash
+export TEMPORAL_ADDRESS=...:7233   TEMPORAL_NAMESPACE=my-ns.acct
+export TEMPORAL_API_KEY=...        # or TEMPORAL_TLS_CERT / _KEY
+make run-connect
+```
+
+- Plaintext branch → **target + TLS + auth** (API key or mTLS).
+- Set the **namespace** explicitly (`my-ns.acct`), not `default`.
+- The execution lands in the **Cloud** UI, not your laptop.
+
+> Your code is decoupled from the cluster — laptop → Docker → Cloud is all env, not a rewrite.
+
+<!--
+Optional - demo-only if attendees have no Cloud creds. Same shared module as the
+Docker slide (examples/runnable/01b-hello-temporal-anywhere); with no creds it
+falls back to plaintext, so it still compiles and runs against make temporal.
+-->
+
+---
+
+<!-- _class: lab -->
+
 ###### Lab · Day 1
 
 # Read the Event History

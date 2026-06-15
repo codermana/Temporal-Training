@@ -120,7 +120,10 @@ ui: ## Open the Temporal Web UI in the default browser
 # Docker stacks (Day 3 Kafka, Day 4 Observability, Day 6 LocalStack)
 # ---------------------------------------------------------------------------
 
-.PHONY: stack-kafka stack-obs stack-aws stack-all stack-down stack-status grafana prometheus localstack
+.PHONY: stack-temporal stack-kafka stack-obs stack-aws stack-all stack-down stack-status grafana prometheus localstack
+
+stack-temporal: ## Day 1 variant: Temporal cluster + PostgreSQL + UI on :7233/:8233 (stop 'make temporal' first)
+	scripts/start-stack.sh temporal up
 
 stack-kafka: ## Day 3: Kafka KRaft broker on :9092
 	scripts/start-stack.sh kafka up
@@ -197,11 +200,14 @@ show: ## Print an example file (FILE=02-reliability/heartbeat_long_activity.java
 	@if [ -z "$(FILE)" ]; then echo "Usage: make show FILE=<path-under-examples>"; exit 2; fi
 	scripts/show-example.sh $(FILE)
 
-.PHONY: run-hello run-async run-approval run-schedules run-kafka run-testing run-saga run-aws
+.PHONY: run-hello run-connect run-async run-approval run-schedules run-kafka run-testing run-saga run-aws
 .PHONY: run-retries run-child run-replay run-continue
 
 run-hello:     ## Day 1: Hello Temporal
 	scripts/run-example.sh hello
+
+run-connect:   ## Day 1 variant: env-driven connection (Docker 1.2b / Cloud 1.2c)
+	scripts/run-example.sh connect
 
 run-async:     ## Day 2 AM: async + parallel activities
 	scripts/run-example.sh async
