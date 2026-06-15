@@ -459,6 +459,86 @@ Ask: "how would you wait 30 days for an email opt-in today?" Compare to one line
 
 ---
 
+# The Event History
+
+A Workflow's state **is** an append-only log of events — what the server
+persists and the Worker replays. A one-Activity run records:
+
+```text
+WorkflowExecutionStarted                  ← input, Task Queue
+WorkflowTaskScheduled / Started / Completed
+ActivityTaskScheduled / Started / Completed
+WorkflowTaskScheduled / Started / Completed
+WorkflowExecutionCompleted                ← result
+```
+
+> If it isn't an event, it didn't happen — this log is the source of truth.
+
+<!--
+This is the artifact event sourcing produces. Don't dissect every event yet
+(that's Lab 1.3) - the goal is that when they open the UI in the next lab, the
+list isn't a wall of noise: they can spot the lifecycle bookends and the
+Activity trio. Each Workflow Task = one "the Worker woke up, decided, recorded."
+-->
+
+---
+
+<!-- _class: image -->
+
+## Web UI — Workflows list
+
+![Temporal Web UI at localhost:8233 showing the Workflows list: four completed GreetingWorkflow executions with Status, Workflow ID, Run ID, and Type columns, plus the left navigation and a Start Workflow button](assets/ui-workflows-list.png)
+
+<!--
+`localhost:8233` opens here. The left rail (Workflows, Schedules, Workers,
+Batch...) is the whole product; Workflows is where you live on Day 1. Walk the
+next slide's columns against this screen.
+-->
+
+---
+
+## Workflows list — what you're seeing
+
+`localhost:8233` → **Workflows**. Every execution, newest first.
+
+- **Status** — `Completed`, `Running`, `Failed`, `Timed Out`, `Terminated`.
+- **Workflow ID** — the ID *you* chose (here, `hello-temporal-demo`).
+- **Run ID** — one server-assigned *attempt* of that ID.
+- **Type** — the Workflow function (`GreetingWorkflow`).
+- **Add Filter** queries by status / type / time.
+- **Start Workflow** launches one straight from the UI.
+
+> Workflow ID is yours and reusable over time; Run ID is one physical execution.
+
+---
+
+<!-- _class: image -->
+
+## Web UI — Event History
+
+![Temporal Web UI Event History tab for hello-temporal-demo: a summary header with Input "Ada" and the greeting Result, then the numbered event table running from WorkflowExecutionStarted up to WorkflowExecutionCompleted](assets/ui-event-history.png)
+
+<!--
+Click any row on the previous screen to land here. Point at Input "Ada" and the
+Result up top, then the numbered event list below. The next slide names the parts.
+-->
+
+---
+
+## Event History — what you're seeing
+
+Click a Workflow → the **Event History** tab.
+
+- **Summary header** — status, Task Queue, **Input** and **Result**, History Size, State Transitions, SDK version.
+- **Event table** — every event numbered (Event ID) with its type and details.
+- The arc runs `WorkflowExecutionStarted` → … → `WorkflowExecutionCompleted`, with the **`ActivityTask*` trio** in the middle.
+- Toggle **All / Compact / JSON**; **Download** the raw history.
+- Same data from the CLI: `temporal workflow show --workflow-id <id>`.
+
+> This is the lab: run Hello Temporal, then find these exact events.
+
+---
+
 <!-- _class: lab -->
 
 ###### Lab · Day 1
@@ -501,6 +581,120 @@ The Workflow completes when the Worker restarts.
 
 This is the most important moment of Day 1.
 -->
+
+---
+
+<!-- _class: code -->
+
+## Wait — two Task Queues in one history?
+
+Each `WorkflowTaskScheduled` event records the Task Queue it was dispatched on — and they differ:
+
+```json
+// event 2 — the first Workflow Task
+"taskQueue": { "name": "hello-temporal", "kind": "TASK_QUEUE_KIND_NORMAL" }
+
+// event 8 — a later Workflow Task
+"taskQueue": {
+  "name":       "Dhruvtara.local:0506aff1-295c-4b05-bf85-1c362f3fffec",
+  "kind":       "TASK_QUEUE_KIND_STICKY",
+  "normalName": "hello-temporal"
+}
+```
+
+- **`name`** — for a *sticky* queue, an auto-generated, per-Worker `host:uuid`.
+- **`normalName`** — the real queue *you* named; what sticky falls back to.
+
+<!--
+This is the #1 "huh?" when people first read a history. They set the queue to
+hello-temporal but see a hostname:uuid on later Workflow Tasks. The next slide
+explains why. JSON is from the Event History "JSON" toggle / `workflow show -o json`.
+-->
+
+---
+
+## Normal vs Sticky Task Queues
+
+- **`NORMAL`** — the durable queue you name. Every Worker on that name competes for its tasks. **All Activities** and the **first** Workflow Task of each run land here.
+- **`STICKY`** — an ephemeral, per-Worker queue the SDK creates automatically. After a Worker runs a Workflow Task it **caches the run in memory**, so the server routes that run's *next* Workflow Tasks back to the **same** Worker — which continues **without replaying** the whole history.
+
+> Sticky is pure Worker optimisation (the "Workflow cache"). You never name one, and Activities are never sticky.
+
+---
+
+## Sticky execution — and its fallback
+
+- Later Workflow Tasks for a run go to its sticky queue **first**.
+- If that Worker is **gone or busy** past `StickyScheduleToStartTimeout` (~5s default), the task **falls back to the normal queue**.
+- Another Worker then picks it up and **replays from event 1** to rebuild state — correctness is never at risk, only the replay shortcut is lost.
+
+> This is exactly why the Workflow survives when you kill the Worker mid-run (the Hello lab's lesson) — the sticky cache is an optimisation, the normal queue + history is the guarantee.
+
+> Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
+
+---
+
+<!-- _class: dense -->
+
+## Workflow ID vs Run ID
+
+| | **Workflow ID** | **Run ID** |
+|---|---|---|
+| Who sets it | **you** | the **server** |
+| Example | `hello-temporal-demo` | `019ecbcd-6981-7b00-…` |
+| Means | the Workflow's **business identity** | **one execution attempt** |
+| Reuse | reusable over time | unique, immutable |
+| New one on | — | retry · continue-as-new · reset |
+
+- Signal / query / cancel / describe target the **Workflow ID** (latest run by default).
+- One Workflow ID → a **chain of Runs**; only **one open** at a time per namespace.
+
+<!--
+The classic Day-1 confusion. Workflow ID is yours and reusable; Run ID is one
+physical attempt. continue-as-new keeps the ID, mints a new Run - the Day-5 lab.
+-->
+
+---
+
+<!-- _class: dense -->
+
+## Three names you'll conflate
+
+| Name | What it is | Here |
+|---|---|---|
+| **Workflow Type** | the Workflow **function / class** | `GreetingWorkflow` |
+| **Workflow ID** | the **instance** you started | `hello-temporal-demo` |
+| **Task Queue** | the **routing** name Workers poll | `hello-temporal` |
+
+- **Type** is recorded from your code as `WorkflowExecutionStarted.workflowType` — the function name (Go) or `@WorkflowMethod` interface (Java).
+- **ID** you pick per run; **Task Queue** wires Workers to work.
+
+> Three independent strings — changing one doesn't touch the others.
+
+<!--
+On the Workflows list: Type column = GreetingWorkflow, Workflow ID column =
+hello-temporal-demo. People assume the Type is the ID, or that the Task Queue
+must match one of them. It doesn't - they're orthogonal.
+-->
+
+---
+
+<!-- _class: dense -->
+
+## "…Completed" — which one?
+
+Three events end in *Completed*; don't conflate them:
+
+| Event | Means |
+|---|---|
+| `WorkflowTaskCompleted` | a **Worker** finished *deciding* — ran your code to the next await |
+| `ActivityTaskCompleted` | one **Activity** returned its result |
+| `WorkflowExecutionCompleted` | the **whole Workflow** finished — the terminal event |
+
+- **Many** `WorkflowTaskCompleted` (one per decision) + one per Activity.
+- Exactly **one** `WorkflowExecutionCompleted`, always last.
+
+> WorkflowTask = "the Worker thought"; ActivityTask = "real work ran."
 
 ---
 
@@ -819,16 +1013,21 @@ String cleanAuditUri = activities.transform(auditUri.get());
 ## Fan-out / fan-in
 
 ```java
+import io.temporal.workflow.Async;
+import io.temporal.workflow.Promise;
+
 List<Promise<Integer>> counts =
     partitions.stream()
         .map(p -> Async.function(activities::processPartition, p))
         .toList();
 
-Promise.allOf(counts).get();
+Promise.allOf(counts).get();                 // wait for every branch
 int total = counts.stream().mapToInt(Promise::get).sum();
 ```
 
-All partitions run in parallel. The Workflow suspends across all of them.
+All partitions run in parallel; the Workflow suspends across all of them.
+
+> Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
 
 <!--
 One JVM hosts tens of thousands of suspended Workflows.
@@ -915,6 +1114,34 @@ Then run and verify their prediction was right (or wrong - even better).
 
 ---
 
+<!-- _class: image -->
+
+## The fan-out, in the history
+
+![Event History for order-pricing-demo, ascending: after a single Workflow Task Completed at event 4, three consecutive Activity Task Scheduled events (5, 6, 7) — each for the Price activity — prove all three SKUs were priced in parallel](assets/ui-async-history.png)
+
+<!--
+This is the proof for lab step 1. Read ascending so events 1-7 are on screen.
+The three ActivityTaskScheduled in a row, under ONE WorkflowTaskCompleted, is the
+whole point - the next slide names the parts.
+-->
+
+---
+
+## What you're seeing
+
+Read the history top-down (Ascending):
+
+- **1–4** — the Workflow starts; the Worker runs its **first Workflow Task**.
+- **5, 6, 7** — three `ActivityTaskScheduled` in a row, all emitted by that *one* Workflow Task → the fan-out is concurrent.
+- **8 onward** — the activities start, complete, and a final Workflow Task closes the run with `WorkflowExecutionCompleted`.
+
+A *sequential* version interleaves schedule → start → complete per item — one Workflow Task each, staggered.
+
+> Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
+
+---
+
 <!-- _class: section -->
 <!-- _transition: slide 0.5s -->
 
@@ -951,6 +1178,9 @@ Open in VSCode: examples/02-reliability/retry_and_timeouts.java, heartbeat_long_
 ## Setting them deliberately
 
 ```java
+import io.temporal.activity.ActivityOptions;
+import io.temporal.common.RetryOptions;
+
 ActivityOptions.newBuilder()
     .setStartToCloseTimeout(Duration.ofMinutes(5))
     .setScheduleToCloseTimeout(Duration.ofMinutes(30))
@@ -972,6 +1202,34 @@ The arithmetic is the lesson.
 
 Bring a calculator if you don't trust the audience to do it on paper.
 -->
+
+---
+
+<!-- _class: image -->
+
+## Retries, live — the Pending Activities tab
+
+![Pending Activities tab of a running Workflow: the ChargeCard Activity is Scheduled, Attempt 2 of 5 with 3 remaining, a Next Retry countdown, and a Last Failure panel showing the GatewayTimeout application error as JSON](assets/ui-pending-activities.png)
+
+<!--
+This is the live view while an Activity is between attempts - the retry counter,
+the next-retry countdown, and the last error. Captured mid-backoff from the
+retries lab (ChargeCard fails twice, then succeeds). Next slide names the fields.
+-->
+
+---
+
+## What you're seeing
+
+While an Activity is retrying, the **Pending Activities** tab is the only place the attempts show up live:
+
+- **Attempt 2 of 5** — the current try vs. `RetryOptions.MaximumAttempts`.
+- **Next Retry** — when the backoff fires (`InitialInterval × BackoffCoefficient`, capped by `MaximumInterval`).
+- **Last Failure** — the error thrown by the previous attempt (here a `GatewayTimeout` application error).
+
+Once the Activity succeeds the panel empties — the **history keeps only the final `ActivityTaskStarted`** (with its `attempt` count + last failure), not one event per retry.
+
+> Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
 
 ---
 
@@ -1312,6 +1570,8 @@ Run: make run-schedules
 <!-- Open in VSCode: examples/03-interactions/schedule_interval.java -->
 
 ```java
+import io.temporal.client.schedules.*;  // Schedule, ScheduleSpec, ScheduleActionStartWorkflow…
+
 Schedule schedule = Schedule.newBuilder()
     .setAction(ScheduleActionStartWorkflow.newBuilder()
         .setWorkflowType(OrdersWorkflow.class)
@@ -1356,6 +1616,32 @@ SchedulePolicy.newBuilder()
 <!--
 Example: examples/03-interactions/schedule_cron_overlap.java
 -->
+
+---
+
+<!-- _class: image -->
+
+## Schedules in the Web UI
+
+![Temporal Web UI Schedule detail for daily-sales-report-schedule: status Running, target Workflow DailyReportWorkflow, a Recent Runs panel, Schedule Input "daily-sales", Schedule Spec "Every day at 9:00 AM UTC", and a list of upcoming run times](assets/ui-schedule-detail.png)
+
+<!--
+The Schedules tab is its own left-rail section, separate from Workflows. Created
+from examples/runnable/04-schedules. Next slide names the parts.
+-->
+
+---
+
+## What you're seeing
+
+The **Schedules** tab (left rail) lists every Schedule; click one for this detail:
+
+- **Spec** — the calendar/interval you set (`Every day at 9:00 AM UTC`) + the **Upcoming Runs** it implies.
+- **Schedule Input** — the argument handed to each run (`"daily-sales"`).
+- **Recent Runs** — what has fired; **Pause** stops firing without deleting the Schedule.
+- A Schedule is a **durable server object** (not a cron line on a box) — it survives redeploys, and `Overlap` decides what happens when a run is still going.
+
+> Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
 
 ---
 
