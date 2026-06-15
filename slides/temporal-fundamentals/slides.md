@@ -539,6 +539,34 @@ Click a Workflow → the **Event History** tab.
 
 ---
 
+<!-- _class: dense -->
+
+## Event History retention
+
+- While a Workflow is **open**, its Event History is the live source of truth.
+- After a Workflow **closes**, history is kept for the Namespace **retention period**.
+- Cleanup is automatic: Temporal schedules a retention timer when the execution closes.
+- The default CLI-created Namespace retention is **3 days**; the minimum is **1 day**.
+- Changing retention affects **newly closed** executions only, not already-closed ones.
+
+> Retention prunes closed histories. It does not shrink a running Workflow's history.
+
+---
+
+<!-- _class: dense -->
+
+## Pruning a growing history
+
+- You do not delete individual events from an open Workflow.
+- Use **Continue-As-New** to checkpoint state and start a fresh Run.
+- Same Workflow ID, new Run ID, new Event History.
+- Use it for long-running Workflows, entity Workflows, and high-event loops.
+- Temporal warns around **10,240 events / 10 MB**; hard limit is **51,200 events / 50 MB**.
+
+> Continue-As-New prunes live history by starting the next run with only the state you pass forward.
+
+---
+
 <!-- _class: lab -->
 
 ###### Lab · Day 1
@@ -2923,6 +2951,31 @@ Open in VSCode: examples/05-production/namespace_strategy.md
 | Different retention SLAs | Separate namespace per retention class |
 
 > Namespace ≠ Task Queue. Task Queue routes work; Namespace bounds it.
+
+---
+
+<!-- _class: code -->
+
+## Namespace retention operations
+
+Retention is Namespace-level policy for **closed** Workflow histories.
+
+```bash
+temporal operator namespace describe --namespace default
+
+temporal operator namespace update \
+  --namespace default \
+  --retention 7d
+
+temporal workflow delete \
+  --namespace default \
+  --workflow-id <workflow-id> \
+  --run-id <run-id>
+```
+
+- Reduce future storage: lower Namespace retention.
+- Remove one closed execution now: `temporal workflow delete`.
+- Preserve old histories externally: enable History Archival.
 
 ---
 
