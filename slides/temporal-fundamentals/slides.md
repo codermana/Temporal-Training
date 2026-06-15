@@ -3373,6 +3373,7 @@ public String process(String orderId) {
 
 * **Orchestration** - one central Workflow coordinates all steps & compensations. Single audit trail. **Temporal's natural shape.**
 * **Choreography** - each service reacts to events, emits its own. No central state.
+* Temporal supports both: a Workflow can be the orchestrator, or one service's durable participant in a larger event choreography.
 
 > For cross-team flows from Airflow + Kafka, orchestration wins.
 
@@ -3381,6 +3382,85 @@ War story: when team #3 silently drops an event in a choreographed flow, nobody
 notices for 36 hours.
 
 Temporal's log shows it immediately.
+-->
+
+---
+
+<!-- _class: dense -->
+
+# Choreography with Temporal
+
+<!-- Open in VSCode: examples/06-saga-spring/java/choreography_bridge.java + python/choreography_bridge.py + go/choreography_bridge.go -->
+
+| Event-choreographed system | Temporal participant |
+| --- | --- |
+| Kafka topic carries facts: `OrderPlaced`, `PaymentCaptured`, `ShipmentFailed` | Workflow owns one business key: `order-123` |
+| Services publish events after local commits | Bridge delivers events with `signalWithStart` |
+| No one process owns the whole company flow | This team still gets durable state, retries, timers, and audit |
+
+> Choreography outside; orchestration inside the Workflow boundary.
+
+<!--
+This is the answer to "does Temporal support choreography?"
+
+Yes, but do not turn every service into one giant shared Workflow. Keep bounded
+contexts independent. Use events at team boundaries, then use Temporal inside a
+team boundary when the service has stateful, retrying, long-running logic.
+-->
+
+---
+
+<!-- _class: dense -->
+
+# Choreography example
+
+Order service owns the order lifecycle, but reacts to events from other teams.
+
+Runnable demo: `examples/runnable/13-choreography`.
+
+```java
+@KafkaListener(topics = "order-domain-events")
+void onEvent(DomainEvent event) {
+  OrderProcessWorkflow workflow = client.newWorkflowStub(
+      OrderProcessWorkflow.class,
+      WorkflowOptions.newBuilder()
+          .setWorkflowId("order-" + event.orderId())
+          .setTaskQueue("orders")
+          .build());
+
+  BatchRequest batch = client.newSignalWithStartRequest();
+  batch.add(workflow::run, event.orderId());
+  batch.add(workflow::onEvent, event);
+  client.signalWithStart(batch);
+}
+```
+
+> The bridge is thin. The Workflow decides what the event means for this order.
+
+<!--
+The listener does not contain business process logic. It makes the event durable
+inside Temporal, then commits the Kafka offset after Temporal accepts it.
+-->
+
+---
+
+<!-- _class: dense -->
+
+# When to choose which
+
+| Choose orchestration when... | Choose choreography when... |
+| --- | --- |
+| One team owns the end-to-end business outcome | Several teams must evolve independently |
+| You need one place for compensations and timeouts | Events are the stable contract between domains |
+| Operators need one execution history to debug | Consumers should be added without changing a central flow |
+| The flow is user-facing or SLA-bound | The flow is naturally eventually consistent |
+
+> Most real systems mix them: events between domains, Workflows inside domains.
+
+<!--
+Avoid presenting this as religion. The useful rule is ownership. If one team
+owns the outcome, orchestrate. If no team should own all downstream behavior,
+choreograph between teams and use Temporal locally.
 -->
 
 ---

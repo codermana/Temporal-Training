@@ -201,9 +201,9 @@ show: ## Print an example file (FILE=02-reliability/heartbeat_long_activity.java
 	scripts/show-example.sh $(FILE)
 
 .PHONY: run-hello run-connect run-async run-approval run-schedules run-kafka run-testing run-saga run-aws
-.PHONY: run-retries run-child run-replay run-continue
+.PHONY: run-retries run-child run-replay run-continue run-choreography
 .PHONY: run-hello-starter run-connect-starter run-async-starter run-approval-starter
-.PHONY: run-retries-starter run-child-starter run-continue-starter
+.PHONY: run-retries-starter run-child-starter run-continue-starter run-choreography-starter
 
 # Split labs ship a standalone Worker and a standalone starter (client). The
 # run-* target launches the long-lived Worker; the run-*-starter target starts
@@ -261,6 +261,11 @@ run-continue:  ## Day 5: continue-as-new (Worker, deep-dive runnable)
 	scripts/run-example.sh continue
 run-continue-starter: ## Day 5: continue-as-new (starter)
 	scripts/run-example.sh continue java starter
+
+run-choreography: ## Day 5: choreography participant (Worker)
+	scripts/run-example.sh choreography
+run-choreography-starter: ## Day 5: choreography participant (starter)
+	scripts/run-example.sh choreography java starter
 
 # ---------------------------------------------------------------------------
 # Per-day bundles - bring everything required for that day up / down

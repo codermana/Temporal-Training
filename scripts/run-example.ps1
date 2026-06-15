@@ -21,6 +21,7 @@ Examples:
   scripts/run-example.ps1 child
   scripts/run-example.ps1 replay
   scripts/run-example.ps1 continue
+  scripts/run-example.ps1 choreography
 "@
 }
 
@@ -97,6 +98,10 @@ switch ($example) {
   }
   { $_ -in @("continue", "continueasnew", "can", "12", "12-continue-as-new") } {
     $dir = "examples/runnable/12-continue-as-new"
+    break
+  }
+  { $_ -in @("choreography", "choreo", "13", "13-choreography") } {
+    $dir = "examples/runnable/13-choreography"
     break
   }
   default {

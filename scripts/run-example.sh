@@ -33,6 +33,7 @@ Examples:
   scripts/run-example.sh child
   scripts/run-example.sh replay
   scripts/run-example.sh continue
+  scripts/run-example.sh choreography
 
 Use scripts/list-examples.sh to see all examples.
 EOF
@@ -112,6 +113,9 @@ case "$EXAMPLE" in
     ;;
   continue|continueasnew|can|12|12-continue-as-new)
     DIR="examples/runnable/12-continue-as-new"
+    ;;
+  choreography|choreo|13|13-choreography)
+    DIR="examples/runnable/13-choreography"
     ;;
   *)
     echo "Unknown runnable example: $EXAMPLE" >&2

@@ -46,4 +46,4 @@ run the Worker and are started from the Temporal CLI, and `06-testing` /
 | `10-child-workflows` | 2 | Child Workflows (deep dive) |
 | `11-determinism-replay` | 4 | Replay / non-determinism (deep dive) |
 | `12-continue-as-new` | 5 | Continue-as-new (deep dive) |
-
+| `13-choreography` | 5 | Event choreography with a durable Temporal participant |

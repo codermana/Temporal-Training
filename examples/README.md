@@ -53,9 +53,9 @@ scripts/run-example.sh async go         # same lab, Go SDK
 - `03-interactions`: Signals, Queries, Updates, Schedules, workflow timeouts, Child Workflows.
 - `04-kafka`: Kafka bridge, Kafka Activity, producer Activity, partition fan-out, DLQ routing.
 - `05-production`: Versioning, worker sizing, observability, namespaces, replay testing.
-- `06-saga-spring`: Saga compensation, sync/async Saga APIs, Spring bean wiring, continue-as-new.
+- `06-saga-spring`: Saga compensation, sync/async Saga APIs, choreography bridge, Spring bean wiring, continue-as-new.
 - `07-aws-containers`: AWS primitive mapping, Glue wrapper, S3 references, Docker, Kubernetes, KEDA.
-- `runnable`: Complete mini-projects for labs and live demos.
+- `runnable`: Complete mini-projects for labs and live demos, including a choreography participant demo.
 
 ## Format
 
