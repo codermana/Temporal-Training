@@ -113,6 +113,29 @@ make start-workflow QUEUE=transform ID=1 TYPE=ImportWorkflow \
   INPUT="s3://imports-incoming/incoming/orders.csv"
 ```
 
+<details><summary>Under the hood — what <code>make run-aws</code> runs</summary>
+
+```bash
+cd examples/runnable/08-aws-containers && mvn -q compile exec:java \
+  -Dexec.mainClass=training.temporal.aws.WorkerMain
+```
+
+</details>
+
+<details><summary>Under the hood — what <code>make start-workflow</code> runs</summary>
+
+```bash
+temporal workflow start \
+  --task-queue transform \
+  --type ImportWorkflow \
+  --workflow-id importworkflow-1 \
+  --input "\"s3://imports-incoming/incoming/orders.csv\""
+# TYPE defaults to ImportWorkflow; workflow-id is <type-lowercased>-<ID>;
+# INPUT defaults to s3://imports-incoming/synthetic-<ID>.csv.
+```
+
+</details>
+
 Expected: the Workflow runs all four steps; a failing input routes through your
 NotifyFailure path. Everything — inputs, retries, the failure, the notify — is in
 **one** Event History.

@@ -25,6 +25,18 @@ human" pattern that Airflow sensors fake with polling.
 
 - Day 1 complete; `make temporal` running.
 
+<details><summary>Under the hood — what <code>make temporal</code> runs</summary>
+
+```bash
+temporal server start-dev \
+  --ip 127.0.0.1 --port 7233 --ui-port 8233 --metrics-port 7234
+```
+
+gRPC on 127.0.0.1:7233, Web UI http://127.0.0.1:8233, metrics on :7234.
+Overridable via env: `TEMPORAL_HOST`, `TEMPORAL_PORT`, `TEMPORAL_UI_PORT`, `TEMPORAL_METRICS_PORT`.
+
+</details>
+
 ## Starter code
 
 Scaffold a module in `training.temporal.approval` (reuse the Lab 1.2 `pom.xml`;

@@ -115,7 +115,17 @@ start Workflows from the CLI.
 
 ```bash
 make run-saga      # Worker on the "orders" queue
+```
 
+<details><summary>Under the hood — what <code>make run-saga</code> runs</summary>
+
+```bash
+cd examples/runnable/07-saga && mvn -q compile exec:java -Dexec.mainClass=training.temporal.saga.SagaWorker
+```
+
+</details>
+
+```bash
 # Happy path -> COMPLETED
 temporal workflow start --task-queue orders --type OrderSagaWorkflow \
   --workflow-id order-OK --input '"order-1001"'

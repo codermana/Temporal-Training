@@ -28,6 +28,17 @@ key, and a producer **Activity** that writes the outcome back.
   make kafka-topic TOPIC=order-outcomes PARTITIONS=4
   ```
 
+  <details><summary>Under the hood — what <code>make kafka-topic</code> runs</summary>
+
+  ```bash
+  docker exec temporal-training-kafka \
+    /opt/bitnami/kafka/bin/kafka-topics.sh \
+    --bootstrap-server localhost:9092 --create --if-not-exists \
+    --topic orders --partitions 4 --replication-factor 1
+  ```
+
+  </details>
+
 ## Starter code
 
 Scaffold a module in `training.temporal.kafka`. The `pom.xml` needs the Temporal
@@ -162,6 +173,18 @@ package training.temporal.kafka;
 make run-kafka      # starts Worker + bridge
 
 # In another terminal: produce an order, key = order id
+```
+
+<details><summary>Under the hood — what <code>make run-kafka</code> runs</summary>
+
+```bash
+cd examples/runnable/05-kafka-bridge && \
+  mvn -q compile exec:java -Dexec.mainClass=training.temporal.kafka.KafkaWorker
+```
+
+</details>
+
+```bash
 echo 'NEW:line-item-A' | kcat -b localhost:9092 -t orders -P -k "order-1"
 
 # Consume outcomes

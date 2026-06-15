@@ -109,6 +109,15 @@ class ReminderWorkflowTest {
 mvn -q test
 ```
 
+<details><summary>Under the hood — what <code>make run-testing</code> runs</summary>
+
+```bash
+cd examples/runnable/06-testing && mvn -q test
+# Pure in-process test — no Temporal server needed.
+```
+
+</details>
+
 Expected: green tests, total runtime dominated by JVM/Maven startup — the
 one-day sleep adds no wall-clock time.
 

@@ -25,6 +25,48 @@ make kind-load      # build the Worker image and load it into kind
 make kind-status    # cluster + KEDA + ScaledObject state
 ```
 
+<details><summary>Under the hood — what <code>make temporal</code> runs</summary>
+
+```bash
+temporal server start-dev \
+  --ip 127.0.0.1 --port 7233 --ui-port 8233 --metrics-port 7234
+# gRPC on 127.0.0.1:7233, Web UI http://127.0.0.1:8233, metrics on :7234.
+# Overridable via TEMPORAL_HOST, TEMPORAL_PORT, TEMPORAL_UI_PORT, TEMPORAL_METRICS_PORT.
+```
+
+</details>
+
+<details><summary>Under the hood — what <code>make kind-up</code> runs</summary>
+
+```bash
+kind create cluster --name temporal-training
+kubectl config use-context kind-temporal-training
+helm repo add kedacore https://kedacore.github.io/charts && helm repo update
+kubectl create namespace keda
+helm install keda kedacore/keda --namespace keda --wait
+```
+
+</details>
+
+<details><summary>Under the hood — what <code>make kind-load</code> runs</summary>
+
+```bash
+docker build -t temporal-transform-worker:dev examples/runnable/08-aws-containers
+kind load docker-image temporal-transform-worker:dev --name temporal-training
+```
+
+</details>
+
+<details><summary>Under the hood — what <code>make kind-status</code> runs</summary>
+
+```bash
+kubectl cluster-info
+kubectl get pods -n keda
+kubectl get scaledobjects -A
+```
+
+</details>
+
 > **Connectivity note:** the in-cluster Worker must reach a Temporal Frontend.
 > Easiest for the lab: run Temporal on the host and point the Deployment at
 > `host.docker.internal:7233` (or the kind node's gateway). The provided
@@ -124,6 +166,30 @@ make load-transform N=200          # or: for i in $(seq 1 200); do make start-wo
 kubectl get hpa -w                 # KEDA manages an HPA under the hood
 kubectl get pods -w
 ```
+
+<details><summary>Under the hood — what <code>make load-transform</code> runs</summary>
+
+```bash
+for i in $(seq 1 200); do
+  temporal workflow start --task-queue transform --type ImportWorkflow \
+    --workflow-id importworkflow-$i --input "\"s3://imports-incoming/synthetic-$i.csv\""
+done
+```
+
+</details>
+
+<details><summary>Under the hood — what <code>make start-workflow</code> runs</summary>
+
+```bash
+temporal workflow start \
+  --task-queue transform \
+  --type ImportWorkflow \
+  --workflow-id importworkflow-<ID> \
+  --input "\"s3://imports-incoming/synthetic-<ID>.csv\""
+# TYPE defaults to ImportWorkflow; workflow-id is <type-lowercased>-<ID>.
+```
+
+</details>
 
 Expected: replica count rises past 2 toward `maxReplicaCount` while backlog is
 high, then settles back to `minReplicaCount` once drained. Deleting a pod during

@@ -49,6 +49,16 @@ From the repo root:
 make stack-temporal          # auto-setup + PostgreSQL + UI; waits for health
 ```
 
+<details><summary>Under the hood — what <code>make stack-temporal</code> runs</summary>
+
+```bash
+docker compose -f docker/compose.temporal.yml up -d
+# temporalio/auto-setup (Frontend/History/Matching) + PostgreSQL + temporalio/ui.
+# gRPC on host :7233, Web UI on host :8233.
+```
+
+</details>
+
 This runs [`docker/compose.temporal.yml`](../../docker/compose.temporal.yml).
 First start pulls images and seeds the Postgres schema, so give it a minute.
 Check it:
@@ -57,6 +67,14 @@ Check it:
 scripts/start-stack.sh temporal status   # all three services Up / healthy
 temporal operator namespace list          # 'default' exists (auto-setup created it)
 ```
+
+<details><summary>Under the hood — what <code>scripts/start-stack.sh temporal status</code> runs</summary>
+
+```bash
+docker compose -f docker/compose.temporal.yml ps
+```
+
+</details>
 
 Web UI: <http://127.0.0.1:8233> (now served by the `temporalio/ui` container, not
 the dev server).
@@ -71,6 +89,17 @@ the dev server).
    ```bash
    make run-connect          # examples/runnable/01b-hello-temporal-anywhere
    ```
+
+   <details><summary>Under the hood — what <code>make run-connect</code> runs</summary>
+
+   ```bash
+   cd examples/runnable/01b-hello-temporal-anywhere && mvn -q compile exec:java
+   # Env-driven connection via Connections.fromEnv(). Reads:
+   #   TEMPORAL_ADDRESS, TEMPORAL_NAMESPACE, TEMPORAL_API_KEY, TEMPORAL_TLS_CERT, TEMPORAL_TLS_KEY
+   # With none set it defaults to plaintext 127.0.0.1:7233 / namespace default.
+   ```
+
+   </details>
 
    (Your original Lab 1.2 worker, `make run-hello`, also works against Docker —
    it's the same gRPC contract. The point of `run-connect` is one worker that
@@ -116,6 +145,14 @@ same server code, just deployed differently.
 ```bash
 scripts/start-stack.sh temporal down   # stops containers AND removes the volume
 ```
+
+<details><summary>Under the hood — what <code>scripts/start-stack.sh temporal down</code> runs</summary>
+
+```bash
+docker compose -f docker/compose.temporal.yml down -v   # -v also deletes the Postgres volume
+```
+
+</details>
 
 > `down` passes `-v`, so the Postgres volume is deleted and history is gone. Just
 > want to pause? Use `docker compose -f docker/compose.temporal.yml stop`.

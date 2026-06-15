@@ -70,6 +70,15 @@ class ReplayTest {
 mvn -q test -Dtest=ReplayTest
 ```
 
+<details><summary>Under the hood — what <code>make run-replay</code> runs</summary>
+
+```bash
+cd examples/runnable/11-determinism-replay && mvn -q test
+# Pure replay test — no Temporal server needed.
+```
+
+</details>
+
 - Step 2: passes.
 - Step 3: fails with a non-determinism / `NonDeterministicException`-style error
   pointing at the diverging event.

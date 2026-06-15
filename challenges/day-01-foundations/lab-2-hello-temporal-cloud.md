@@ -166,6 +166,18 @@ export TEMPORAL_TLS_KEY="/path/to/client.key"
 mvn -q compile exec:java         # or, from the repo root: make run-connect
 ```
 
+<details><summary>Under the hood — what <code>make run-connect</code> runs</summary>
+
+```bash
+cd examples/runnable/01b-hello-temporal-anywhere && mvn -q compile exec:java
+# Env-driven connection via Connections.fromEnv(). Reads:
+#   TEMPORAL_ADDRESS, TEMPORAL_NAMESPACE, TEMPORAL_API_KEY, TEMPORAL_TLS_CERT, TEMPORAL_TLS_KEY
+# API key path uses the regional endpoint + HTTPS; mTLS uses the *.tmprl.cloud endpoint + PKCS#8 cert/key.
+# With none set it falls back to plaintext 127.0.0.1:7233 / namespace default.
+```
+
+</details>
+
 Expected: the log prints which mode it connected with, then the greeting string.
 
 Point the CLI at the same namespace to see the execution:

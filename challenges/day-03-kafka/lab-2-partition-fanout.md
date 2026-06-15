@@ -29,6 +29,17 @@ Workflow**: fan out one Activity per partition range, run them concurrently
   make kafka-topic TOPIC=batch-input PARTITIONS=6
   ```
 
+  <details><summary>Under the hood — what <code>make kafka-topic</code> runs</summary>
+
+  ```bash
+  docker exec temporal-training-kafka \
+    /opt/bitnami/kafka/bin/kafka-topics.sh \
+    --bootstrap-server localhost:9092 --create --if-not-exists \
+    --topic batch-input --partitions 6 --replication-factor 1
+  ```
+
+  </details>
+
   Produce some keyed records so partitions are non-empty (any `kcat -P` loop).
 
 ## Starter code

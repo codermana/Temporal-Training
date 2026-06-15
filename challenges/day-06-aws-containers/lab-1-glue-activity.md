@@ -25,6 +25,26 @@ make temporal      # terminal 1
 make stack-aws     # terminal 2: LocalStack on :4566
 ```
 
+<details><summary>Under the hood — what <code>make temporal</code> runs</summary>
+
+```bash
+temporal server start-dev \
+  --ip 127.0.0.1 --port 7233 --ui-port 8233 --metrics-port 7234
+# gRPC on 127.0.0.1:7233, Web UI http://127.0.0.1:8233, metrics on :7234.
+# Overridable via TEMPORAL_HOST, TEMPORAL_PORT, TEMPORAL_UI_PORT, TEMPORAL_METRICS_PORT.
+```
+
+</details>
+
+<details><summary>Under the hood — what <code>make stack-aws</code> runs</summary>
+
+```bash
+docker compose -f docker/compose.localstack.yml up -d
+# LocalStack S3/SQS/Glue on :4566
+```
+
+</details>
+
 Create a Glue job in LocalStack to target (a stub script is fine; LocalStack
 will report run states). Use `awslocal glue create-job ...`. If your LocalStack
 build doesn't fully simulate Glue run transitions, treat the polling loop as the

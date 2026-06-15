@@ -29,6 +29,14 @@ gives you the muscle memory for the three-terminal pattern you'll use every day.
    make check
    ```
 
+   <details><summary>Under the hood — what <code>make check</code> runs</summary>
+
+   ```bash
+   scripts/check-local.sh   # verifies Java, Maven, and the temporal CLI are on PATH
+   ```
+
+   </details>
+
    If anything is missing, fix it before continuing — later labs assume a green
    `make check`.
 
@@ -37,6 +45,17 @@ gives you the muscle memory for the three-terminal pattern you'll use every day.
    ```bash
    make temporal
    ```
+
+   <details><summary>Under the hood — what <code>make temporal</code> runs</summary>
+
+   ```bash
+   temporal server start-dev \
+     --ip 127.0.0.1 --port 7233 --ui-port 8233 --metrics-port 7234
+   # gRPC on 127.0.0.1:7233, Web UI http://127.0.0.1:8233, metrics on :7234.
+   # Override via env: TEMPORAL_HOST, TEMPORAL_PORT, TEMPORAL_UI_PORT, TEMPORAL_METRICS_PORT.
+   ```
+
+   </details>
 
    Read the startup banner. Note the gRPC address and the Web UI URL it prints.
 

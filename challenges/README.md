@@ -53,6 +53,36 @@ and one `lab-N-*.md` per hands-on exercise.
   | 2 | `make stack-kafka` / `stack-obs` / `stack-aws` | Only on days that need a stack |
   | 3 | your lab | `mvn ...` or `make run-<name>` |
 
+  **The `make` targets are shortcuts, not magic.** Each one just runs a `temporal`,
+  `mvn`, or `docker compose` command you could type yourself — and you should know
+  which, because production won't have this Makefile. Every lab now includes an
+  *"Under the hood"* callout next to its `make` commands revealing the real
+  invocation (and the `TEMPORAL_*` env vars that drive connections). The table
+  below decodes the targets you'll meet most; the source of truth is the
+  [`Makefile`](../Makefile) and [`scripts/`](../scripts/).
+
+  <details><summary>Make targets, decoded</summary>
+
+  | Target | What it actually runs |
+  |---|---|
+  | `make temporal` | `temporal server start-dev --ip 127.0.0.1 --port 7233 --ui-port 8233 --metrics-port 7234` |
+  | `make temporal-persistent` | same, plus `--db-filename .temporal/dev-server.db` (survives restarts) |
+  | `make stack-temporal` | `docker compose -f docker/compose.temporal.yml up -d` (auto-setup + PostgreSQL + UI) |
+  | `make stack-kafka` | `docker compose -f docker/compose.kafka.yml up -d` (Kafka KRaft on :9092) |
+  | `make stack-obs` | `docker compose -f docker/compose.observability.yml up -d` (Prometheus :9091 + Grafana :3000) |
+  | `make stack-aws` | `docker compose -f docker/compose.localstack.yml up -d` (LocalStack on :4566) |
+  | `make stack-down` | `docker compose -f <files> down -v` (tears down + removes volumes) |
+  | `make run-<name>` | `cd examples/runnable/<module> && mvn -q compile exec:java` (see `scripts/run-example.sh`) |
+  | `make run-connect` | the env-driven worker — reads `TEMPORAL_ADDRESS` / `TEMPORAL_NAMESPACE` / `TEMPORAL_API_KEY` / `TEMPORAL_TLS_CERT` / `TEMPORAL_TLS_KEY`; defaults to plaintext `127.0.0.1:7233` / `default` |
+  | `make run-testing`, `run-replay` | `mvn -q test` in the module (no server needed) |
+  | `make start-workflow QUEUE=q ID=n` | `temporal workflow start --task-queue q --type ImportWorkflow --workflow-id importworkflow-n --input "..."` |
+  | `make kafka-topic TOPIC=t` | `docker exec temporal-training-kafka .../kafka-topics.sh --bootstrap-server localhost:9092 --create --topic t ...` |
+  | `make kind-up` | `kind create cluster` + `helm install keda kedacore/keda -n keda` |
+  | `make kind-load` | `docker build -t temporal-transform-worker:dev ...` + `kind load docker-image ...` |
+  | `make check` | `scripts/check-local.sh` (verifies Java, Maven, Temporal CLI) |
+
+  </details>
+
 - **Web UI first.** After every run, open the Web UI and read the Event
   History. Most "why didn't it work" questions are answered there.
 - **Audience framing.** Labs are tagged with the mental model they replace:
