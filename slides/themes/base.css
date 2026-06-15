@@ -715,6 +715,67 @@ section.day h1 { font-size: 88px; max-width: 1000px; }
 section.day p  { color: var(--muted); font-size: 28px; max-width: 880px; }
 
 /* ---------------------------------------------------------------------------
+   Two-column photo layouts - image beside vertically-centred text.
+   ---------------------------------------------------------------------------
+   Used in why-temporal for the speaker / intro photo slides.
+     .cols-photo              -> image LEFT,  text RIGHT (default)
+     .cols-photo.media-right  -> image RIGHT, text LEFT
+   Markup: a `.cols` wrapper holding `.col-media` (the image) and `.col-body`
+   (the text). Pure flexbox, so it composes with the entrance animations below.
+   --------------------------------------------------------------------------- */
+
+section.cols-photo {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+section.cols-photo .cols {
+  align-items: center;
+  display: flex;
+  gap: 60px;
+  width: 100%;
+}
+
+section.cols-photo.media-right .cols {
+  flex-direction: row-reverse;
+}
+
+section.cols-photo .col-media {
+  flex: 0 0 44%;
+}
+
+section.cols-photo .col-body {
+  flex: 1 1 auto;
+  text-align: left;
+}
+
+/* Center a short caption within its half (e.g. the "What we wanted" slides). */
+section.cols-photo.center-body .col-body {
+  text-align: center;
+}
+
+section.cols-photo .col-media img {
+  border-radius: 8px;
+  display: block;
+  margin: 0;
+  max-height: 540px;
+  object-fit: contain;
+  width: 100%;
+}
+
+section.cols-photo .col-body > :first-child { margin-top: 0; }
+
+@media (prefers-reduced-motion: no-preference) {
+  section.cols-photo .col-media {
+    animation: marpRiseIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both !important;
+  }
+  section.cols-photo .col-body {
+    animation: marpRiseIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
    Motion - on-enter content animation (live HTML / Bespoke deck only)
    ---------------------------------------------------------------------------
    Slide-to-slide transitions are driven by the `transition:` directive in each

@@ -36,9 +36,15 @@ Ask for a show of hands: "who's been paged for a half-finished workflow?"
 
 ---
 
-<!-- _class: center middle portrait -->
+<!-- _class: cols-photo -->
+
+<div class="cols">
+<div class="col-media">
 
 ![Me](assets/images/me.png)
+
+</div>
+<div class="col-body">
 
 ## Gaurav Agarwal
 
@@ -47,6 +53,9 @@ Software Engineer & Product Developer
 Director of Engineering & Founder @ https://codermana.com
 
 ex-Tarka Labs, ex-BrowserStack, ex-ThoughtWorks
+
+</div>
+</div>
 
 <!--
 30 seconds max.
@@ -59,19 +68,37 @@ production at companies with both Java and Go stacks - it lands trust faster.
 
 ---
 
-<!-- _class: center middle intro-photo -->
+<!-- _class: cols-photo media-right center-body -->
 
-*What we wanted*
+<div class="cols">
+<div class="col-media">
 
 ![In-class Training](assets/images/professional-training-courses.jpg)
 
+</div>
+<div class="col-body">
+
+*What we wanted*
+
+</div>
+</div>
+
 ---
 
-<!-- _class: center middle intro-photo -->
+<!-- _class: cols-photo center-body -->
+
+<div class="cols">
+<div class="col-media">
+
+![WFH](assets/images/wfh.jpg)
+
+</div>
+<div class="col-body">
 
 *What we got*
 
-![WFH](assets/images/wfh.jpg)
+</div>
+</div>
 
 ---
 
