@@ -34,6 +34,7 @@ Examples:
   scripts/run-example.sh replay
   scripts/run-example.sh continue
   scripts/run-example.sh choreography
+  scripts/run-example.sh wordcount
 
 Use scripts/list-examples.sh to see all examples.
 EOF
@@ -116,6 +117,9 @@ case "$EXAMPLE" in
     ;;
   choreography|choreo|13|13-choreography)
     DIR="examples/runnable/13-choreography"
+    ;;
+  wordcount|word-count|fanout|14|14-word-count-fanout)
+    DIR="examples/runnable/14-word-count-fanout"
     ;;
   *)
     echo "Unknown runnable example: $EXAMPLE" >&2

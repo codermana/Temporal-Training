@@ -47,3 +47,4 @@ run the Worker and are started from the Temporal CLI, and `06-testing` /
 | `11-determinism-replay` | 4 | Replay / non-determinism (deep dive) |
 | `12-continue-as-new` | 5 | Continue-as-new (deep dive) |
 | `13-choreography` | 5 | Event choreography with a durable Temporal participant |
+| `14-word-count-fanout` | 2 | Word-count fan-out / fan-in |
