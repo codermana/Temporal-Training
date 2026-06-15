@@ -1,3 +1,0 @@
-temporalio>=1.7,<2
-pytest
-pytest-asyncio

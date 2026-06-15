@@ -22,9 +22,7 @@ mvn -q test
 
 ```bash
 cd python
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-pytest -q
+uv run pytest -q
 ```
 
 `WorkflowEnvironment.start_time_skipping()` downloads and runs an in-process test

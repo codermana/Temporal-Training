@@ -30,9 +30,7 @@ original, throws for the reordered impl. Test:
 
 ```bash
 cd python
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-pytest -q
+uv run pytest -q
 ```
 
 Records history with `WorkflowEnvironment.start_time_skipping()` +

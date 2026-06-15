@@ -6,7 +6,7 @@ numbered directories contain smaller snippets for explanations.
 Each lab ships in **three SDKs** under per-language subfolders — `java/`
 (`io.temporal:temporal-sdk`), `python/` (`temporalio`), and `go/`
 (`go.temporal.io/sdk`) — with its own build file (`pom.xml`,
-`requirements.txt`, `go.mod`) and a `README.md` showing how to run all three.
+`pyproject.toml`, `go.mod`) and a `README.md` showing how to run all three.
 Pick a language with the script's optional arg:
 
 ```bash

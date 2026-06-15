@@ -18,8 +18,8 @@ Shared: `TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE` (default `default`).
 # Java
 scripts/run-example.sh connect                       # == cd java && mvn -q compile exec:java
 
-# Python
-cd python && pip install -r requirements.txt && python worker.py
+# Python (uv reads pyproject.toml and provisions the env)
+cd python && uv run worker.py
 #   scripts/run-example.sh connect python
 
 # Go
@@ -33,7 +33,7 @@ Cloud example:
 TEMPORAL_ADDRESS=us-east-1.aws.api.temporal.io:7233 \
 TEMPORAL_NAMESPACE=your-ns.acct \
 TEMPORAL_API_KEY=$(cat key.txt) \
-  python worker.py
+  uv run worker.py
 ```
 
 The connection helpers (`Connections.java`, `connections.py`, `connections.go`)

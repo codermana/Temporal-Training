@@ -216,6 +216,27 @@ Compile all runnable Maven projects:
 scripts/test-runnable.sh
 ```
 
+### Python and Go versions
+
+Every runnable lab also ships Python (`temporalio`) and Go (`go.temporal.io/sdk`)
+versions under `python/` and `go/` subfolders. Pass the language as a second
+argument:
+
+```bash
+scripts/run-example.sh hello python   # runs python/worker.py via uv
+scripts/run-example.sh hello go        # runs go/main.go via `go run .`
+```
+
+Toolchains (only needed for the language you use):
+
+- **Python** — [uv](https://docs.astral.sh/uv/) drives the Python labs. It reads
+  each lab's `pyproject.toml`, provisions an isolated environment, and runs — no
+  manual `venv`/`pip`. Install: `brew install uv` (macOS) or
+  `curl -LsSf https://astral.sh/uv/install.sh | sh`. Then, in any lab:
+  `cd python && uv run worker.py` (or `uv run pytest` for the testing labs).
+- **Go** — install Go 1.23+ (`brew install go`). Then `cd go && go run .`; the
+  first run resolves the SDK from the committed `go.mod`/`go.sum`.
+
 ## Generate Workflow Load (Day 6 KEDA Demo)
 
 ```bash

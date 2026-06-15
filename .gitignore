@@ -47,12 +47,14 @@ slides-template/
 # End of https://www.toptal.com/developers/gitignore/api/java
 *.pdf
 
-### Python (polyglot examples — temporalio) ###
+### Python (polyglot examples — temporalio, run with uv) ###
 __pycache__/
 *.py[cod]
 .venv/
 venv/
 .pytest_cache/
+# uv resolves from pyproject.toml on demand; lockfiles are regenerated locally.
+uv.lock
 
 ### Go (polyglot examples — go.temporal.io/sdk) ###
 # `go build` in a main-package dir drops an extensionless binary named after the

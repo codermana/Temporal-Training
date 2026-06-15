@@ -150,10 +150,6 @@ case "$LANG_CHOICE" in
       exit 1
     fi
     cd "$PDIR"
-    if ! command -v python3 >/dev/null 2>&1; then
-      echo "python3 is required. See Setup.md." >&2
-      exit 1
-    fi
     # Conventional entrypoints, in order of preference.
     ENTRY=""
     for cand in worker.py main.py starter.py run.py; do
@@ -163,8 +159,18 @@ case "$LANG_CHOICE" in
       echo "No worker.py/main.py entrypoint found in $DIR/python." >&2
       exit 1
     fi
-    echo "Tip: pip install -r requirements.txt (ideally in a venv) before running." >&2
-    python3 "$ENTRY"
+    # uv reads pyproject.toml, provisions an isolated env, and runs — no manual
+    # venv/pip. Falls back to plain python3 if uv isn't installed.
+    if command -v uv >/dev/null 2>&1; then
+      uv run "$ENTRY"
+    elif command -v python3 >/dev/null 2>&1; then
+      echo "uv not found; falling back to system python3 (install uv: https://docs.astral.sh/uv/)." >&2
+      echo "Tip: create a venv and 'pip install .' from $DIR/python first." >&2
+      python3 "$ENTRY"
+    else
+      echo "uv (preferred) or python3 is required. See Setup.md." >&2
+      exit 1
+    fi
     ;;
   go)
     GDIR="$ROOT_DIR/$DIR/go"

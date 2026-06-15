@@ -1,0 +1,13 @@
+[project]
+name = "temporal-lab-kafka-bridge"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "temporalio>=1.7,<2",
+    "kafka-python>=2.0,<3",
+]
+
+# These labs are runnable scripts, not installable packages — uv just manages the
+# environment. Run with:  uv run worker.py   (or main.py, or: uv run pytest)
+[tool.uv]
+package = false

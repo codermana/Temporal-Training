@@ -16,7 +16,7 @@ examples/02-reliability/
 ```
 
 Runnable labs follow the same shape — `examples/runnable/<lab>/{java,python,go}/`
-— each with its own build file (`pom.xml`, `requirements.txt`, `go.mod`). The
+— each with its own build file (`pom.xml`, `pyproject.toml`, `go.mod`). The
 snippets teach one concept and are intentionally incomplete (see **Format**);
 the runnable labs are complete, build, and run against a local dev server.
 

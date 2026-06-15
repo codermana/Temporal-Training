@@ -28,9 +28,7 @@ Entry point: `java/src/main/java/training/temporal/approval/ApprovalWorker.java`
 
 ```bash
 cd python
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-python worker.py
+uv run worker.py
 ```
 
 Entry point: `python/worker.py` (Workflow in `python/approval.py`).

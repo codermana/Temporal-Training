@@ -28,9 +28,7 @@ Entry point: `java/src/main/java/training/temporal/aws/WorkerMain.java`
 
 ```bash
 cd python
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-python worker.py
+uv run worker.py
 ```
 
 Entry point: `python/worker.py` (workflow + activities in `python/import_pipeline.py`).
@@ -59,7 +57,7 @@ Expected result: `s3://imports-incoming/transformed/orders.csv?rows=<n>`.
 
 ## Containers
 
-Each language has its own `Dockerfile` (Java fat-JAR vs `pip install` vs
+Each language has its own `Dockerfile` (Java fat-JAR vs `uv sync` vs
 `go build`) because the build differs — but they all produce the *same* kind of
 artifact: a Worker that dials **out** to the Frontend, with no inbound port.
 

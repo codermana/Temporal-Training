@@ -29,9 +29,7 @@ Entry point: `java/src/main/java/training/temporal/kafka/KafkaWorker.java`.
 
 ```bash
 cd python
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-python worker.py
+uv run worker.py
 ```
 
 Entry point: `python/worker.py` (workflow + producer Activity in `python/orders.py`).

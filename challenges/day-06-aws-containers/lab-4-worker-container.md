@@ -72,16 +72,17 @@ graceful shutdown on `SIGTERM` — but the **container build differs** (fat-JAR 
 [`examples/runnable/08-aws-containers/python`](../../examples/runnable/08-aws-containers/python)
 and [`.../go`](../../examples/runnable/08-aws-containers/go).
 
-**Python** — no build stage; install deps and run. `SIGTERM` drains the `async
-with Worker(...)` block on its own:
+**Python** — uv provisions deps from `pyproject.toml`. `SIGTERM` drains the
+`async with Worker(...)` block on its own:
 
 ```dockerfile
 FROM python:3.12-slim
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY pyproject.toml .
+RUN uv sync --no-dev
 COPY . .
-ENTRYPOINT ["python", "worker.py"]   # no inbound port to EXPOSE
+ENTRYPOINT ["uv", "run", "--no-sync", "worker.py"]   # no inbound port to EXPOSE
 ```
 
 ```python

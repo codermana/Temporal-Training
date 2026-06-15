@@ -22,9 +22,7 @@ Entry point: `java/src/main/java/training/temporal/parallel/PricingWorker.java`.
 
 ```bash
 cd python
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-python worker.py
+uv run worker.py
 # or, from the repo root:  scripts/run-example.sh async python
 ```
 
