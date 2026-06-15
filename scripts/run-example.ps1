@@ -11,6 +11,10 @@ Examples:
   scripts/run-example.ps1 schedules
   scripts/run-example.ps1 testing
   scripts/run-example.ps1 saga
+  scripts/run-example.ps1 retries
+  scripts/run-example.ps1 child
+  scripts/run-example.ps1 replay
+  scripts/run-example.ps1 continue
 "@
 }
 
@@ -64,6 +68,24 @@ switch ($example) {
   { $_ -in @("aws", "containers", "08", "08-aws-containers") } {
     $dir = "examples/runnable/08-aws-containers"
     $mainClass = "training.temporal.aws.WorkerMain"
+    break
+  }
+  { $_ -in @("retries", "heartbeat", "heartbeats", "09", "09-retries-heartbeats") } {
+    $dir = "examples/runnable/09-retries-heartbeats"
+    break
+  }
+  { $_ -in @("child", "children", "10", "10-child-workflows") } {
+    $dir = "examples/runnable/10-child-workflows"
+    break
+  }
+  { $_ -in @("replay", "determinism", "11", "11-determinism-replay") } {
+    $dir = "examples/runnable/11-determinism-replay"
+    $mode = "test"
+    $needsTemporal = $false
+    break
+  }
+  { $_ -in @("continue", "continueasnew", "can", "12", "12-continue-as-new") } {
+    $dir = "examples/runnable/12-continue-as-new"
     break
   }
   default {

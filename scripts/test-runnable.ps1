@@ -13,7 +13,7 @@ Get-ChildItem $runnable -Directory | Sort-Object Name | ForEach-Object {
   Write-Host "==> $($_.Name)"
   Push-Location $_.FullName
   try {
-    if ($_.Name -eq "06-testing") {
+    if (Test-Path (Join-Path $_.FullName "src/test")) {
       mvn -q test
     } else {
       mvn -q -DskipTests compile

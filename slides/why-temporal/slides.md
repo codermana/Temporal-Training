@@ -406,13 +406,28 @@ The talk inflects here; if you're 11 minutes in, you're on schedule.
 
 ---
 
-<!-- _class: code -->
-
 ## Durable execution
 
 > **Durable Execution:** your code's progress is persisted automatically. Crashes, restarts, and deploys don't lose state - execution resumes exactly where it left off.
 
 A **Workflow** is application code (Java, Go, Python, TS, .NET, PHP, Ruby).
+
+It reads like a normal function - no special framework, just method calls.
+
+<!--
+THIS IS THE CENTRAL CONCEPT - this slide defines the term, the next one shows it.
+
+Spend ~30 seconds here on the definition. The persistence is automatic; you don't
+write checkpoint/restore code.
+
+Then advance to the code.
+-->
+
+---
+
+<!-- _class: code -->
+
+## A Workflow, in code
 
 ```java
 @WorkflowMethod
@@ -424,24 +439,18 @@ public String processOrder(String orderId) {
 }
 ```
 
-If the Worker dies on line 3, line 4 still runs - on **a different process, hours later**, from where it left off.
+If the Worker dies after `authorizePayment`, `reserveInventory` still runs - on **a different process, hours later**, from where it left off.
 
 <!--
-THIS IS THE CENTRAL SLIDE.
+Spend ~60 seconds here.
 
-Spend ~90 seconds here.
+Walk the code: this is normal Java. There's no special framework. The methods are
+just method calls.
 
-Walk the code: this is normal Java.
+The MAGIC is the last line.
 
-There's no special framework.
-
-The methods are just method calls.
-
-The MAGIC is the last bullet.
-
-Then say: "the Workflow doesn't care which JVM is running it.
-
-The state lives in the cluster, not on a host."
+Then say: "the Workflow doesn't care which JVM is running it. The state lives in
+the cluster, not on a host."
 -->
 
 ---
@@ -486,15 +495,10 @@ reservationID from history before scheduling ship.
 class OrderWorkflow:
     @workflow.run
     async def process_order(self, order_id: str) -> str:
-        payment_id = await workflow.execute_activity(
-            authorize_payment, order_id, start_to_close_timeout=timedelta(minutes=2)
-        )
-        reservation_id = await workflow.execute_activity(
-            reserve_inventory, order_id, start_to_close_timeout=timedelta(minutes=2)
-        )
-        await workflow.execute_activity(
-            ship, order_id, start_to_close_timeout=timedelta(minutes=2)
-        )
+        opts = dict(start_to_close_timeout=timedelta(minutes=2))
+        payment_id = await workflow.execute_activity(authorize_payment, order_id, **opts)
+        reservation_id = await workflow.execute_activity(reserve_inventory, order_id, **opts)
+        await workflow.execute_activity(ship, order_id, **opts)
         return "OK"
 ```
 
@@ -612,10 +616,8 @@ public String process(String orderId) {
   try {
     String paymentId = activities.authorizePayment(orderId);
     saga.addCompensation(activities::cancelPayment, paymentId);
-
     String reservationId = activities.reserveInventory(orderId);
     saga.addCompensation(activities::restoreInventory, reservationId);
-
     activities.ship(orderId);
     return "COMPLETED";
   } catch (RuntimeException failure) {
@@ -649,16 +651,14 @@ Compensations also retry.
 
 ```java
 Schedule.newBuilder()
-    .setAction(
-        ScheduleActionStartWorkflow.newBuilder()
-            .setWorkflowType(OrdersWorkflow.class)
-            .setOptions(WorkflowOptions.newBuilder().setTaskQueue("orders").build())
-            .build())
-    .setSpec(
-        ScheduleSpec.newBuilder()
-            .setIntervals(List.of(new ScheduleIntervalSpec(Duration.ofHours(1))))
-            .setJitter(Duration.ofMinutes(5))
-            .build())
+    .setAction(ScheduleActionStartWorkflow.newBuilder()
+        .setWorkflowType(OrdersWorkflow.class)
+        .setOptions(WorkflowOptions.newBuilder().setTaskQueue("orders").build())
+        .build())
+    .setSpec(ScheduleSpec.newBuilder()
+        .setIntervals(List.of(new ScheduleIntervalSpec(Duration.ofHours(1))))
+        .setJitter(Duration.ofMinutes(5))
+        .build())
     .build();
 ```
 
@@ -751,7 +751,7 @@ The AI agents bullet is newest and lands hardest in 2024+ rooms.
 
 # Who's running it
 
-Temporal popularized **Durable Execution** as a category - now a non-exhaustive sample of companies that talk publicly about running it in production:
+A sample of companies that publicly run Durable Execution in production:
 
 - Snap (payments + ads)
 - Stripe (Workflow Engine)
@@ -804,8 +804,8 @@ neutral" row matters for Step Functions skeptics.
 
 # Where Temporal is *not* the answer
 
-- **Pure data transformation.** Use Spark / dbt. Wrap them in Temporal if you need orchestration.
-- **Sub-millisecond serving.** Workflows have RPC overhead; they aren't your hot path.
+- **Pure data transformation.** Use Spark / dbt; wrap them only if you need orchestration.
+- **Sub-millisecond serving.** Workflows have RPC overhead; not your hot path.
 - **Single, never-failing, one-step jobs.** A cron line is fine.
 - **Stateless event handlers** where Kafka + a function is the whole story.
 
@@ -1046,21 +1046,10 @@ Then: "Questions?"
 
 ## Resources
 
-Docs
-
-https://docs.temporal.io
-
-Java SDK
-
-https://github.com/temporalio/sdk-java
-
-Slides
-
-https://temporal-training.slides.algogrit.com/why-temporal/
-
-Course repo
-
-https://github.com/CoderMana/temporal-training
+- **Docs** — https://docs.temporal.io
+- **Java SDK** — https://github.com/temporalio/sdk-java
+- **Slides** — https://temporal-training.slides.algogrit.com/why-temporal/
+- **Course repo** — https://github.com/CoderMana/temporal-training
 
 <!--
 Leave on screen during Q&A.

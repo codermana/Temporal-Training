@@ -81,11 +81,8 @@ Challenge → [`day-01-foundations/lab-1-local-dev-setup`](https://github.com/co
 ```bash
 make check          # verify required tools
 make temporal       # start dev server (in this terminal)
-```
 
-In another terminal:
-
-```bash
+# in another terminal
 open http://127.0.0.1:8233
 temporal operator namespace list
 ```
@@ -474,11 +471,9 @@ Challenge → [`day-01-foundations/lab-2-hello-temporal`](https://github.com/cod
 make run-hello
 ```
 
-What to look for:
-
 1. Workflow appears in the Web UI under `default` namespace.
 2. Click into it; open the Event History tab.
-3. Identify `WorkflowExecutionStarted`, `ActivityTaskScheduled`, `ActivityTaskCompleted`.
+3. Identify `WorkflowExecutionStarted` and the `ActivityTask*` events.
 
 > Restart the Worker mid-run; the Workflow resumes. That's the lesson.
 
@@ -513,21 +508,18 @@ Run: make run-hello, then read the Web UI event history. Dump it from the CLI wi
 ## The cluster
 
 ```
-                   ┌──────────────┐
+                    ┌──────────────┐
    SDK / CLI  ───▶ │   Frontend   │   gRPC API
-                   └──────┬───────┘
-                          │
-                   ┌──────▼───────┐
-                   │   History    │   workflow state machine
-                   └──────┬───────┘
-                          │
-                   ┌──────▼───────┐
-                   │   Matching   │   Task Queue dispatch
-                   └──────┬───────┘
-                          │
-                   ┌──────▼───────┐
-                   │ Persistence  │   PostgreSQL / Cassandra
-                   └──────────────┘
+                    └──────┬───────┘
+                    ┌──────▼───────┐
+                    │   History    │   workflow state machine
+                    └──────┬───────┘
+                    ┌──────▼───────┐
+                    │   Matching   │   Task Queue dispatch
+                    └──────┬───────┘
+                    ┌──────▼───────┐
+                    │ Persistence  │   PostgreSQL / Cassandra
+                    └──────────────┘
 ```
 
 Your Workers connect **outbound** to Frontend on `:7233`.
@@ -802,9 +794,8 @@ for (int p : partitions)
 
 Map<Integer, String> result = new LinkedHashMap<>();
 for (var e : futures.entrySet()) {
-  try {
-    result.put(e.getKey(), e.getValue().get());
-  } catch (ActivityFailure failure) {
+  try { result.put(e.getKey(), e.getValue().get()); }
+  catch (ActivityFailure failure) {
     result.put(e.getKey(), "FAILED: " + failure.getMessage());
   }
 }
@@ -917,8 +908,7 @@ public String exportLargeTable(String tableName) {
       exportPage(tableName, page);
       Activity.getExecutionContext().heartbeat(page);
     } catch (ActivityCanceledException | ActivityPausedException stop) {
-      cleanupPartialExport(tableName, page);
-      throw stop;
+      cleanupPartialExport(tableName, page); throw stop;
     }
   }
   return "s3://exports/" + tableName;
@@ -1059,12 +1049,10 @@ Challenge → [`day-02-reliability/lab-2-signals-and-queries`](https://github.co
 
 ```bash
 make run-approval
-```
 
-```bash
+# in another terminal
 temporal workflow signal --workflow-id approval-demo \
   --name approve --input '"alice"'
-
 temporal workflow query --workflow-id approval-demo \
   --type currentState
 ```
@@ -1340,12 +1328,9 @@ Open in VSCode: examples/03-interactions/child_workflow.java, workflow_and_run_t
 <!-- Open in VSCode: examples/03-interactions/child_workflow.java -->
 
 ```java
-FraudWorkflow fraud = Workflow.newChildWorkflowStub(
-    FraudWorkflow.class,
+FraudWorkflow fraud = Workflow.newChildWorkflowStub(FraudWorkflow.class,
     ChildWorkflowOptions.newBuilder().setTaskQueue("fraud").build());
-
-ShippingWorkflow shipping = Workflow.newChildWorkflowStub(
-    ShippingWorkflow.class,
+ShippingWorkflow shipping = Workflow.newChildWorkflowStub(ShippingWorkflow.class,
     ChildWorkflowOptions.newBuilder().setTaskQueue("shipping").build());
 
 Promise<String> fraudDecision = Async.function(fraud::check, orderId);
@@ -1596,11 +1581,8 @@ Challenge → [`day-03-kafka/lab-1-kafka-pipeline`](https://github.com/codermana
 ```bash
 make stack-kafka      # KRaft broker on :9092
 make run-kafka        # Worker + bridge
-```
 
-In another terminal:
-
-```bash
+# in another terminal
 kcat -b localhost:9092 -t orders -P -k "order-1" <<< 'NEW:line-item-A'
 kcat -b localhost:9092 -t order-outcomes -C -o end -f 'key=%k value=%s\n'
 ```
@@ -1960,11 +1942,9 @@ WorkflowServiceStubs service = WorkflowServiceStubs.newServiceStubs(
 ```java
 class InvoiceActivitiesImpl implements InvoiceActivities {
   private final Counter invoices;
-
   InvoiceActivitiesImpl(MeterRegistry registry) {
     this.invoices = Counter.builder("training_invoices_generated_total").register(registry);
   }
-
   @Override public String generateInvoice(String orderId) {
     invoices.increment();
     return "s3://invoices/" + orderId + ".pdf";
@@ -2019,11 +1999,10 @@ open http://localhost:3000
 make load-transform N=50
 ```
 
-In Grafana:
+In Grafana, open the **Temporal Training - Overview** dashboard and watch:
 
-1. Open the "Temporal Training - Overview" dashboard.
-2. Watch `temporal_workflow_completed_total` climb.
-3. Generate a failure; see `temporal_workflow_failed_total` increment.
+1. `temporal_workflow_completed_total` climb.
+2. `temporal_workflow_failed_total` increment when you force a failure.
 
 ---
 
@@ -2105,18 +2084,14 @@ String result = stub.run("hello");
 
 ```java
 @RegisterExtension
-static final TestWorkflowExtension ext =
-    TestWorkflowExtension.newBuilder()
-        .setWorkflowTypes(ReminderWorkflowImpl.class)
-        .setDoNotStart(true).build();
-
+static final TestWorkflowExtension ext = TestWorkflowExtension.newBuilder()
+    .setWorkflowTypes(ReminderWorkflowImpl.class).setDoNotStart(true).build();
 @Test
 void completes(TestWorkflowEnvironment env, Worker worker, ReminderWorkflow wf) {
   ReminderActivities activities = mock(ReminderActivities.class);
   when(activities.lookupEmail("u1")).thenReturn("u1@example.com");
   worker.registerActivitiesImplementations(activities);
   env.start();
-
   assertEquals("sent to u1@example.com", wf.remind("u1"));
 }
 ```
@@ -2362,13 +2337,19 @@ Challenge → [`day-05-saga-spring/lab-1-order-saga-walkthrough`](https://github
 make run-saga
 ```
 
-Try two starts:
+Start the happy path:
 
 ```bash
 temporal workflow start --task-queue orders \
   --type OrderSagaWorkflow --workflow-id order-OK \
   --input '"order-1001"'
+```
 
+---
+
+# Run the saga: force a failure
+
+```bash
 temporal workflow start --task-queue orders \
   --type OrderSagaWorkflow --workflow-id order-fail \
   --input '"fail-at-ship"'
@@ -2402,11 +2383,9 @@ Open in VSCode: examples/06-saga-spring/spring_temporal_config.java, kafka_liste
 @Configuration
 class TemporalConfig {
   @Bean WorkflowServiceStubs workflowServiceStubs() {
-    return WorkflowServiceStubs.newLocalServiceStubs();
-  }
+    return WorkflowServiceStubs.newLocalServiceStubs(); }
   @Bean WorkflowClient workflowClient(WorkflowServiceStubs s) {
-    return WorkflowClient.newInstance(s);
-  }
+    return WorkflowClient.newInstance(s); }
   @Bean(initMethod = "start", destroyMethod = "shutdown")
   WorkerFactory workerFactory(WorkflowClient c, OrderActivities a) {
     WorkerFactory f = WorkerFactory.newInstance(c);
@@ -2758,14 +2737,10 @@ Challenge → [`day-06-aws-containers/lab-1-glue-activity`](https://github.com/c
 make stack-aws        # LocalStack on :4566
 make aws-init         # create S3 buckets
 make run-aws          # Import Worker
-```
 
-In another terminal:
-
-```bash
+# in another terminal
 awslocal s3 cp /tmp/test.csv s3://imports-incoming/test.csv
-scripts/start-workflow.sh transform 1 ImportWorkflow \
-  "s3://imports-incoming/test.csv"
+scripts/start-workflow.sh transform 1 ImportWorkflow "s3://imports-incoming/test.csv"
 ```
 
 > Watch the heartbeats in the Web UI as the polling loop runs.
@@ -2990,7 +2965,6 @@ kubectl logs -l app=temporal-transform-worker --tail=20
 <!-- Open in VSCode: examples/07-aws-containers/keda_scaledobject.yaml -->
 
 ```yaml
-apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 spec:
   scaleTargetRef: { name: temporal-transform-worker }
@@ -3004,7 +2978,6 @@ spec:
         taskQueue: transform
         queueType: ActivityTaskQueue
         targetQueueSize: "20"
-        activationTargetQueueSize: "5"
 ```
 
 > Native scaler polls `DescribeTaskQueue`. No Prometheus exporter needed.
@@ -3067,10 +3040,8 @@ kubectl get scaledobject,pods -l app=temporal-transform-worker -w
 make stack-aws        # LocalStack
 make temporal         # dev server
 make run-aws          # Worker
-
 awslocal s3 cp test-input.csv s3://imports-incoming/
-scripts/start-workflow.sh transform end2end ImportWorkflow \
-  "s3://imports-incoming/test-input.csv"
+scripts/start-workflow.sh transform end2end ImportWorkflow "s3://imports-incoming/test-input.csv"
 awslocal s3 ls s3://imports-output/
 ```
 
@@ -3133,22 +3104,8 @@ The cost is learning a new model. The reward is fewer runbooks.
 
 ## Resources
 
-Docs
-
-https://docs.temporal.io
-
-Java SDK
-
-https://github.com/temporalio/sdk-java
-
-Slides
-
-https://temporal-training.slides.algogrit.com/temporal-fundamentals/
-
-Course repo
-
-https://github.com/CoderMana/temporal-training
-
-Hands-on labs
-
-https://github.com/codermana/Temporal-Training/tree/master/challenges
+- **Docs** — https://docs.temporal.io
+- **Java SDK** — https://github.com/temporalio/sdk-java
+- **Slides** — https://temporal-training.slides.algogrit.com/temporal-fundamentals/
+- **Course repo** — https://github.com/CoderMana/temporal-training
+- **Hands-on labs** — https://github.com/codermana/Temporal-Training/tree/master/challenges

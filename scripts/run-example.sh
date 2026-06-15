@@ -14,6 +14,10 @@ Examples:
   scripts/run-example.sh schedules
   scripts/run-example.sh testing
   scripts/run-example.sh saga
+  scripts/run-example.sh retries
+  scripts/run-example.sh child
+  scripts/run-example.sh replay
+  scripts/run-example.sh continue
 
 Use scripts/list-examples.sh to see all examples.
 EOF
@@ -64,6 +68,20 @@ case "$EXAMPLE" in
     DIR="examples/runnable/08-aws-containers"
     MODE="exec"
     MAIN_CLASS="training.temporal.aws.WorkerMain"
+    ;;
+  retries|heartbeat|heartbeats|09|09-retries-heartbeats)
+    DIR="examples/runnable/09-retries-heartbeats"
+    ;;
+  child|children|10|10-child-workflows)
+    DIR="examples/runnable/10-child-workflows"
+    ;;
+  replay|determinism|11|11-determinism-replay)
+    DIR="examples/runnable/11-determinism-replay"
+    MODE="test"
+    NEEDS_TEMPORAL="no"
+    ;;
+  continue|continueasnew|can|12|12-continue-as-new)
+    DIR="examples/runnable/12-continue-as-new"
     ;;
   *)
     echo "Unknown runnable example: $EXAMPLE" >&2

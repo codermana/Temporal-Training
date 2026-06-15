@@ -198,6 +198,7 @@ show: ## Print an example file (FILE=02-reliability/heartbeat_long_activity.java
 	scripts/show-example.sh $(FILE)
 
 .PHONY: run-hello run-async run-approval run-schedules run-kafka run-testing run-saga run-aws
+.PHONY: run-retries run-child run-replay run-continue
 
 run-hello:     ## Day 1: Hello Temporal
 	scripts/run-example.sh hello
@@ -222,6 +223,18 @@ run-saga:      ## Day 5: Saga
 
 run-aws:       ## Day 6: Import Worker (needs stack-aws + temporal)
 	scripts/run-example.sh aws
+
+run-retries:   ## Day 2: retries + heartbeat (deep-dive runnable)
+	scripts/run-example.sh retries
+
+run-child:     ## Day 2: child Workflows (deep-dive runnable)
+	scripts/run-example.sh child
+
+run-replay:    ## Day 1/4: determinism replay test (no server needed)
+	scripts/run-example.sh replay
+
+run-continue:  ## Day 5: continue-as-new (deep-dive runnable)
+	scripts/run-example.sh continue
 
 # ---------------------------------------------------------------------------
 # Per-day bundles - bring everything required for that day up / down
@@ -317,7 +330,7 @@ aws-buckets: ## List LocalStack S3 buckets
 # Slides (Marp)
 # ---------------------------------------------------------------------------
 
-.PHONY: slides slides-deps slides-why slides-fundamentals slides-html slides-pdf slides-pptx
+.PHONY: slides slides-deps slides-why slides-fundamentals slides-html slides-pdf slides-pptx slides-lint
 
 slides-deps: ## Install Marp CLI for a deck (DECK=why-temporal|temporal-fundamentals)
 	@DECK=$${DECK:-why-temporal}
@@ -352,6 +365,9 @@ slides-pdf: ## Export a deck to PDF (DECK=<name>) -> slides/<deck>/dist/slides.p
 slides-pptx: ## Export a deck to PPTX (DECK=<name>) -> slides/<deck>/dist/slides.pptx
 	@DECK=$${DECK:-why-temporal}
 	cd "slides/$$DECK" && npm run pptx
+
+slides-lint: ## Flag slides whose content overflows the slide box (DECK=<name> for one deck)
+	node scripts/check-slides.mjs $(DECK)
 
 # ---------------------------------------------------------------------------
 # Build / test
