@@ -2658,7 +2658,8 @@ Open in VSCode: examples/05-production/worker_options_manual.java, worker_tuner.
 | `ResourceBasedTuner` | Auto-scale Worker slots vs CPU / memory targets |
 | `CompositeTuner` | Mix strategies: fixed workflow slots + resource-based activity slots |
 | Sticky execution | Worker caches workflows; skips full replay each task |
-| `setUsingVirtualThreads(true)` (JDK 21+) | Threads = cheaper; more Activity concurrency |
+| `setUsingVirtualWorkflowThreads(true)` | Cheaper SDK Workflow threads inside the Worker Factory |
+| `setUsingVirtualThreads(true)` (JDK 21+) | Cheaper Activity execution threads inside one Worker |
 | Number of Task Queues | One pool per resource profile |
 
 ---
@@ -2693,6 +2694,58 @@ schedule-to-start latency - the Observability section next.
 
 ---
 
+<!-- _class: dense -->
+
+## Workers across machines
+
+```
+orders Task Queue
+   ├── worker JVM on pod-a / vm-a
+   ├── worker JVM on pod-b / vm-b
+   └── worker JVM on pod-c / vm-c
+```
+
+- Every Worker polling the same Task Queue is in the **same pool**.
+- Matching hands each task to **one** available poller; Workers compete, they do not coordinate directly.
+- Total capacity is roughly: `machines × Worker processes × execution slots`.
+- Sticky Workflow cache is **per Worker process**; if that process disappears, another Worker replays from history.
+
+> Machines scale the pool. Slots limit concurrency inside each Worker.
+
+<!--
+This is the missing bridge between the Pollers tab and the tuning knobs.
+Kubernetes replicas, VM count, and multiple JVMs all just add pollers to the same
+queue. Temporal does not shard a Workflow across Workers; each Workflow Task or
+Activity Task is leased to one Worker at a time.
+-->
+
+---
+
+<!-- _class: dense -->
+
+## Threads vs virtual threads
+
+| Layer | Platform threads | Virtual threads |
+| --- | --- | --- |
+| Workflow execution | SDK workflow threads; deterministic, park at Temporal waits | `setUsingVirtualWorkflowThreads(true)` makes those cheaper |
+| Activity execution | One blocking Activity can occupy one OS-backed thread | `setUsingVirtualThreads(true)` makes blocking I/O Activities cheaper |
+| Temporal semantics | Same Task Queues, histories, retries, timeouts | Same semantics — only JVM scheduling cost changes |
+
+- Virtual threads help **blocking I/O-heavy** Activity pools.
+- They do **not** make CPU-bound Activities faster; CPU still caps throughput.
+- Long Workflow waits still do **not** park a JVM thread; Temporal records timers and resumes later.
+
+> Virtual threads increase how much one JVM can hold; extra machines increase the Worker pool.
+
+<!--
+Important framing: virtual threads are a Java runtime implementation detail, not
+a Temporal distribution feature. They reduce per-blocking-call thread cost inside
+a Worker. Task Queues decide which machine gets the task; WorkerOptions decide
+how many tasks this process runs at once.
+-->
+
+---
+
 <!-- _class: code -->
 
 ## Manual sizing
@@ -2709,6 +2762,31 @@ Worker worker = factory.newWorker(
 ```
 
 > I/O-heavy workload: many concurrent Activities, few workflow tasks.
+
+---
+
+<!-- _class: code -->
+
+## Virtual-thread Worker
+
+<!-- Open in VSCode: examples/05-production/virtual_threads.java -->
+
+```java
+WorkerFactoryOptions factoryOptions =
+    WorkerFactoryOptions.newBuilder()
+        .setUsingVirtualWorkflowThreads(true)
+        .build();
+
+Worker worker =
+    factory.newWorker(
+        "high-concurrency-activities",
+        WorkerOptions.newBuilder()
+            .setUsingVirtualThreads(true)
+            .setMaxConcurrentActivityExecutionSize(1_000)
+            .build());
+```
+
+> Same Task Queue. Same retries. More blocking I/O Activities can fit in one JVM.
 
 ---
 
