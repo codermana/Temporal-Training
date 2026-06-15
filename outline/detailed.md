@@ -330,7 +330,7 @@ add Docker stacks. Minimum recommended RAM: 8 GB.
 | Service | Used from | Notes |
 |---|---|---|
 | `temporal server start-dev` | Day 1+ | Single binary: Frontend/History/Matching + Web UI + in-memory/SQLite persistence (`make temporal`) |
-| Kafka (KRaft, single broker) | Day 3 | `bitnamilegacy/kafka` image; no Zookeeper needed |
+| Kafka (KRaft, single broker) | Day 3 | Official `apache/kafka` image; no Zookeeper needed |
 | Prometheus | Day 4 | Scrapes Worker metrics endpoint via Micrometer |
 | Grafana | Day 4 | Pre-loaded Temporal dashboard |
 | LocalStack | Day 6 | Mocks Glue, S3, SQS, and EventBridge for AWS labs |

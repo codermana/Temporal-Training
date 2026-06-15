@@ -32,7 +32,7 @@ key, and a producer **Activity** that writes the outcome back.
 
   ```bash
   docker exec temporal-training-kafka \
-    /opt/bitnami/kafka/bin/kafka-topics.sh \
+    /opt/kafka/bin/kafka-topics.sh \
     --bootstrap-server localhost:9092 --create --if-not-exists \
     --topic orders --partitions 4 --replication-factor 1
   ```

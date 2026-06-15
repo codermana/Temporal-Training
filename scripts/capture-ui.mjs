@@ -34,7 +34,10 @@ const browser = await puppeteer.launch({
 try {
   const page = await browser.newPage();
   await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 2 });
-  await page.goto(`${UI}${urlPath}`, { waitUntil: 'networkidle0', timeout: 30000 });
+  // domcontentloaded (not networkidle0): running Workflows poll forever, so the
+  // network never goes idle and networkidle0 would time out. waitText below
+  // gates on the actual content being present.
+  await page.goto(`${UI}${urlPath}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
   if (waitText) {
     try {
       await page.waitForFunction((t) => document.body.innerText.includes(t), { timeout: 15000 }, waitText);

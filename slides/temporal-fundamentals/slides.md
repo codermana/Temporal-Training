@@ -990,6 +990,24 @@ Run: make run-async
 
 ---
 
+## Why async — the mental model
+
+An Activity call is a **durable async call**. It returns a **`Promise`** (a future result), not a blocked thread:
+
+- **`Async.function(act::method, arg)`** schedules the Activity and hands back a `Promise` **immediately**.
+- The Workflow **parks** on `.get()` — the Worker thread is freed. One JVM holds tens of thousands of parked Workflows as **heap state**, not threads.
+- **The one rule:** start *every* Activity you want in parallel **before** you `.get()` any of them.
+
+> Sequential vs parallel is just *when* you call `.get()` — same API, different timing.
+
+<!--
+The lead-in before any Async code. The whole section is one idea: a Promise lets
+the Workflow wait without occupying a thread, so "parallel" costs nothing. Get
+this and the fan-out code is obvious.
+-->
+
+---
+
 # Sequential vs Async
 
 ```java
@@ -1005,6 +1023,24 @@ String cleanAuditUri = activities.transform(auditUri.get());
 ```
 
 > `Promise.get()` blocks the *Workflow loop*, not an OS thread.
+
+---
+
+## Fan-out / fan-in — the shape
+
+The everyday parallel pattern: do N independent things, then combine. Three steps:
+
+1. **Fan-out** — map each item to an `Async.function(...)` call, collecting the **`Promise`s into a list** (don't `.get()` yet).
+2. **Join** — `Promise.allOf(list).get()` parks until *every* branch finishes.
+3. **Fan-in** — reduce the resolved values (sum, merge, collect).
+
+> The whole trick is step 1: build the list of Promises **before** you await any — that's what makes it parallel instead of a sequential loop.
+
+<!--
+This is the lead-in before the stream().map(Async.function).toList() one-liner.
+If they get "collect all Promises, THEN join," the code reads itself. The classic
+bug is calling .get() inside the map - that serializes it.
+-->
 
 ---
 
@@ -1037,6 +1073,22 @@ Each one is just heap state, not a parked thread.
 
 ---
 
+## More async shapes — procedure & race
+
+Two variants on the same parking model:
+
+- **`Async.procedure`** — for **void** Activities (no return); `Async.function` is for ones that return a value.
+- **`Promise.allOf`** waits for **every** branch; **`Promise.anyOf`** wakes on the **first** to finish — a race.
+
+> Pick `allOf` to gather all results, `anyOf` to act on the fastest and move on.
+
+<!--
+Lead-in before the procedure/anyOf code. Same idea as fan-out, two more tools:
+void Activities, and racing N calls when you only need the first answer.
+-->
+
+---
+
 <!-- _class: code -->
 
 ## Async.procedure & first-to-finish
@@ -1057,6 +1109,22 @@ Promise.anyOf(primary, fallback).get();
 
 <!--
 Example: examples/02-reliability/async_procedure_and_race.java
+-->
+
+---
+
+## When one branch fails
+
+By default a failed branch's `.get()` **throws** — and an unhandled throw aborts the whole fan-out.
+
+- To **survive partial failure**, wrap each branch's `.get()` in a try/catch and record a per-branch outcome.
+- The other branches keep their results; *you* decide what a partial success means.
+
+> All-or-nothing is the default; per-branch handling is a deliberate choice.
+
+<!--
+Lead-in before the try/catch-per-branch code. The question to pose: "3 of 4
+priced fine, 1 failed - do you fail the order or price 3?" That's a design call.
 -->
 
 ---
@@ -1233,6 +1301,50 @@ Once the Activity succeeds the panel empties — the **history keeps only the fi
 
 ---
 
+<!-- _class: dense -->
+
+## Activity retry vs Workflow retry
+
+Two different retry scopes — people set the wrong one:
+
+| | **Activity `RetryPolicy`** | **Workflow `RetryPolicy`** |
+|---|---|---|
+| Set on | `ActivityOptions` | `WorkflowOptions` |
+| Retries | one Activity attempt | the **whole Workflow run** |
+| Default | **on** — unlimited attempts | **off** — no retry |
+| For | transient I/O failures (the 99% case) | crash-only restart of an entire run |
+
+- Almost all retry logic belongs on the **Activity** — that's where side effects and flakiness live.
+- A Workflow retry restarts from **event 0** as a new Run — rarely what you want.
+
+> The knob you reach for daily is the **Activity** RetryPolicy; Workflow retry is the rare exception.
+
+<!--
+The mix-up: people put MaximumAttempts on WorkflowOptions expecting their Activity
+to retry. It doesn't - Activity retries are configured on ActivityOptions and are
+ON by default (unlimited). Workflow retry is opt-in and restarts the whole run.
+-->
+
+---
+
+## Heartbeats — why
+
+A long Activity (export 1000 pages, transcode a video) has a problem: if the Worker dies at page 900, a plain retry restarts at **page 0**.
+
+- A **heartbeat** is a periodic "still alive — at page N" ping from the Activity to the server.
+- It buys two things: **liveness** — miss the `heartbeatTimeout` and the server reschedules the Activity on another Worker; and **resumability** — the retry reads the last heartbeat detail and continues from **page N**.
+- Only **long-running** Activities need it; short ones finish before any timeout.
+
+> A heartbeat checkpoints an *Activity*, the way continue-as-new checkpoints a *Workflow*.
+
+<!--
+The lead-in before the loop. Without heartbeats a dead Worker is invisible until
+startToClose fires, and the retry redoes everything. With them: fast failure
+detection + resume-where-you-left-off.
+-->
+
+---
+
 <!-- _class: code -->
 
 ## Heartbeats
@@ -1254,6 +1366,23 @@ public String exportLargeTable(String tableName) {
 ```
 
 > On retry, read the last heartbeat detail and *resume from page N*.
+
+---
+
+## Racing an Activity against a deadline
+
+Sometimes a long Activity must be **abandoned** if it overruns — but you still want it to clean up first.
+
+- A **`CancellationScope`** wraps the Activity; cancelling the scope sends a cancellation to it.
+- That cancellation arrives on the Activity's **next heartbeat** (which throws) — so it can delete partial work before exiting.
+- Drive it with `Workflow.await(deadline, …)` to enforce the time budget.
+
+> Cancellation is cooperative — it rides the heartbeat, so only heartbeating Activities can be stopped mid-flight.
+
+<!--
+Lead-in before the CancellationScope code. Ties back to heartbeats: cancellation
+reaches a running Activity the same way liveness does - via the heartbeat.
+-->
 
 ---
 
@@ -1335,6 +1464,30 @@ Run: make run-approval
 
 ---
 
+<!-- _class: dense -->
+
+## Talking to a running Workflow — which one?
+
+A Workflow is a **live object**, not a job you fire and forget. Three ways to interact, picked by *intent*:
+
+| | **Signal** | **Query** | **Update** |
+|---|---|---|---|
+| Direction | push **in** | read **out** | call **in → out** |
+| Synchronous? | no — fire-and-forget | yes | yes |
+| Change state? | **yes** | **no** (read-only) | **yes** |
+| In the history? | **yes** | no | **yes** |
+| Can be rejected? | no | n/a | **yes** (validator) |
+
+> Signal = "here's an event." Query = "what's your state?" Update = "do this and tell me the result."
+
+<!--
+This is the lead-in BEFORE any annotation soup. Decide by intent first, then the
+@SignalMethod / @QueryMethod / @UpdateMethod code is obvious. Queries never touch
+history (read-only, served from the cached state); signals and updates do.
+-->
+
+---
+
 <!-- _class: code -->
 
 ## Signals - push data in
@@ -1374,6 +1527,33 @@ public String currentState() { return state; }
 - No history events. No Activities. No side effects.
 
 > Synchronous and cheap. Routed to whichever Worker has the workflow cached.
+
+---
+
+<!-- _class: image -->
+
+## Queries in the Web UI
+
+![Temporal Web UI Queries tab for the running approval-demo Workflow: a Query Type dropdown set to currentState, a Query Arg box, and a Run Query button — it runs synchronously against the live Workflow and writes nothing to history](assets/ui-queries.png)
+
+<!--
+Demo: pick currentState, Run Query, read the result. Note Event History is 0 here
+- a Query never appears in history. Empty tab = no Worker polling / run not cached.
+-->
+
+---
+
+## What you're seeing
+
+The **Queries** tab runs a Query against the *live* Workflow, on demand:
+
+- Pick a registered **Query Type** (`currentState`) and hit **Run Query**.
+- The result is the Workflow's **current in-memory state** — rebuilt by replaying to "now" on a Worker that has it cached.
+- **Nothing is written to history** — Queries are read-only, so you can poll them freely.
+
+> Empty tab? No Worker is polling — a Query needs a live Worker with the run cached.
+
+> Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
 
 ---
 
@@ -1422,6 +1602,23 @@ Run: make run-approval
 
 ---
 
+## Updates — a validated, blocking call
+
+An Update is the **request/response** way into a Workflow: the caller waits for a result, and the Workflow can **reject** bad input before recording anything.
+
+- Mark the handler `@UpdateMethod`; add an optional `@UpdateValidatorMethod` that runs **first**.
+- Validator throws → the Update is rejected and **never hits history** (cheap, no audit noise).
+- Accepted → it mutates state and returns a value to the caller.
+
+> Use an Update (not a Signal) when the caller needs the outcome, or you must validate before admitting.
+
+<!--
+Lead-in before the @UpdateMethod interface. The validator is the headline:
+reject bad input synchronously without polluting history.
+-->
+
+---
+
 <!-- _class: code -->
 
 ## @UpdateMethod + @UpdateValidatorMethod
@@ -1442,6 +1639,23 @@ interface CartWorkflow {
 - Caller blocks on `.getResult()`.
 - Validator runs **before** the update is admitted to history.
 - Reject cheaply; don't pollute the audit trail.
+
+---
+
+## Don't want to block? startUpdate
+
+A typed `addItem(...)` call **blocks** until the Update finishes. When you'd rather fire it and keep working:
+
+- **`startUpdate(...)`** returns a **handle** as soon as the Update reaches a chosen stage.
+- The `WorkflowUpdateStage` (`ACCEPTED` or `COMPLETED`) is **required** — it says how far to wait before handing back the handle.
+- Call `handle.getResult()` later, only when you actually need the value.
+
+> Same Update; the only choice is *when* you block — now (typed call) or later (handle).
+
+<!--
+Lead-in before the startUpdate code. Parallels startUpdate to Async.function:
+both hand back a handle so you can do other work before collecting the result.
+-->
 
 ---
 
@@ -1469,6 +1683,22 @@ Example: examples/03-interactions/update_completed.java
 
 ---
 
+## Start-or-signal — one idempotent entry
+
+A Kafka consumer (or any event source) can't know whether the Workflow for a key exists yet. Bare `start()` **throws** on the second event for that key.
+
+- **`signalWithStart`** = "start the Workflow if absent, then deliver this Signal" — atomic, every time.
+- First event for `order-123` starts it; every later event just signals the running execution.
+
+> The idempotent entry point for event-driven Workflows — never branch on "does it exist yet?"
+
+<!--
+Lead-in before the signalWithStart code. THE foot-gun fix - the Day-3 Kafka
+bridge depends entirely on this. Bare start() crashes on event #2 for a key.
+-->
+
+---
+
 <!-- _class: code -->
 
 ## signalWithStart
@@ -1490,6 +1720,22 @@ This is THE foot-gun.
 
 Every team copies bare WorkflowClient.start() from a tutorial and crashes on the
 second Kafka message for the same key.
+-->
+
+---
+
+## Create + update in one round trip
+
+Sometimes you want to **start a Workflow and immediately ask it something**, in a single call:
+
+- **`startUpdateWithStart`** creates the Workflow if absent, applies an Update, and returns its result — one round trip.
+- The Update half is the same validated `@UpdateMethod` from before.
+
+> The synchronous cousin of `signalWithStart`: start-or-reuse, but it hands back a result.
+
+<!--
+Lead-in before the startUpdateWithStart code. Use when the very first interaction
+both creates the Workflow and needs an answer (e.g. submit-and-confirm).
 -->
 
 ---
@@ -1546,6 +1792,34 @@ when the caller wants the result.
 
 ---
 
+<!-- _class: image -->
+
+## Signals & Updates in the history
+
+![Event History for approval-demo (Completed, Result "PO-1001 APPROVED by alice (expedite before close of business)"): the table shows Workflow Execution Signaled for approve, plus Workflow Execution Update Accepted and Update Completed for changeNote — and no Query events](assets/ui-signals-history.png)
+
+<!--
+Capstone for the section: the SAME run, after a Query (not shown - leaves no
+trace), an Update (changeNote), and a Signal (approve). Point at the Signaled
+event and the Update Accepted/Completed pair. Next slide names them.
+-->
+
+---
+
+## What you're seeing
+
+Unlike Queries, **Signals and Updates are durable events** — they show up in history:
+
+- **`WorkflowExecutionSignaled`** — the `approve` Signal that woke the `await`.
+- **`…UpdateAccepted` → `…UpdateCompleted`** — `changeNote`: validator admitted it, then it ran.
+- The **Result** reflects both; **no Query events** — reading state leaves no trace.
+
+> Replay re-applies these events, so Signal/Update effects survive restarts; a Query you just re-run.
+
+> Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
+
+---
+
 <!-- _class: section -->
 <!-- _transition: slide 0.5s -->
 
@@ -1560,6 +1834,22 @@ Open in VSCode: examples/03-interactions/schedule_interval.java, schedule_cron_o
 Run: make run-schedules
 -->
 
+
+---
+
+## Defining a Schedule
+
+A Schedule is a **durable server object** that starts a Workflow on a spec — Temporal's replacement for cron / Airflow's scheduler.
+
+- A **`Schedule`** = an **action** (which Workflow, which Task Queue) + a **spec** (when) + a **policy** (overlap, jitter, catchup).
+- The **server** owns it; you manage it with `ScheduleClient` — create, pause, trigger, delete.
+
+> You define *what* and *when*; the server fires it. No always-on scheduler process of your own.
+
+<!--
+Lead-in before the Schedule.newBuilder code. Three parts: action + spec + policy.
+Contrast with a cron line on a box that dies when the box dies.
+-->
 
 ---
 
@@ -1590,6 +1880,22 @@ scheduleClient.createSchedule("hourly-orders", schedule, ScheduleOptions.newBuil
 ```
 
 > Durable Temporal object. Survives redeploy. Overlap is *explicit*.
+
+---
+
+## Calendar specs, catchup & overlap
+
+Two questions every scheduler must answer — Temporal makes both explicit knobs:
+
+- **When** — a cron expression or calendar/interval spec, with optional **jitter** to avoid thundering herds.
+- **If it's late or still running** — `catchupWindow` bounds backfill after downtime; the **overlap policy** decides what happens when the previous run hasn't finished.
+
+> Airflow's `schedule_interval` + `catchup` + `max_active_runs`, but as explicit, bounded settings.
+
+<!--
+Lead-in before the cron/overlap code + table. The overlap policy is the real
+lesson - "your hourly job takes 90 min, now what?" has five named answers.
+-->
 
 ---
 
@@ -1689,6 +1995,28 @@ Open in VSCode: examples/03-interactions/child_workflow.java, workflow_and_run_t
 
 ---
 
+<!-- _class: dense -->
+
+## Child Workflow vs Activity — when?
+
+Both let a parent delegate work. Reach for a **Child Workflow** only when the sub-task is itself a *workflow*:
+
+| Use an **Activity** when… | Use a **Child Workflow** when… |
+|---|---|
+| it's one unit of work (a call, a job) | it has its own multi-step orchestration |
+| no independent retries/timeouts needed | it needs its **own** history, timeouts, Task Queue |
+| the result fits the parent's history | its events would bloat the parent's history |
+| — | you want it on a different Worker pool |
+
+> Default to an Activity. Compose a Child Workflow when the sub-task deserves its **own identity and history**.
+
+<!--
+The lead-in before the stub code. 90% of delegation is Activities; children are
+for when the sub-task is a real orchestration in its own right.
+-->
+
+---
+
 <!-- _class: code -->
 
 ## Child Workflows
@@ -1708,6 +2036,33 @@ Promise.allOf(fraudDecision, shippingPlan).get();
 ```
 
 > Children get **independent identity, history, Task Queue, timeouts**.
+
+---
+
+<!-- _class: image -->
+
+## Child Workflows in the UI — Relationships
+
+![Relationships tab for batch-parent-demo: a parent-over-three-children tree, and a table listing BatchWorkflow batch-parent-demo with Child Count 3, then three ItemWorkflow children item-A, item-B, item-C, each Completed with its own start, end and duration](assets/ui-child-relationships.png)
+
+<!--
+Click into the parent → Relationships. The tree + table make "each child is its
+own Workflow" concrete. Click any child row to jump to its own page/history.
+-->
+
+---
+
+## What you're seeing
+
+The parent's **Relationships** tab shows the tree it spawned:
+
+- The **parent** (`BatchWorkflow`, `batch-parent-demo`) with **Child Count 3**.
+- Each **child** (`ItemWorkflow`, `item-A/B/C`) is its **own Workflow** — own ID, own history, own page (click a row to open it).
+- They ran **in parallel** (overlapping start/end) and each Completed independently.
+
+> A child is a first-class Workflow, not a sub-step hidden in the parent's history — that's the point of composing.
+
+> Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
 
 ---
 
@@ -1830,6 +2185,23 @@ Heartbeat the topic:partition:offset so retries can resume.
 
 ---
 
+## Emitting events back to Kafka
+
+When a Workflow needs to **publish** a result, wrap the producer in an Activity:
+
+- The send is a **side effect** → it lives in an Activity, never in Workflow code.
+- Make the producer **idempotent** (`enable.idempotence`, `acks=all`) with a **stable key**, so a retried Activity doesn't duplicate.
+- Temporal's at-least-once + an idempotent keyed producer ≈ **effectively-once** per key.
+
+> The Worker may retry the send; idempotent + keyed is what makes that safe.
+
+<!--
+Lead-in before the producer config. The point: publishing is a side effect
+(Activity), and the retry story forces idempotence + a stable key.
+-->
+
+---
+
 <!-- _class: code -->
 
 ## Producer Activity
@@ -1848,6 +2220,22 @@ public void publishOutcome(String orderId, String outcome) {
 
 - Idempotent producer + stable key = at-least-once becomes effectively-once by key.
 - Downstream still dedupes.
+
+---
+
+## Atomic DB write + event — the outbox
+
+You can't atomically **write your DB and publish to Kafka** — two systems, no shared transaction (and 2PC is the thing to avoid).
+
+- Write the business row **and** an `outbox` row in **one DB transaction** — they commit or fail together.
+- A separate Activity (or Debezium) reads the outbox and publishes to Kafka, marking rows sent.
+
+> Turn "two side effects across systems" into "one local transaction + a relay."
+
+<!--
+Lead-in before the outbox transaction code. The problem statement is the lesson:
+DB-write + Kafka-publish can't be atomic, so make the publish derive from a row.
+-->
 
 ---
 
@@ -2131,6 +2519,22 @@ if (v == Workflow.DEFAULT_VERSION) {
 
 ---
 
+## Two ways a Worker adopts new code
+
+When you deploy new code, what happens to **in-flight** runs? Choose per Workflow type:
+
+- **`PINNED`** — in-flight runs stay on the **old** code until they finish; new code only takes new runs. Right for short-lived Workflows (drain, then deploy).
+- **`AUTO_UPGRADE`** — long-runners pick up newer **compatible** code automatically. Right for Workflows that live for months.
+
+> Short-lived → PINNED; long-lived → AUTO_UPGRADE. (`getVersion`, previous slide, patches *within* one definition.)
+
+<!--
+Lead-in before the @WorkflowVersioningBehavior code. The decision is run lifetime:
+you can drain a 5-minute checkout; you can't drain a 6-month subscription.
+-->
+
+---
+
 <!-- _class: code -->
 
 ## Versioning behavior
@@ -2182,6 +2586,36 @@ Open in VSCode: examples/05-production/worker_options_manual.java, worker_tuner.
 
 ---
 
+<!-- _class: image -->
+
+## Who's polling? — the Workers / Pollers tab
+
+![A Workflow's Workers tab on the Pollers subtab: one poller 19330@Dhruvtara.local with a Build ID, a Last Accessed time, and checkmarks under Workflow Task Handler and Activity Handler, confirming a Worker is actively polling this Task Queue](assets/ui-workers-tab.png)
+
+<!--
+The diagnostic view. "My Workflow is stuck" → open Workers/Pollers; if it's empty,
+no Worker is polling that Task Queue. Also shows what each Worker registered.
+-->
+
+---
+
+## What you're seeing
+
+A Workflow's **Workers → Pollers** tab answers "is anything polling this Task Queue?":
+
+- Each **poller** is a Worker thread pulling tasks — shows its **identity** (`pid@host`), **Build ID**, **Last Accessed**.
+- The **Workflow / Activity Handler** ticks show what that Worker registered.
+- **No pollers** → tasks pile up, nothing runs — first thing to check when a Workflow is stuck.
+
+> Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
+
+<!--
+Capacity lives here too: too few pollers for the backlog shows up as
+schedule-to-start latency - the Observability section next.
+-->
+
+---
+
 <!-- _class: code -->
 
 ## Manual sizing
@@ -2198,6 +2632,22 @@ Worker worker = factory.newWorker(
 ```
 
 > I/O-heavy workload: many concurrent Activities, few workflow tasks.
+
+---
+
+## Let the host decide — resource-based slots
+
+Fixed slot counts are a guess. A **resource-based tuner** sizes the Worker to the **machine** instead:
+
+- You set **target CPU / memory** (e.g. 75% / 80%); the SDK grows or shrinks slots to hold that.
+- Best for **mixed or unpredictable** workloads, where any fixed number is wrong half the time.
+
+> Stop hand-tuning slot counts per host — target a utilisation and let it adapt.
+
+<!--
+Lead-in before the ResourceBasedTuner code. Contrast with the previous "Manual
+sizing" slide: same goal (right concurrency), but driven by live resource use.
+-->
 
 ---
 
@@ -2225,6 +2675,22 @@ Worker worker = factory.newWorker(
 
 ---
 
+## Mix strategies per slot type
+
+Workflow tasks and Activities have different profiles — so tune them **differently inside one Worker**:
+
+- **Fixed** slots where load is predictable (e.g. workflow-task decisions).
+- **Resource-based** slots where it isn't (e.g. I/O-heavy Activities).
+
+> A `CompositeTuner` lets each slot type use the strategy that fits it — not one knob for everything.
+
+<!--
+Lead-in before the CompositeTuner code. The realistic answer is "both": pin the
+cheap deterministic workflow slots, auto-size the expensive activity slots.
+-->
+
+---
+
 <!-- _class: code -->
 
 ## CompositeTuner - mix strategies
@@ -2246,6 +2712,29 @@ WorkerTuner tuner = new CompositeTuner(
 
 <!--
 Example: examples/05-production/composite_tuner.java
+-->
+
+---
+
+<!-- _class: dense -->
+
+## Cancel vs Terminate vs Reset — the scary buttons
+
+The detail page's **More Actions** menu has three ways to intervene — *not* interchangeable:
+
+| | **Cancel** | **Terminate** | **Reset** |
+|---|---|---|---|
+| Workflow gets a say? | **yes** — a request it can catch | **no** — killed at once | replays instead |
+| Cleanup / compensation? | yes, if you coded it | no | n/a |
+| Effect | graceful stop | hard stop | **rewind to an earlier event**, re-run from there |
+| Use when | "stop, but tidy up" | "it's wedged, stop now" | "bad deploy/bug — replay with fixed code" |
+
+> Cancel is cooperative; Terminate is `kill -9`; Reset is a time machine — a new Run from a past point.
+
+<!--
+The most dangerous menu for newcomers. Terminate forfeits compensation - prefer
+Cancel. Reset recovers from a bad code deploy: pick an event, reset, the Worker
+replays forward with current code. All three are in the per-Workflow More Actions.
 -->
 
 ---
@@ -2303,6 +2792,22 @@ WorkflowServiceStubs service = WorkflowServiceStubs.newServiceStubs(
 
 ---
 
+## Beyond the built-ins — your own metrics
+
+The SDK emits task latencies and counts for free. For **business** signals, you add your own:
+
+- Grab the SDK's metrics scope inside an Activity and emit counters / gauges / timers.
+- They ride the **same Micrometer → Prometheus** pipeline as the built-in metrics.
+
+> "How many orders compensated today?" is a metric *you* emit — Temporal doesn't know your domain.
+
+<!--
+Lead-in before the custom-metric code. Built-ins tell you the system is healthy;
+custom metrics tell you the business is. Same export path, so it's cheap to add.
+-->
+
+---
+
 <!-- _class: code -->
 
 ## Custom Activity metric
@@ -2324,6 +2829,22 @@ class InvoiceActivitiesImpl implements InvoiceActivities {
 
 <!--
 Example: examples/05-production/custom_activity_metric.java
+-->
+
+---
+
+## One trace across Workflow + Activities
+
+A request that spans a Workflow and several Activities should be **one distributed trace**, not disconnected spans:
+
+- An OpenTelemetry **interceptor** propagates trace context across Workflow → Activity → child-Workflow boundaries.
+- Spans land in your existing backend (Jaeger, Tempo, Honeycomb…).
+
+> Wire the interceptor once on the client + Worker; causality across the whole execution comes for free.
+
+<!--
+Lead-in before the OTel interceptor code. The win is correlation: without it,
+the Activity spans are orphans; with it, you see the whole request as one tree.
 -->
 
 ---
@@ -2727,6 +3248,33 @@ temporal workflow start --task-queue orders \
 
 ---
 
+<!-- _class: image -->
+
+## Compensation in the history
+
+![Event History for the failed saga (Completed, Result "COMPENSATED"): after Ship fails, the compensating Activities RestoreInventory, CancelPayment and SendFailureNotification are scheduled and completed, undoing the earlier ReserveInventory and AuthorizePayment](assets/ui-saga-compensation.png)
+
+<!--
+Captured from examples/runnable/07-saga with input fail-at-ship. The Result is
+"COMPENSATED" - a handled business outcome, not a crash. Next slide names the arc.
+-->
+
+---
+
+## What you're seeing
+
+The forward path ran, `Ship` failed, and the Saga **unwound it**:
+
+- Forward: `AuthorizePayment` → `ReserveInventory` → `Ship` ✗.
+- Compensations, in **reverse**: `RestoreInventory` (undo Reserve), `CancelPayment` (undo Authorize), `SendFailureNotification` — each its own Activity in the history.
+- The Workflow ends **Completed**, Result **`COMPENSATED`** — a handled outcome, not a crash.
+
+> Temporal rolls nothing back for you. Compensation is just **more Activities you orchestrate** — the Saga pattern + your code own the "undo."
+
+> Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
+
+---
+
 <!-- _class: section -->
 <!-- _transition: slide 0.5s -->
 
@@ -2740,6 +3288,23 @@ Wiring + interaction patterns.
 Open in VSCode: examples/06-saga-spring/spring_temporal_config.java, kafka_listener_trigger.java, sync_saga_update.java, async_saga_signal.java, continue_as_new.java
 -->
 
+
+---
+
+## Temporal in Spring Boot — the shape
+
+Temporal isn't a framework you hand control to — it's a **client + Worker** you wire into Spring's lifecycle:
+
+- Expose **`WorkflowServiceStubs` → `WorkflowClient` → `WorkerFactory`** as `@Bean`s; bind the factory's **start / shutdown** to the app context.
+- **Activities are Spring beans** — inject DataSources, HTTP clients, repositories as usual.
+- Drive Workflows from a **`@RestController`** (start / signal / query); the Worker just polls in the background.
+
+> In production use the `temporal-spring-boot-starter`; the next slide is the manual wiring it automates.
+
+<!--
+The lead-in before the @Configuration soup. Three beans + lifecycle is the whole
+trick; Activities being Spring beans is what makes DI/testing feel native.
+-->
 
 ---
 
@@ -2818,6 +3383,23 @@ void onOrder(OrderRequest request) {
 
 ---
 
+## Continue-as-new — why
+
+History grows with **every event**. A Workflow that loops forever (a subscription, a counter, an actor) would grow its history without bound — slower replay, eventual hard limits.
+
+- **Continue-as-new** atomically **ends the current run** and **starts a fresh one** — same Workflow ID, clean history.
+- You hand forward only the state the next run needs: a **checkpoint**, not a memory dump.
+- To callers it's still *one* Workflow ID; underneath it's a **chain of Runs**.
+
+> Reach for it on unbounded loops and periodic/cron-style Workflows.
+
+<!--
+The lead-in before the loop code. The trigger is history size, not elapsed time:
+if a Workflow keeps appending events forever, continue-as-new resets the slate.
+-->
+
+---
+
 <!-- _class: code -->
 
 ## Continue-as-new
@@ -2839,6 +3421,33 @@ public void run(String subscriptionId, int eventCount) {
 ```
 
 > Continue-as-new is a *checkpoint*, not a memory dump. Carry only what's needed.
+
+---
+
+<!-- _class: image -->
+
+## Continue-as-new in the UI — the Run chain
+
+![Relationships tab for continue-as-new-demo: a First Execution link and a Previous Execution link joined to the current run — one Workflow ID spanning multiple Runs chained by continue-as-new, each with its own small history](assets/ui-continue-relationships.png)
+
+<!--
+Captured from examples/runnable/12-continue-as-new (processed 9 events across 3
+Runs). The First/Previous Execution links are the chain - walk them backwards.
+-->
+
+---
+
+## What you're seeing
+
+The **Relationships** tab exposes the chain continue-as-new builds:
+
+- **First Execution / Previous Execution** links — hop backwards through the Runs.
+- Same **Workflow ID** throughout; each Run has its **own Run ID and history**.
+- The current Run started fresh — its history is small, not the sum of every iteration.
+
+> One business identity, many physical Runs — exactly the Workflow ID vs Run ID distinction from Day 1.
+
+> Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
 
 ---
 
@@ -3061,6 +3670,26 @@ Open in VSCode: examples/07-aws-containers/glue_activity.java, s3_reference_payl
 Run: make run-aws
 -->
 
+
+---
+
+## Supervising external compute — the pattern
+
+You can't make a 30-minute Glue / EMR / Batch job *itself* durable. So wrap it in an Activity that **supervises** it:
+
+1. **Start** the external job — get back a job-run ID.
+2. **Poll** its status in a loop, **heartbeating** the run ID each time.
+3. **Succeed / fail** the Activity when the job finishes.
+
+- The heartbeat means a Worker restart **re-attaches to the same run** and resumes polling — it doesn't relaunch the job.
+- The Workflow stays oblivious — it just sees "a long Activity."
+
+> Temporal owns the *orchestration & durability*; AWS still owns the *compute*.
+
+<!--
+The lead-in before the polling loop. This is THE pattern for any external async
+job (Glue, EMR, Batch, SageMaker): start → poll+heartbeat → settle.
+-->
 
 ---
 

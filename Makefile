@@ -325,7 +325,7 @@ load-transform: ## Start N=200 Workflows on the transform queue (KEDA demo)
 kafka-topic: ## Create a Kafka topic (TOPIC=orders [PARTITIONS=4])
 	@if [ -z "$(TOPIC)" ]; then echo "Usage: make kafka-topic TOPIC=<name> [PARTITIONS=4]"; exit 2; fi
 	docker exec temporal-training-kafka \
-		/opt/bitnami/kafka/bin/kafka-topics.sh \
+		/opt/kafka/bin/kafka-topics.sh \
 		--bootstrap-server localhost:9092 --create --if-not-exists \
 		--topic $(TOPIC) --partitions $${PARTITIONS:-4} --replication-factor 1
 

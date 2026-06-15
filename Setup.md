@@ -285,6 +285,6 @@ make clean         # mvn clean for every runnable project
 ## Reference
 
 - Temporal CLI setup: <https://temporal.io/setup/install-temporal-cli>
-- Bitnami Kafka image: <https://hub.docker.com/r/bitnami/kafka>
+- Apache Kafka image: <https://hub.docker.com/r/apache/kafka>
 - LocalStack: <https://docs.localstack.cloud/>
 - KEDA Temporal scaler: <https://keda.sh/docs/latest/scalers/temporal/>

@@ -33,7 +33,7 @@ Workflow**: fan out one Activity per partition range, run them concurrently
 
   ```bash
   docker exec temporal-training-kafka \
-    /opt/bitnami/kafka/bin/kafka-topics.sh \
+    /opt/kafka/bin/kafka-topics.sh \
     --bootstrap-server localhost:9092 --create --if-not-exists \
     --topic batch-input --partitions 6 --replication-factor 1
   ```
