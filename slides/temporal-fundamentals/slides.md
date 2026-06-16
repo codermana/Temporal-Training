@@ -952,6 +952,39 @@ the right.
 
 ---
 
+<!-- _class: dense -->
+
+## Limits you design around
+
+Per **Run** (one Workflow execution) — the caps that decide when to Continue-As-New:
+
+| What | SDK warns | Hard cap | Escape hatch |
+|---|---|---|---|
+| Events in the history | 10,240 | **51,200** | Continue-As-New |
+| History size | 10 MB | **50 MB** | Continue-As-New |
+| A single payload | ~256 KB | **2 MB** | S3 reference *(Day 6)* |
+| Pending Activities / Child Workflows | — | **~2,000** each | bounded batches, not all at once |
+
+- **Open Runs** — exactly **one** per Workflow ID per Namespace; the ID frees up once that run closes.
+- These are server **defaults** (dynamic config), but the event/size caps are real stops: blow past **51,200 events / 50 MB** and the server **terminates** the Workflow.
+
+> The history caps are the true ceiling — **Continue-As-New** is how every unbounded Workflow stays under them.
+
+<!--
+The consolidated "limits?" reference — pairs with the retention/pruning slides
+above and the serialization-limits slide in the SDK section. Two kinds of limit:
+SIZE/COUNT (the table — hit the hard cap and the server terminates the run) and
+STRUCTURAL (one open run per ID; ~2,000 pending activities/children before the
+Workflow Task fails). All numbers are dynamic-config defaults: historyCount
+warn/error 10,240/51,200, historySize 10/50 MB, blobSize ~256 KB/2 MB,
+NumPendingActivities/ChildExecutions 2,000. Escape hatches: Continue-As-New
+(Day 5) for history growth, S3 reference payloads (Day 6) for big blobs, bounded
+fan-out for pending-work caps. Say out loud: you never tune these up — you design
+under them.
+-->
+
+---
+
 <!-- _class: lab -->
 
 ###### Lab · Day 1
