@@ -10,6 +10,9 @@
   <properties>
     <maven.compiler.release>17</maven.compiler.release>
     <temporal.version>1.32.1</temporal.version>
+    <!-- Default entry point (the Worker). Override on the CLI to run the
+         starter: mvn ... exec:java -Dexec.mainClass=...Starter -->
+    <exec.mainClass>training.temporal.approval.ApprovalWorker</exec.mainClass>
   </properties>
 
   <dependencies>
@@ -40,7 +43,7 @@
         <artifactId>exec-maven-plugin</artifactId>
         <version>3.3.0</version>
         <configuration>
-          <mainClass>training.temporal.approval.ApprovalWorker</mainClass>
+          <mainClass>${exec.mainClass}</mainClass>
         </configuration>
       </plugin>
     </plugins>

@@ -46,6 +46,9 @@ mkdir -p work/day-01/hello/src/main/java/training/temporal/hello
   <properties>
     <maven.compiler.release>17</maven.compiler.release>
     <temporal.version>1.32.1</temporal.version>
+    <!-- Default entry point (the Worker). Override on the CLI to run the
+         starter: mvn ... exec:java -Dexec.mainClass=...HelloStarter -->
+    <exec.mainClass>training.temporal.hello.HelloWorker</exec.mainClass>
   </properties>
   <dependencies>
     <dependency>
@@ -74,7 +77,10 @@ mkdir -p work/day-01/hello/src/main/java/training/temporal/hello
         <artifactId>exec-maven-plugin</artifactId>
         <version>3.3.0</version>
         <configuration>
-          <mainClass>training.temporal.hello.HelloWorker</mainClass>
+          <!-- Reference the property (don't hardcode the class) so
+               -Dexec.mainClass can override it; a hardcoded value here
+               silently wins over the CLI and always runs the Worker. -->
+          <mainClass>${exec.mainClass}</mainClass>
         </configuration>
       </plugin>
     </plugins>
@@ -305,6 +311,11 @@ mvn -q compile exec:java
 # Terminal 4, from work/day-01/hello — the starter
 mvn -q compile exec:java -Dexec.mainClass=training.temporal.hello.HelloStarter
 ```
+
+> `-Dexec.mainClass` only overrides the Worker because the pom's `<mainClass>`
+> references the `${exec.mainClass}` property. If you hardcode the class in the
+> plugin `<configuration>` instead, that explicit value wins over the CLI flag
+> and **both** commands run the Worker.
 
 Expected: the starter prints the greeting string to stdout. (Order doesn't
 matter — start the Workflow first and the server holds it on the queue until the
