@@ -16,4 +16,3 @@ class AsyncWorkflow implements OrdersWorkflow {
     activities.load(cleanAuditUri);
   }
 }
-
