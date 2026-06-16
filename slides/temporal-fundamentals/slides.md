@@ -760,20 +760,17 @@ columns are named on the right, beside the screen.
 
 ---
 
-<!-- _class: image -->
+<!-- _class: cols-figure -->
 
 ## Web UI — Event History
 
+<div class="cols">
+<div class="col-media">
+
 ![Temporal Web UI Event History tab for hello-temporal-demo: a summary header with Input "Ada" and the greeting Result, then the numbered event table running from WorkflowExecutionStarted up to WorkflowExecutionCompleted](assets/ui-event-history.png)
 
-<!--
-Click any row on the previous screen to land here. Point at Input "Ada" and the
-Result up top, then the numbered event list below. The next slide names the parts.
--->
-
----
-
-## Event History — what you're seeing
+</div>
+<div class="col-body">
 
 Click a Workflow → the **Event History** tab.
 
@@ -784,6 +781,15 @@ Click a Workflow → the **Event History** tab.
 - Same data from the CLI: `temporal workflow show --workflow-id <id>`.
 
 > This is the lab: run Hello Temporal, then find these exact events.
+
+</div>
+</div>
+
+<!--
+Click any row on the previous screen to land here. Point at Input "Ada" and the
+Result up top, then the numbered event list beside it. The parts are named on
+the right.
+-->
 
 ---
 
@@ -1748,21 +1754,17 @@ Bring a calculator if you don't trust the audience to do it on paper.
 
 ---
 
-<!-- _class: image -->
+<!-- _class: cols-figure -->
 
 ## Retries, live — the Pending Activities tab
 
+<div class="cols">
+<div class="col-media">
+
 ![Pending Activities tab of a running Workflow: the ChargeCard Activity is Scheduled, Attempt 2 of 5 with 3 remaining, a Next Retry countdown, and a Last Failure panel showing the GatewayTimeout application error as JSON](assets/ui-pending-activities.png)
 
-<!--
-This is the live view while an Activity is between attempts - the retry counter,
-the next-retry countdown, and the last error. Captured mid-backoff from the
-retries lab (ChargeCard fails twice, then succeeds). Next slide names the fields.
--->
-
----
-
-## What you're seeing
+</div>
+<div class="col-body">
 
 While an Activity is retrying, the **Pending Activities** tab is the only place the attempts show up live:
 
@@ -1773,6 +1775,15 @@ While an Activity is retrying, the **Pending Activities** tab is the only place 
 Once the Activity succeeds the panel empties — the **history keeps only the final `ActivityTaskStarted`** (with its `attempt` count + last failure), not one event per retry.
 
 > Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
+
+</div>
+</div>
+
+<!--
+This is the live view while an Activity is between attempts - the retry counter,
+the next-retry countdown, and the last error. Captured mid-backoff from the
+retries lab (ChargeCard fails twice, then succeeds). Fields named on the right.
+-->
 
 ---
 
@@ -2005,20 +2016,17 @@ public String currentState() { return state; }
 
 ---
 
-<!-- _class: image -->
+<!-- _class: cols-figure -->
 
 ## Queries in the Web UI
 
+<div class="cols">
+<div class="col-media">
+
 ![Temporal Web UI Queries tab for the running approval-demo Workflow: a Query Type dropdown set to currentState, a Query Arg box, and a Run Query button — it runs synchronously against the live Workflow and writes nothing to history](assets/ui-queries.png)
 
-<!--
-Demo: pick currentState, Run Query, read the result. Note Event History is 0 here
-- a Query never appears in history. Empty tab = no Worker polling / run not cached.
--->
-
----
-
-## What you're seeing
+</div>
+<div class="col-body">
 
 The **Queries** tab runs a Query against the *live* Workflow, on demand:
 
@@ -2029,6 +2037,14 @@ The **Queries** tab runs a Query against the *live* Workflow, on demand:
 > Empty tab? No Worker is polling — a Query needs a live Worker with the run cached.
 
 > Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
+
+</div>
+</div>
+
+<!--
+Demo: pick currentState, Run Query, read the result. Note Event History is 0 here
+- a Query never appears in history. Empty tab = no Worker polling / run not cached.
+-->
 
 ---
 
@@ -2267,21 +2283,17 @@ when the caller wants the result.
 
 ---
 
-<!-- _class: image -->
+<!-- _class: cols-figure -->
 
 ## Signals & Updates in the history
 
+<div class="cols">
+<div class="col-media">
+
 ![Event History for approval-demo (Completed, Result "PO-1001 APPROVED by alice (expedite before close of business)"): the table shows Workflow Execution Signaled for approve, plus Workflow Execution Update Accepted and Update Completed for changeNote — and no Query events](assets/ui-signals-history.png)
 
-<!--
-Capstone for the section: the SAME run, after a Query (not shown - leaves no
-trace), an Update (changeNote), and a Signal (approve). Point at the Signaled
-event and the Update Accepted/Completed pair. Next slide names them.
--->
-
----
-
-## What you're seeing
+</div>
+<div class="col-body">
 
 Unlike Queries, **Signals and Updates are durable events** — they show up in history:
 
@@ -2292,6 +2304,15 @@ Unlike Queries, **Signals and Updates are durable events** — they show up in h
 > Replay re-applies these events, so Signal/Update effects survive restarts; a Query you just re-run.
 
 > Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
+
+</div>
+</div>
+
+<!--
+Capstone for the section: the SAME run, after a Query (not shown - leaves no
+trace), an Update (changeNote), and a Signal (approve). Point at the Signaled
+event and the Update Accepted/Completed pair, named on the right.
+-->
 
 ---
 
@@ -2400,20 +2421,17 @@ Example: examples/03-interactions/schedule_cron_overlap.java
 
 ---
 
-<!-- _class: image -->
+<!-- _class: cols-figure -->
 
 ## Schedules in the Web UI
 
+<div class="cols">
+<div class="col-media">
+
 ![Temporal Web UI Schedule detail for daily-sales-report-schedule: status Running, target Workflow DailyReportWorkflow, a Recent Runs panel, Schedule Input "daily-sales", Schedule Spec "Every day at 9:00 AM UTC", and a list of upcoming run times](assets/ui-schedule-detail.png)
 
-<!--
-The Schedules tab is its own left-rail section, separate from Workflows. Created
-from examples/runnable/04-schedules. Next slide names the parts.
--->
-
----
-
-## What you're seeing
+</div>
+<div class="col-body">
 
 The **Schedules** tab (left rail) lists every Schedule; click one for this detail:
 
@@ -2423,6 +2441,14 @@ The **Schedules** tab (left rail) lists every Schedule; click one for this detai
 - A Schedule is a **durable server object** (not a cron line on a box) — it survives redeploys, and `Overlap` decides what happens when a run is still going.
 
 > Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
+
+</div>
+</div>
+
+<!--
+The Schedules tab is its own left-rail section, separate from Workflows. Created
+from examples/runnable/04-schedules. The parts are named on the right.
+-->
 
 ---
 
@@ -2514,20 +2540,17 @@ Promise.allOf(fraudDecision, shippingPlan).get();
 
 ---
 
-<!-- _class: image -->
+<!-- _class: cols-figure -->
 
 ## Child Workflows in the UI — Relationships
 
+<div class="cols">
+<div class="col-media">
+
 ![Relationships tab for batch-parent-demo: a parent-over-three-children tree, and a table listing BatchWorkflow batch-parent-demo with Child Count 3, then three ItemWorkflow children item-A, item-B, item-C, each Completed with its own start, end and duration](assets/ui-child-relationships.png)
 
-<!--
-Click into the parent → Relationships. The tree + table make "each child is its
-own Workflow" concrete. Click any child row to jump to its own page/history.
--->
-
----
-
-## What you're seeing
+</div>
+<div class="col-body">
 
 The parent's **Relationships** tab shows the tree it spawned:
 
@@ -2538,6 +2561,14 @@ The parent's **Relationships** tab shows the tree it spawned:
 > A child is a first-class Workflow, not a sub-step hidden in the parent's history — that's the point of composing.
 
 > Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
+
+</div>
+</div>
+
+<!--
+Click into the parent → Relationships. The tree + table make "each child is its
+own Workflow" concrete. Click any child row to jump to its own page/history.
+-->
 
 ---
 
@@ -2830,21 +2861,17 @@ If it does, they're using bare start - debug it.
 
 ---
 
-<!-- _class: image -->
+<!-- _class: cols-figure -->
 
 ## The bridge, in the history
 
+<div class="cols">
+<div class="col-media">
+
 ![Event History for order-100 (one Workflow per order key): event 1 is WorkflowExecutionStarted and events 2, 7, 11 are WorkflowExecutionSignaled with signal name orderEvent — three Kafka messages for the same key produced one start and two signals, never a second Workflow](assets/ui-kafka-bridge.png)
 
-<!--
-Captured live: kcat produced 3 events (created/paid/shipped) for key 100 to the
-'orders' topic; the bridge did SignalWithStartWorkflow each time. One Started,
-the rest Signaled. The next slide reads it.
--->
-
----
-
-## What you're seeing
+</div>
+<div class="col-body">
 
 Three Kafka messages for key `100` → **one** Workflow `order-100`:
 
@@ -2854,10 +2881,14 @@ Three Kafka messages for key `100` → **one** Workflow `order-100`:
 
 > One long-lived Workflow per key, fed by Signals — the Kafka-bridge pattern, proven in the history.
 
+</div>
+</div>
+
 <!--
-Docs: https://docs.temporal.io/develop/java · Javadoc:
-https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html
-The activity (PublishOutcome → order-outcomes topic) is the producer half.
+Captured live: kcat produced 3 events (created/paid/shipped) for key 100 to the
+'orders' topic; the bridge did SignalWithStartWorkflow each time. One Started,
+the rest Signaled. The activity (PublishOutcome → order-outcomes topic) is the
+producer half. Docs: https://docs.temporal.io/develop/java
 -->
 
 ---
@@ -3094,20 +3125,17 @@ Open in VSCode: examples/05-production/worker_options_manual.java, worker_tuner.
 
 ---
 
-<!-- _class: image -->
+<!-- _class: cols-figure -->
 
 ## Who's polling? — the Workers / Pollers tab
 
+<div class="cols">
+<div class="col-media">
+
 ![A Workflow's Workers tab on the Pollers subtab: one poller 19330@Dhruvtara.local with a Build ID, a Last Accessed time, and checkmarks under Workflow Task Handler and Activity Handler, confirming a Worker is actively polling this Task Queue](assets/ui-workers-tab.png)
 
-<!--
-The diagnostic view. "My Workflow is stuck" → open Workers/Pollers; if it's empty,
-no Worker is polling that Task Queue. Also shows what each Worker registered.
--->
-
----
-
-## What you're seeing
+</div>
+<div class="col-body">
 
 A Workflow's **Workers → Pollers** tab answers "is anything polling this Task Queue?":
 
@@ -3117,9 +3145,13 @@ A Workflow's **Workers → Pollers** tab answers "is anything polling this Task 
 
 > Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
 
+</div>
+</div>
+
 <!--
-Capacity lives here too: too few pollers for the backlog shows up as
-schedule-to-start latency - the Observability section next.
+The diagnostic view. "My Workflow is stuck" → open Workers/Pollers; if it's empty,
+no Worker is polling that Task Queue. Capacity lives here too: too few pollers for
+the backlog shows up as schedule-to-start latency - the Observability section next.
 -->
 
 ---
@@ -3496,20 +3528,17 @@ In Grafana, open the **Temporal Training - Overview** dashboard and watch:
 
 ---
 
-<!-- _class: image -->
+<!-- _class: cols-figure -->
 
 ## The dashboard, live
 
+<div class="cols">
+<div class="col-media">
+
 ![Temporal Training Grafana dashboard (dark theme) with four live panels fed by a Worker exporting SDK metrics to Prometheus: Workflow tasks scheduled rate (~10/s), Workflow task schedule-to-start latency p95 (~0.047s), Workflow completed/failed rate climbing, and Activity attempts/failures rate climbing](assets/ui-grafana.png)
 
-<!--
-Captured live: a Worker exporting tally→Prometheus metrics on :9464, Prometheus
-scraping it, Grafana rendering the provisioned overview. The next slide reads it.
--->
-
----
-
-## What you're seeing
+</div>
+<div class="col-body">
 
 The Worker exports **SDK metrics** to Prometheus; Grafana renders the overview:
 
@@ -3520,6 +3549,14 @@ The Worker exports **SDK metrics** to Prometheus; Grafana renders the overview:
 > Wire metrics on day one — schedule-to-start latency is the number KEDA autoscales on (Day 6).
 
 > Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
+
+</div>
+</div>
+
+<!--
+Captured live: a Worker exporting tally→Prometheus metrics on :9464, Prometheus
+scraping it, Grafana rendering the provisioned overview. Read beside the image.
+-->
 
 ---
 
@@ -4049,30 +4086,54 @@ temporal workflow start --task-queue orders \
 
 ---
 
-<!-- _class: image -->
+<!-- _class: cols-figure -->
 
 ## Compensation in the history
 
+<div class="cols">
+<div class="col-media">
+
 ![Event History for the failed saga (Completed, Result "COMPENSATED"): after Ship fails, the compensating Activities RestoreInventory, CancelPayment and SendFailureNotification are scheduled and completed, undoing the earlier ReserveInventory and AuthorizePayment](assets/ui-saga-compensation.png)
 
-<!--
-Captured from examples/runnable/07-saga with input fail-at-ship. The Result is
-"COMPENSATED" - a handled business outcome, not a crash. Next slide names the arc.
--->
-
----
-
-## What you're seeing
+</div>
+<div class="col-body">
 
 The forward path ran, `Ship` failed, and the Saga **unwound it**:
 
 - Forward: `AuthorizePayment` → `ReserveInventory` → `Ship` ✗.
 - Compensations, in **reverse**: `RestoreInventory` (undo Reserve), `CancelPayment` (undo Authorize), `SendFailureNotification` — each its own Activity in the history.
+
+</div>
+</div>
+
+<!--
+Captured from examples/runnable/07-saga with input fail-at-ship. The Result is
+"COMPENSATED" - a handled business outcome, not a crash. The arc is named on the
+right; the takeaways continue on the next slide.
+-->
+
+---
+
+<!-- _class: cols-figure -->
+
+## Compensation in the history *(continued)*
+
+<div class="cols">
+<div class="col-media">
+
+![Event History for the failed saga (Completed, Result "COMPENSATED"): after Ship fails, the compensating Activities RestoreInventory, CancelPayment and SendFailureNotification are scheduled and completed, undoing the earlier ReserveInventory and AuthorizePayment](assets/ui-saga-compensation.png)
+
+</div>
+<div class="col-body">
+
 - The Workflow ends **Completed**, Result **`COMPENSATED`** — a handled outcome, not a crash.
 
 > Temporal rolls nothing back for you. Compensation is just **more Activities you orchestrate** — the Saga pattern + your code own the "undo."
 
 > Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
+
+</div>
+</div>
 
 ---
 
@@ -4257,20 +4318,17 @@ public void run(String subscriptionId, int eventCount) {
 
 ---
 
-<!-- _class: image -->
+<!-- _class: cols-figure -->
 
 ## Continue-as-new in the UI — the Run chain
 
+<div class="cols">
+<div class="col-media">
+
 ![Relationships tab for continue-as-new-demo: a First Execution link and a Previous Execution link joined to the current run — one Workflow ID spanning multiple Runs chained by continue-as-new, each with its own small history](assets/ui-continue-relationships.png)
 
-<!--
-Captured from examples/runnable/12-continue-as-new (processed 9 events across 3
-Runs). The First/Previous Execution links are the chain - walk them backwards.
--->
-
----
-
-## What you're seeing
+</div>
+<div class="col-body">
 
 The **Relationships** tab exposes the chain continue-as-new builds:
 
@@ -4281,6 +4339,14 @@ The **Relationships** tab exposes the chain continue-as-new builds:
 > One business identity, many physical Runs — exactly the Workflow ID vs Run ID distinction from Day 1.
 
 > Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
+
+</div>
+</div>
+
+<!--
+Captured from examples/runnable/12-continue-as-new (processed 9 events across 3
+Runs). The First/Previous Execution links are the chain - walk them backwards.
+-->
 
 ---
 
