@@ -710,26 +710,18 @@ physical attempt. continue-as-new keeps the ID, mints a new Run - the Day-5 lab.
 ## Start retry pattern
 
 ```java
-String workflowId = "order-" + orderId; // stable business id
-
-OrderWorkflow workflow =
-    client.newWorkflowStub(
-        OrderWorkflow.class,
-        WorkflowOptions.newBuilder()
-            .setWorkflowId(workflowId)
-            .setTaskQueue("orders")
-            .build());
+String workflowId = "order-" + orderId;            // stable business id
+OrderWorkflow wf = client.newWorkflowStub(OrderWorkflow.class,
+    WorkflowOptions.newBuilder().setWorkflowId(workflowId).setTaskQueue("orders").build());
 
 try {
-  WorkflowClient.start(workflow::run, orderId);
-  System.out.println("started " + workflowId);
+  WorkflowClient.start(wf::run, orderId);
 } catch (WorkflowExecutionAlreadyStarted e) {
-  // Previous attempt may have started it before the response was lost.
-  System.out.println("already running; treating start as success");
+  // a prior attempt started it before the response came back — treat as success
 }
 ```
 
-> Retry the start with the same Workflow ID. Duplicate start becomes "already exists", not duplicate business work.
+> Retry the start with the same Workflow ID. A duplicate start becomes "already exists," not duplicate business work.
 
 ---
 
@@ -2765,6 +2757,22 @@ Worker worker = factory.newWorker(
 
 ---
 
+## Cheaper concurrency — virtual threads
+
+Activity slots cost threads. On **JDK 21+**, virtual threads make those threads almost free:
+
+- `setUsingVirtualWorkflowThreads(true)` runs execution on **virtual threads**, so one Worker can hold far more concurrent (especially I/O-bound) Activities per host.
+- Frees you from sizing slot counts around OS-thread limits.
+
+> The easy lever for high-concurrency, I/O-heavy Activity workloads (JDK 21+ only).
+
+<!--
+Lead-in before the virtual-threads code. Slots map to threads; virtual threads
+lift the ceiling for blocking I/O Activities without a thread-per-slot cost.
+-->
+
+---
+
 <!-- _class: code -->
 
 ## Virtual-thread Worker
@@ -3050,6 +3058,33 @@ In Grafana, open the **Temporal Training - Overview** dashboard and watch:
 
 ---
 
+<!-- _class: image -->
+
+## The dashboard, live
+
+![Temporal Training Grafana dashboard (dark theme) with four live panels fed by a Worker exporting SDK metrics to Prometheus: Workflow tasks scheduled rate (~10/s), Workflow task schedule-to-start latency p95 (~0.047s), Workflow completed/failed rate climbing, and Activity attempts/failures rate climbing](assets/ui-grafana.png)
+
+<!--
+Captured live: a Worker exporting tally→Prometheus metrics on :9464, Prometheus
+scraping it, Grafana rendering the provisioned overview. The next slide reads it.
+-->
+
+---
+
+## What you're seeing
+
+The Worker exports **SDK metrics** to Prometheus; Grafana renders the overview:
+
+- **Tasks scheduled** + **schedule-to-start latency (p95)** — your **capacity** signal. Rising latency = Workers can't keep up.
+- **Workflow completed / failed** and **Activity attempts / failures** — the **health** signals.
+- All `temporal_*` families — counters (`*_total`) and latency histograms (`*_seconds`).
+
+> Wire metrics on day one — schedule-to-start latency is the number KEDA autoscales on (Day 6).
+
+> Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
+
+---
+
 <!-- _class: section -->
 <!-- _transition: slide 0.5s -->
 
@@ -3089,15 +3124,9 @@ Retention is Namespace-level policy for **closed** Workflow histories.
 
 ```bash
 temporal operator namespace describe --namespace default
-
-temporal operator namespace update \
-  --namespace default \
-  --retention 7d
-
-temporal workflow delete \
-  --namespace default \
-  --workflow-id <workflow-id> \
-  --run-id <run-id>
+temporal operator namespace update --namespace default --retention 7d
+temporal workflow delete --namespace default \
+  --workflow-id <workflow-id> --run-id <run-id>
 ```
 
 - Reduce future storage: lower Namespace retention.
@@ -3123,6 +3152,22 @@ Run: make run-testing (no server needed)
 
 ---
 
+## Testing Workflows — no server, no clock
+
+Workflow logic is deterministic, so you can test it **in-process** — no Docker, no real Temporal, no waiting:
+
+- **`TestWorkflowEnvironment`** runs a Worker + client inside your test JVM.
+- **Time-skipping** is the headline: a Workflow that sleeps 30 days completes in **milliseconds** — the test clock jumps straight to the next timer.
+
+> Unit-test orchestration like ordinary code — fast and hermetic.
+
+<!--
+Lead-in before the TestWorkflowEnvironment code. Time-skipping is the "wow":
+durable timers normally make long Workflows untestable; here they run instantly.
+-->
+
+---
+
 <!-- _class: code -->
 
 ## TestWorkflowEnvironment
@@ -3144,6 +3189,22 @@ String result = stub.run("hello");
 ```
 
 > No Docker. No network. *Time skipping* - a 30-day reminder completes in milliseconds.
+
+---
+
+## JUnit 5 + mocked Activities
+
+For real test suites, skip the manual env wiring and isolate the logic:
+
+- **`TestWorkflowExtension`** injects the `env` / `worker` / typed stub into each `@Test`.
+- **Mock the Activities** (Mockito) so the test exercises **Workflow logic only** — zero network, zero DB.
+
+> Assert the orchestration: *given these Activity results, the Workflow reaches this outcome.*
+
+<!--
+Lead-in before the JUnit5 + Mockito code. The pattern: real Workflow, fake
+Activities. You're testing the decisions, not the side effects.
+-->
 
 ---
 
@@ -3229,6 +3290,31 @@ void replaysProductionHistory() throws Exception {
 ```
 
 > Refactor breaks an in-flight workflow → CI fails before you ship.
+
+---
+
+<!-- _class: code -->
+
+## What a non-determinism failure looks like
+
+Reorder two Activities, then replay the old history — the replayer rejects it:
+
+```text
+[TMPRL1100] nondeterministic workflow:
+  history event is  ActivityTaskScheduled  (ActivityId: 5, Name: Extract …)
+  replay command is ScheduleActivityTask   (ActivityId: 5, Name: Load …)
+```
+
+- History scheduled **Extract** as command #5; the new code emits **Load** there.
+- The SDK won't guess — it **fails the replay** rather than corrupt state.
+
+> Real output from the lab's `TestReorderedCodeBreaksReplay`. In CI this fires **before** the deploy, not on a live run.
+
+<!--
+Captured from examples/runnable/11-determinism-replay (go test -run
+TestReorderedCodeBreaksReplay -v). TMPRL1100 is the non-determinism error code -
+recorded history vs replay command diverge at event 5.
+-->
 
 ---
 
@@ -3338,6 +3424,23 @@ Open in VSCode: examples/06-saga-spring/saga_compensation.java (full project: ex
 Run: make run-saga
 -->
 
+
+---
+
+## The Saga pattern — forward steps + undo
+
+A saga is a sequence of steps where, if a later one fails, you **undo the earlier ones** — there's no distributed transaction to roll back for you:
+
+- After each forward Activity, **register its compensation** (the inverse Activity).
+- On failure, run the registered compensations — by default **LIFO** (reverse order).
+- The SDK's `Saga` helper just tracks the compensation stack; *you* write the undo Activities.
+
+> "Authorize → reserve → ship", with a matching "cancel → restore → notify" if anything throws.
+
+<!--
+Lead-in before the Saga code. The mental model is a stack: push a compensation
+after each success; on failure, pop them in reverse. Temporal runs your undo.
+-->
 
 ---
 
@@ -3598,6 +3701,22 @@ In production, prefer the temporal-spring-boot-starter and let it do this.
 
 ---
 
+## Driving the saga synchronously (HTTP)
+
+A `@RestController` POST that needs the **result** uses an Update-with-start:
+
+- **`startUpdateWithStart`** creates the saga Workflow (if absent) and submits the order in one call.
+- The handler **blocks** on `getResult()` and returns the outcome — one round trip; the caller gets the answer.
+
+> Synchronous request/response over a durable Workflow — the client never knows it isn't a plain service call.
+
+<!--
+Lead-in before the sync HTTP code. This is the "two front doors" pair with the
+next slide: HTTP Update here, Kafka Signal next - same Workflow underneath.
+-->
+
+---
+
 <!-- _class: code -->
 
 ## Sync interaction (Update)
@@ -3616,6 +3735,22 @@ return update.getResult();
 ```
 
 > POST endpoint blocks until the workflow returns. One round trip.
+
+---
+
+## Driving the saga from Kafka (async)
+
+A `@KafkaListener` that just needs to **kick off** work uses signal-with-start:
+
+- **`signalWithStart`** starts the saga for `order-<id>` if absent, then delivers the event — idempotent per key.
+- No blocking, no result — fire the event, commit the offset.
+
+> Same Workflow, two front doors: a synchronous HTTP Update, and an async Kafka Signal.
+
+<!--
+Lead-in before the KafkaListener code. Reinforces signalWithStart from Day 3:
+the consumer never checks "does this order's Workflow exist yet?"
+-->
 
 ---
 
@@ -4004,6 +4139,22 @@ scripts/start-workflow.sh transform 1 ImportWorkflow "s3://imports-incoming/test
 
 ---
 
+# Big data? Pass a reference, not the bytes
+
+Every payload — Workflow args, results, Signals — is stored in **history**, which has a hard **2 MB** cap (the SDK warns around 256 KB).
+
+- Keep the **bytes in S3** (or any blob store); pass only a **URI + metadata** through the Workflow.
+- The Activity reads/writes the object; history stays tiny and replay stays fast.
+
+> History is a control plane, not a data bus — move references, not megabytes.
+
+<!--
+Lead-in before the record types. The rule: if a payload could be big, it goes to
+blob storage and the Workflow carries the pointer. Keeps history small + fast.
+-->
+
+---
+
 # S3 reference payloads
 
 ```java
@@ -4016,6 +4167,23 @@ record TransformResult(String outputS3Uri, long rowCount) {}
 - Hard cap **2 MB** per payload (SDK warns ~256 KB); large data via S3.
 
 > Workflow history is small. URIs travel cheap.
+
+---
+
+## Encrypting payloads — the codec
+
+Workflow inputs, results, and Activity args are stored in **history as plaintext** by default. For sensitive data, encrypt at the SDK boundary:
+
+- A **`PayloadCodec`** encrypts on the way out and decrypts on the way in — the server only ever stores ciphertext.
+- A **codec server** lets the Web UI / CLI decrypt for *authorized* viewers, so history stays human-readable without being exposed at rest.
+
+> End-to-end encryption — the Temporal server (and its operators) never see your plaintext.
+
+<!--
+Lead-in before the PayloadCodec code. The threat model: history is durable
+storage; treat it like any DB column you'd encrypt. Codec server = controlled
+decryption for the UI.
+-->
 
 ---
 
@@ -4059,6 +4227,23 @@ Take a hypothetical existing pipeline that writes a checkpoint S3 key after ever
 3. Sketch the Workflow signature. What's input? What's output?
 
 > No new code; redesign on paper. 15 minutes.
+
+---
+
+## From state machine to code
+
+Migrating an AWS Step Functions state machine? The mapping is direct, and the win is leaving ASL/JSON behind:
+
+- **States → plain code** — choices become `if`, parallel states become `Async`, retriers become a `RetryPolicy`.
+- **No 25,000-event / 1-year ceilings**, no JSON DSL — it's just a Workflow function.
+- Activities wrap the **same** Lambdas / jobs you already invoke.
+
+> A state machine becomes ordinary control flow you can read, test, and debug.
+
+<!--
+Lead-in before the before/after code. The pitch: you stop maintaining ASL and
+its limits; the orchestration is code your team already knows.
+-->
 
 ---
 
@@ -4168,6 +4353,23 @@ docker run --rm \
 
 ---
 
+## Workers are just Deployments
+
+A Temporal Worker is a **stateless process that polls** — so it's an ordinary Kubernetes `Deployment`:
+
+- **No ingress, no Service, no ports** — Workers dial *out* to Temporal; nothing connects in.
+- Scale with **replicas** — each pod is an identical Worker on the same Task Queue.
+- Liveness = "is the process polling?" (next: KEDA scales the replicas on backlog).
+
+> Nothing special to deploy: containerise the Worker and run N replicas.
+
+<!--
+Lead-in before the Deployment YAML. The "no Service/ingress" point surprises
+people from request/response services - Workers are outbound-only.
+-->
+
+---
+
 <!-- _class: code dense -->
 
 ## Kubernetes Deployment
@@ -4212,6 +4414,22 @@ kubectl logs -l app=temporal-transform-worker --tail=20
 ```
 
 > Confirm the Worker polls the cluster's Temporal address.
+
+---
+
+## Autoscaling on Task Queue backlog
+
+CPU is the wrong scaling signal for a Worker — the right one is **how much work is waiting**:
+
+- **KEDA** scales the Worker Deployment on a **Temporal metric**: the Task Queue's backlog / schedule-to-start lag.
+- Backlog grows → add Worker pods; the queue drains → scale back down (even to zero).
+
+> Scale to queue depth, not CPU — the metric that actually means "we're falling behind."
+
+<!--
+Lead-in before the ScaledObject YAML. Ties back to worker sizing + the
+schedule-to-start metric: that latency IS the autoscaling trigger.
+-->
 
 ---
 
