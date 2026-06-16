@@ -313,6 +313,8 @@ factory.start();
 - Worker = long-lived JVM polling `orders` Task Queue.
 - The Task Queue **string** routes work to a Worker pool.
 
+> Javadoc: [`WorkerFactory`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/worker/WorkerFactory.html) · [`WorkerFactoryOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/worker/WorkerFactoryOptions.html) · [`WorkerOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/worker/WorkerOptions.html)
+
 <!--
 factory.start() kicks off the long-poll loop.
 
@@ -435,7 +437,7 @@ replay contract. The four bullets map 1:1 to the packages on the next slide.
 | `io.temporal.workflow` | Write Workflow code | `Workflow`, `Async`, `Promise`, `Saga`, `@WorkflowInterface` |
 | `io.temporal.activity` | Write Activities | `Activity`, `ActivityOptions`, `@ActivityInterface` |
 | `io.temporal.common` | Shared config | `RetryOptions`, converters, interceptors |
-| `io.temporal.serviceclient` | The gRPC connection | `WorkflowServiceStubs`, TLS / API-key options |
+| `io.temporal.serviceclient` | The gRPC connection | `WorkflowServiceStubs`, `WorkflowServiceStubsOptions` (TLS / API-key) |
 
 > Docs: [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
 
@@ -492,6 +494,8 @@ String result = wf.greet("Ada");   // start & block; .start(...) is async
 ```
 
 > The same `client` signals, queries, updates, and describes running Workflows.
+
+> Javadoc: [`WorkflowClient`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/WorkflowClient.html) · [`WorkflowServiceStubs`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/serviceclient/WorkflowServiceStubs.html) · [`WorkflowOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/WorkflowOptions.html)
 
 <!--
 This is the starter side from the Hello lab. Three steps: connect, make a stub,
@@ -1629,7 +1633,7 @@ int total = counts.stream().mapToInt(Promise::get).sum();
 
 All partitions run in parallel; the Workflow suspends across all of them.
 
-> Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
+> Javadoc: [`Async`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/workflow/Async.html) · [`Promise`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/workflow/Promise.html)
 
 <!--
 One JVM hosts tens of thousands of suspended Workflows.
@@ -1875,6 +1879,8 @@ ActivityOptions.newBuilder()
 ```
 
 6 × 5min attempts + 6 backoff waits ≈ 33min — set scheduleToClose to bound it.
+
+> Javadoc: [`ActivityOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/activity/ActivityOptions.html) · [`RetryOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/common/RetryOptions.html)
 
 <!--
 The arithmetic is the lesson.
@@ -2562,6 +2568,8 @@ scheduleClient.createSchedule("hourly-orders", schedule, ScheduleOptions.newBuil
 ```
 
 > Durable Temporal object. Survives redeploy. Overlap is *explicit*.
+
+> Javadoc: [`Schedule`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/schedules/Schedule.html) · [`io.temporal.client.schedules`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/schedules/package-summary.html)
 
 ---
 
@@ -3621,6 +3629,55 @@ Example: examples/05-production/composite_tuner.java
 
 <!-- _class: dense -->
 
+## Options at a glance — wiring the client & Worker
+
+Every layer of the bootstrap path has its own `*Options` builder. From the outside in:
+
+| Builder | Configures | Applied when |
+|---|---|---|
+| [`WorkflowServiceStubsOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/serviceclient/WorkflowServiceStubsOptions.html) | Connection: target host, TLS, API key, metrics scope | building the service stubs |
+| [`WorkflowClientOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/WorkflowClientOptions.html) | Namespace, data converter, client interceptors | building the `WorkflowClient` |
+| [`WorkerFactoryOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/worker/WorkerFactoryOptions.html) | Cross-Worker: sticky cache, virtual workflow threads, Worker interceptors | `WorkerFactory.newInstance` |
+| [`WorkerOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/worker/WorkerOptions.html) | Per-queue slots, tuner, virtual threads | `factory.newWorker` |
+| [`WorkflowImplementationOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/worker/WorkflowImplementationOptions.html) | Per-type: fail-on exception types, per-Activity defaults | registering a Workflow impl |
+
+> Each builder is `newBuilder() … .build()` — same shape everywhere, so they read the same.
+
+<!--
+This is the reference slide people screenshot. Walk it outside-in: stubs are the
+socket, client is the namespace-scoped entry point, factory owns the JVM-wide
+cache + threads, worker is per-Task-Queue, impl options are per-Workflow-type.
+-->
+
+---
+
+<!-- _class: dense -->
+
+## Options at a glance — starting & retrying work
+
+These travel with each execution rather than the Worker:
+
+| Builder | Configures | Applied when |
+|---|---|---|
+| [`WorkflowOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/WorkflowOptions.html) | ID, Task Queue, run/execution timeouts, retry, ID-reuse policy | starting a Workflow |
+| [`ChildWorkflowOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/workflow/ChildWorkflowOptions.html) | Same set + parent-close policy | starting a Child Workflow |
+| [`ScheduleOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/schedules/ScheduleOptions.html) | Memo & search attributes for the Schedule | `createSchedule` |
+| [`ActivityOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/activity/ActivityOptions.html) | Timeouts, heartbeat, Task Queue, retry | building an Activity stub |
+| [`LocalActivityOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/activity/LocalActivityOptions.html) | Timeouts + retry for short, local Activities | building a local Activity stub |
+| [`RetryOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/common/RetryOptions.html) | Backoff, max attempts, non-retryable types | nested inside the four above |
+
+> `RetryOptions` is never set alone — it's the retry block *inside* a Workflow/Activity options builder.
+
+<!--
+Contrast with the previous slide: those configure the Worker once at boot; these
+are per-execution and can change call to call. RetryOptions is the common nested
+piece — point back to the "Setting them deliberately" slide.
+-->
+
+---
+
+<!-- _class: dense -->
+
 ## Cancel vs Terminate vs Reset — the scary buttons
 
 The detail page's **More Actions** menu has three ways to intervene — *not* interchangeable:
@@ -4559,6 +4616,8 @@ class TemporalConfig {
   }
 }
 ```
+
+> Javadoc: [`WorkflowServiceStubs`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/serviceclient/WorkflowServiceStubs.html) · [`WorkflowClient`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/WorkflowClient.html) · [`WorkerFactory`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/worker/WorkerFactory.html)
 
 <!--
 This is the underlying wiring.
