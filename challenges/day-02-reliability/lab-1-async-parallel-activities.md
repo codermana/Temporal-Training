@@ -19,6 +19,31 @@ bread-and-butter parallelism pattern.
 > tasks whose count depends on runtime input — without writing a custom operator
 > or mapping plugin. It's just a `stream().map(...)` in Workflow code.
 
+## Warm-up — reason before you code (5 min, no keyboard)
+
+New to async/Promises? Do this on paper first; it makes the code below obvious.
+
+1. **Claim-ticket check.** `Async.function(activities::price, sku)` returns a
+   `Promise<Integer>` *immediately* — the price isn't computed yet. Which single
+   call actually *waits* for the price: getting the Promise, or calling `.get()`?
+2. **Predict the clock.** Each `price(...)` call takes 1s. For 8 SKUs:
+   - A sequential loop that calls `.get()` each pass takes how long?
+   - A fan-out that starts all 8 first, then joins, takes roughly how long?
+3. **Spot the trap.** Why does calling `.get()` *inside* the `for` loop quietly
+   turn your "parallel" code back into the sequential version?
+
+<details><summary>Answers</summary>
+
+1. `.get()` waits. Building the Promise is instant — that's what lets you start
+   all 8 before waiting on any.
+2. Sequential ≈ 8s (1s × 8). Fan-out ≈ 1s — all 8 run at once, you wait for the
+   slowest.
+3. `.get()` blocks until *that* Promise resolves, so the loop can't start the
+   next Activity until the current one finishes — back to one-at-a-time. Collect
+   all Promises first, then join with `Promise.allOf(...).get()`.
+
+</details>
+
 ## Prerequisites
 
 - Day 1 complete; `make temporal` running.

@@ -776,6 +776,76 @@ section.cols-photo .col-body > :first-child { margin-top: 0; }
 }
 
 /* ---------------------------------------------------------------------------
+   Figure + explanation - a screenshot beside its "what you're seeing" notes.
+   ---------------------------------------------------------------------------
+   Image LEFT, dense reading text RIGHT, with a full-width title on top. Unlike
+   .cols-photo (a photo + a one-line caption) the right column carries real
+   reading - a lead-in, bullets, a callout - so the type is shrunk to fit both
+   halves on one slide without overflow.
+     .cols-figure              -> image LEFT,  text RIGHT (default)
+     .cols-figure.media-right  -> image RIGHT, text LEFT
+   Markup: an h2, then a `.cols` wrapper holding `.col-media` (the image) and
+   `.col-body` (the notes). Keep the screenshot's descriptive title; drop the
+   generic "What you're seeing" heading - the lead-in line already says it.
+   --------------------------------------------------------------------------- */
+
+section.cols-figure {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  font-size: 24px;
+  line-height: 1.32;
+  padding: 44px 70px 60px;
+}
+
+section.cols-figure h2 {
+  font-size: 38px;
+  margin-bottom: 18px;
+}
+
+section.cols-figure .cols {
+  align-items: center;
+  display: flex;
+  gap: 40px;
+  width: 100%;
+}
+
+section.cols-figure.media-right .cols { flex-direction: row-reverse; }
+
+section.cols-figure .col-media { flex: 0 0 50%; }
+section.cols-figure .col-body  { flex: 1 1 auto; text-align: left; }
+
+section.cols-figure .col-media img {
+  border-radius: 8px;
+  display: block;
+  margin: 0;
+  max-height: 560px;
+  object-fit: contain;
+  width: 100%;
+}
+
+section.cols-figure .col-body > :first-child { margin-top: 0; }
+section.cols-figure .col-body p  { margin: 0 0 10px; }
+section.cols-figure .col-body ul { margin-top: 8px; }
+section.cols-figure .col-body li { margin: 5px 0; }
+
+section.cols-figure blockquote {
+  font-size: 20px !important;
+  line-height: 1.28 !important;
+  margin-top: 14px !important;
+  padding: 13px 17px !important;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  section.cols-figure .col-media {
+    animation: marpRiseIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both !important;
+  }
+  section.cols-figure .col-body {
+    animation: marpRiseIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
    Motion - on-enter content animation (live HTML / Bespoke deck only)
    ---------------------------------------------------------------------------
    Slide-to-slide transitions are driven by the `transition:` directive in each

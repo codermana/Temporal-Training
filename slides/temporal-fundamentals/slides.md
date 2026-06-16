@@ -726,21 +726,17 @@ Activity trio. Each Workflow Task = one "the Worker woke up, decided, recorded."
 
 ---
 
-<!-- _class: image -->
+<!-- _class: cols-figure -->
 
 ## Web UI — Workflows list
 
+<div class="cols">
+<div class="col-media">
+
 ![Temporal Web UI at localhost:8233 showing the Workflows list: four completed GreetingWorkflow executions with Status, Workflow ID, Run ID, and Type columns, plus the left navigation and a Start Workflow button](assets/ui-workflows-list.png)
 
-<!--
-`localhost:8233` opens here. The left rail (Workflows, Schedules, Workers,
-Batch...) is the whole product; Workflows is where you live on Day 1. Walk the
-next slide's columns against this screen.
--->
-
----
-
-## Workflows list — what you're seeing
+</div>
+<div class="col-body">
 
 `localhost:8233` → **Workflows**. Every execution, newest first.
 
@@ -752,6 +748,15 @@ next slide's columns against this screen.
 - **Start Workflow** launches one straight from the UI.
 
 > Workflow ID is yours and reusable over time; Run ID is one physical execution.
+
+</div>
+</div>
+
+<!--
+`localhost:8233` opens here. The left rail (Workflows, Schedules, Workers,
+Batch...) is the whole product; Workflows is where you live on Day 1. The
+columns are named on the right, beside the screen.
+-->
 
 ---
 
@@ -1302,6 +1307,85 @@ Run: make run-async
 
 ---
 
+## Blocking: the model you already have
+
+Normal code runs **one line at a time**. A call *blocks* — the next line waits until it returns.
+
+```java
+String a = priceBook();   // wait here...
+String b = priceLamp();   // ...only then start this, wait again
+```
+
+Two calls that don't depend on each other still run **back-to-back**. If each takes 1s, you wait 2s — for no reason.
+
+> Blocking is the default everywhere you've coded. Async is just about *not* waiting when you don't have to.
+
+<!--
+Start from what they know. Everyone has written blocking code; name it so the
+contrast on the next slides has something to push against. No Temporal yet -
+this is pure "how code waits". For the non-async crowd, this slide is the floor.
+-->
+
+---
+
+## A Promise is a claim ticket
+
+Order at a coffee shop: you hand over the order, get a **number** on a receipt, and step aside. The receipt isn't the coffee — it's a *promise* of coffee, handed to you **instantly**.
+
+- Placing the order = **`Async.function(...)`** — starts the work, returns a `Promise` right away.
+- Walking up when your number is called = **`.get()`** — *this* is the only step that waits.
+
+> Getting the ticket is instant; only `.get()` blocks. That gap is the whole idea.
+
+<!--
+The claim-ticket analogy is the load-bearing metaphor for the entire section.
+A Promise is a receipt for a result that isn't ready yet. Async hands it back
+immediately; .get() is the only thing that waits. Land this hard before any code.
+-->
+
+---
+
+## Same calls, different timing
+
+Order three coffees, *then* collect them — all three baristas work at once. Order-wait, order-wait, order-wait and you've tripled the time for the same drinks.
+
+```text
+Sequential:  order→wait  order→wait  order→wait     ~3 drinks of time
+Async:       order order order  →  wait for all     ~1 drink of time
+```
+
+> Sequential vs parallel isn't a different API — it's *when* you collect. Start everything first, collect last.
+
+<!--
+The punchline that makes "parallel" cost nothing. Same orders, same counter -
+the only variable is whether you wait between orders or after all of them.
+No threads, no executor pools. Hold here until heads nod.
+-->
+
+---
+
+<!-- _class: exercise -->
+
+# Exercise · The coffee run
+
+You're getting coffee for 3 teammates. Each order takes the barista 4 minutes.
+
+On paper, order these 6 steps so all three are ready in **~4 minutes, not 12**:
+
+1. Collect Dana's coffee · 2. Place Amir's order · 3. Collect Amir's coffee
+4. Place Sam's order · 5. Place Dana's order · 6. Collect Sam's coffee
+
+> Which steps are the `Async.function(...)` calls? Which are the `.get()`s?
+
+<!--
+Answer: place all three orders first (2, 4, 5 in any order), THEN collect all
+three (1, 3, 6). Placing = Async.function; collecting = .get(). The trap answer
+interleaves place/collect - that's the sequential 12-minute version.
+2-minute solo, then reveal. Tie each step back to the API name out loud.
+-->
+
+---
+
 ## Why async — the mental model
 
 An Activity call is a **durable async call**. It returns a **`Promise`** (a future result), not a blocked thread:
@@ -1335,6 +1419,54 @@ String cleanAuditUri = activities.transform(auditUri.get());
 ```
 
 > `Promise.get()` blocks the *Workflow loop*, not an OS thread.
+
+---
+
+<!-- _class: exercise -->
+
+# Exercise · Predict the clock
+
+Each `extract` takes **2s**; each `transform` takes **1s**.
+
+```java
+Promise<String> raw   = Async.function(activities::extract, a);
+Promise<String> audit = Async.function(activities::extract, b);
+String x = activities.transform(raw.get());
+String y = activities.transform(audit.get());
+```
+
+1. How long does a fully **sequential** version (4 blocking calls) take?
+2. How long does **this** version take — and why isn't it faster *everywhere*?
+
+* **Hint** — the two `extract`s overlap; the two `transform`s still run one at a time.
+
+<!--
+Sequential: 2+2+1+1 = 6s. This version: the two extracts overlap (2s), then the
+transforms run sequentially (1+1) = 4s total. Lesson: only the work you START
+before waiting overlaps; anything you call sequentially after a .get() is still
+sequential. Follow-up: "how would you parallelize the transforms too?" - start
+both, then get both.
+-->
+
+---
+
+## Fan-out / fan-in, in plain terms
+
+A mailroom with 100 letters: hand all 100 out at once (**fan-out**), wait until the last clerk finishes (**join**), then stack every reply into one pile (**fan-in**).
+
+- **Fan-out** — start N independent jobs without waiting between them.
+- **Fan-in** — combine the N results once they're all back.
+
+> Split → do in parallel → combine. The code on the next slides is just this sentence in Java.
+
+*Java note: `list.stream().map(f).toList()` = "run `f` on each item, collect the results" — a for-loop in one line.*
+
+<!--
+Name the pattern with a physical picture before any stream()/Promise code. Many
+in the room haven't met "fan-out/fan-in" as vocabulary - it's just split-work-
+then-combine. The stream() gloss matters: half the room may not read Java streams
+fluently, and the next slide leans on .stream().map(...).toList().
+-->
 
 ---
 
@@ -1381,6 +1513,32 @@ All partitions run in parallel; the Workflow suspends across all of them.
 One JVM hosts tens of thousands of suspended Workflows.
 
 Each one is just heap state, not a parked thread.
+-->
+
+---
+
+<!-- _class: exercise -->
+
+# Exercise · Spot the serial bug
+
+This *looks* parallel but runs one Activity at a time. Find the line that kills the concurrency:
+
+```java
+int total = 0;
+for (String p : partitions) {
+  Promise<Integer> c = Async.function(activities::processPartition, p);
+  total += c.get();          // <-- ?
+}
+```
+
+> Pair up, 2 minutes. Then rewrite it so all partitions run at once.
+
+<!--
+The bug: .get() is INSIDE the loop, so each pass waits for its own Activity
+before the next one starts - fully sequential despite Async.function. Fix:
+collect every Promise first (stream().map(Async.function).toList()), THEN
+allOf().get() and sum. This is THE classic mistake; seeing it once inoculates
+them. Connect back to the coffee run - this is order-wait, order-wait.
 -->
 
 ---
@@ -1494,21 +1652,17 @@ Then run and verify their prediction was right (or wrong - even better).
 
 ---
 
-<!-- _class: image -->
+<!-- _class: cols-figure -->
 
 ## The fan-out, in the history
 
+<div class="cols">
+<div class="col-media">
+
 ![Event History for order-pricing-demo, ascending: after a single Workflow Task Completed at event 4, three consecutive Activity Task Scheduled events (5, 6, 7) — each for the Price activity — prove all three SKUs were priced in parallel](assets/ui-async-history.png)
 
-<!--
-This is the proof for lab step 1. Read ascending so events 1-7 are on screen.
-The three ActivityTaskScheduled in a row, under ONE WorkflowTaskCompleted, is the
-whole point - the next slide names the parts.
--->
-
----
-
-## What you're seeing
+</div>
+<div class="col-body">
 
 Read the history top-down (Ascending):
 
@@ -1519,6 +1673,15 @@ Read the history top-down (Ascending):
 A *sequential* version interleaves schedule → start → complete per item — one Workflow Task each, staggered.
 
 > Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
+
+</div>
+</div>
+
+<!--
+This is the proof for lab step 1. Read ascending so events 1-7 are on screen.
+The three ActivityTaskScheduled in a row, under ONE WorkflowTaskCompleted, is the
+whole point - image left, the parts named on the right.
+-->
 
 ---
 
