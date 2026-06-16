@@ -348,6 +348,249 @@ its keep."
 
 ###### Day 1
 
+# The Temporal SDK
+
+The library that turns ordinary code into durable executions.
+
+<!--
+The cluster is language-agnostic; the SDK is how YOUR language speaks to it. Every
+primitive from the last section (Workflow, Activity, Worker, Task Queue) is a type
+in this library. Java is our working language; Python and Go appear at the end so
+the room knows the same model ships everywhere.
+
+Reference throughout: javadoc.io/doc/io.temporal/temporal-sdk/latest
+-->
+
+---
+
+# What the SDK actually does
+
+One dependency, two responsibilities — it's both how you *talk to* the cluster and how you *run* your code under its rules:
+
+* **Client side** — connect to Frontend over gRPC; start, signal, query, and update Workflows.
+* **Worker side** — long-poll Task Queues, dispatch Workflow & Activity tasks, replay history.
+* **Determinism runtime** — the `Workflow.*` toolkit (time, random, sleep, threads) that survives replay.
+* **Plumbing** — payload (de)serialization, retries, interceptors, metrics, TLS.
+
+> You write annotated classes and plain methods; the SDK makes them durable.
+
+<!--
+The headline: you don't call a REST API to "do durable execution." You link a
+library, and the library both reaches the cluster AND hosts your code under the
+replay contract. The four bullets map 1:1 to the packages on the next slide.
+-->
+
+---
+
+<!-- _class: dense -->
+
+# Java SDK — the packages
+
+| Package | You use it for | Key types |
+| --- | --- | --- |
+| `io.temporal.client` | Start / signal / query from outside | `WorkflowClient`, `WorkflowStub`, `WorkflowOptions` |
+| `io.temporal.worker` | Host & poll | `Worker`, `WorkerFactory`, `WorkerOptions` |
+| `io.temporal.workflow` | Write Workflow code | `Workflow`, `Async`, `Promise`, `Saga`, `@WorkflowInterface` |
+| `io.temporal.activity` | Write Activities | `Activity`, `ActivityOptions`, `@ActivityInterface` |
+| `io.temporal.common` | Shared config | `RetryOptions`, converters, interceptors |
+| `io.temporal.serviceclient` | The gRPC connection | `WorkflowServiceStubs`, TLS / API-key options |
+
+> Docs: [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
+
+<!--
+Don't read every cell - point at the split: client+serviceclient are the OUTSIDE
+(your HTTP handler / starter), worker is the HOST, workflow+activity are the CODE
+you write, common is the shared knobs. This is the whole API surface in one frame;
+the Javadoc index has this exact package list.
+-->
+
+---
+
+<!-- _class: code -->
+
+# `Workflow` — the deterministic toolkit
+
+Inside Workflow code, reach for the `Workflow` statics, never the JDK equivalents:
+
+```java
+Workflow.sleep(Duration.ofDays(30));        // durable timer, not Thread.sleep
+long now = Workflow.currentTimeMillis();    // recorded, not System.*
+UUID id  = Workflow.randomUUID();           // seeded, replay-safe
+Workflow.await(() -> approved);             // park until a predicate flips
+
+var act  = Workflow.newActivityStub(OrdersActivities.class, opts);
+var child = Workflow.newChildWorkflowStub(ChildWorkflow.class);
+Workflow.getLogger(getClass()).info("replay-aware logging");
+```
+
+> Every value the Worker can't reproduce on replay comes from `Workflow.*`.
+
+<!--
+This is the single most-used class in the SDK and the bridge back to the
+non-determinism slides coming next. The rule: if the JDK version would give a
+different answer on replay, there's a Workflow.* that records it instead.
+-->
+
+---
+
+<!-- _class: code -->
+
+# `WorkflowClient` — the way in from outside
+
+```java
+// connect to Frontend over gRPC
+WorkflowClient client = WorkflowClient.newInstance(
+    WorkflowServiceStubs.newLocalServiceStubs());
+// typed stub bound to your Workflow interface
+GreetingWorkflow wf = client.newWorkflowStub(GreetingWorkflow.class,
+    WorkflowOptions.newBuilder()
+        .setWorkflowId("hello-temporal-demo")
+        .setTaskQueue("hello-temporal").build());
+String result = wf.greet("Ada");   // start & block; .start(...) is async
+```
+
+> The same `client` signals, queries, updates, and describes running Workflows.
+
+<!--
+This is the starter side from the Hello lab. Three steps: connect, make a stub,
+call it. A direct method call blocks for the result; WorkflowClient.start(wf::greet,
+"Ada") returns immediately with a WorkflowExecution handle - the async path.
+-->
+
+---
+
+<!-- _class: code -->
+
+# Add it to your build
+
+```xml
+<!-- Maven — pom.xml -->
+<dependency>
+  <groupId>io.temporal</groupId>
+  <artifactId>temporal-sdk</artifactId>
+  <version>1.32.1</version>   <!-- check Maven Central for latest -->
+</dependency>
+```
+
+```groovy
+// Gradle — build.gradle
+implementation 'io.temporal:temporal-sdk:1.32.1'
+implementation 'io.temporal:temporal-testing:1.32.1'  // replay & time-skip tests
+```
+
+> `temporal-sdk` is the only runtime dependency; add `temporal-testing` for Day 4.
+
+<!--
+One artifact gets you everything on the package slide. temporal-testing (the
+TestWorkflowEnvironment + replay harness) lands on Day 4 - flag it now so the
+dependency is already familiar.
+-->
+
+---
+
+<!-- _class: section -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 1 · optional
+
+# Other SDKs — same model
+
+Python and Go ship the identical primitives in idiomatic form.
+
+<!--
+Optional / awareness only - the room is Java-first. The point of these three
+slides: the mental model is the product, not the Java API. A polyglot shop runs
+Workflows in one language and Workers in another against the same cluster.
+-->
+
+---
+
+<!-- _class: code -->
+
+###### Optional
+
+# Python SDK — `temporalio`
+
+```python
+from temporalio.client import Client
+from temporalio.worker import Worker
+
+client = await Client.connect("localhost:7233", namespace="default")
+handle = await client.start_workflow(
+    GreetingWorkflow.run, "Ada",
+    id="hello-temporal-demo", task_queue="hello-temporal")
+print(await handle.result())
+worker = Worker(client, task_queue="hello-temporal",
+                workflows=[GreetingWorkflow], activities=[greet])
+await worker.run()
+```
+
+> `pip install temporalio` — async-native: `@workflow.defn` / `@activity.defn`, `workflow.*` toolkit.
+
+<!--
+Same three moves - connect, start, run a worker - in async Python. The Workflow.*
+toolkit becomes the workflow module (workflow.sleep, workflow.now, workflow.uuid4).
+-->
+
+---
+
+<!-- _class: code -->
+
+###### Optional
+
+# Go SDK — `go.temporal.io/sdk`
+
+```go
+// go get go.temporal.io/sdk  →  import "go.temporal.io/sdk/client"
+c, _ := client.Dial(client.Options{HostPort: "localhost:7233"})
+defer c.Close()
+
+we, _ := c.ExecuteWorkflow(ctx,
+    client.StartWorkflowOptions{ID: "hello-temporal-demo", TaskQueue: "hello-temporal"},
+    GreetingWorkflow, "Ada")
+
+var result string
+we.Get(ctx, &result)   // block for the result
+```
+
+> A Workflow is a plain `func(ctx workflow.Context, ...)`; the `workflow` package holds the determinism toolkit.
+
+<!--
+No annotations - Go uses function signatures and the workflow.Context. Same shape:
+Dial, ExecuteWorkflow, Get. worker.New(c, "queue", opts).Run() hosts it.
+-->
+
+---
+
+<!-- _class: dense -->
+
+###### Optional
+
+# Cross-SDK at a glance
+
+| Concept | Java | Python | Go |
+| --- | --- | --- | --- |
+| Package | `io.temporal:temporal-sdk` | `temporalio` (pip) | `go.temporal.io/sdk` |
+| Connect | `WorkflowClient` | `Client.connect` | `client.Dial` |
+| Define Workflow | `@WorkflowInterface` | `@workflow.defn` | `func(ctx, …)` |
+| Run a Worker | `WorkerFactory` / `Worker` | `Worker(...).run()` | `worker.New(...).Run()` |
+| Determinism API | `Workflow.*` | `workflow` module | `workflow` package |
+| Call an Activity | typed Activity stub | `workflow.execute_activity` | `workflow.ExecuteActivity` |
+
+> Different syntax, one runtime contract — pick the language, keep the model.
+
+<!--
+The takeaway slide for the optional block: the columns differ, the rows don't.
+This is why a team can adopt Temporal without a language rewrite.
+-->
+
+---
+
+<!-- _class: section -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 1
+
 # Event sourcing & deterministic replay
 
 The single concept that breaks the most Airflow brains.
