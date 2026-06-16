@@ -439,7 +439,7 @@ replay contract. The four bullets map 1:1 to the packages on the next slide.
 | `io.temporal.common` | Shared config | `RetryOptions`, converters, interceptors |
 | `io.temporal.serviceclient` | The gRPC connection | `WorkflowServiceStubs`, `WorkflowServiceStubsOptions` (TLS / API-key) |
 
-> Docs: [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
+> Javadoc: [`WorkflowClient`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/WorkflowClient.html) · [`Worker`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/worker/Worker.html) · [`Workflow`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/workflow/Workflow.html) · [`Activity`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/activity/Activity.html) · [`WorkflowServiceStubs`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/serviceclient/WorkflowServiceStubs.html) · [full index](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
 
 <!--
 Don't read every cell - point at the split: client+serviceclient are the OUTSIDE
@@ -2001,6 +2001,8 @@ Sometimes a long Activity must be **abandoned** if it overruns — but you still
 
 > Cancellation is cooperative — it rides the heartbeat, so only heartbeating Activities can be stopped mid-flight.
 
+> Javadoc: [`CancellationScope`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/workflow/CancellationScope.html)
+
 <!--
 Lead-in before the CancellationScope code. Ties back to heartbeats: cancellation
 reaches a running Activity the same way liveness does - via the heartbeat.
@@ -2129,6 +2131,8 @@ A Workflow is a **live object**, not a job you fire and forget. Three ways to in
 | Can be rejected? | no | n/a | **yes** (validator) |
 
 > Signal = "here's an event." Query = "what's your state?" Update = "do this and tell me the result."
+
+> Javadoc: [`@SignalMethod`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/workflow/SignalMethod.html) · [`@QueryMethod`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/workflow/QueryMethod.html) · [`@UpdateMethod`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/workflow/UpdateMethod.html)
 
 <!--
 This is the lead-in BEFORE any annotation soup. Decide by intent first, then the
@@ -2533,6 +2537,8 @@ A Schedule is a **durable server object** that starts a Workflow on a spec — T
 - The **server** owns it; you manage it with `ScheduleClient` — create, pause, trigger, delete.
 
 > You define *what* and *when*; the server fires it. No always-on scheduler process of your own.
+
+> Javadoc: [`Schedule`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/schedules/Schedule.html) · [`ScheduleClient`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/schedules/ScheduleClient.html)
 
 <!--
 Lead-in before the Schedule.newBuilder code. Three parts: action + spec + policy.
@@ -4005,6 +4011,8 @@ Workflow logic is deterministic, so you can test it **in-process** — no Docker
 
 > Unit-test orchestration like ordinary code — fast and hermetic.
 
+> Javadoc: [`TestWorkflowEnvironment`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/testing/TestWorkflowEnvironment.html)
+
 <!--
 Lead-in before the TestWorkflowEnvironment code. Time-skipping is the "wow":
 durable timers normally make long Workflows untestable; here they run instantly.
@@ -4192,6 +4200,8 @@ For a Workflow you wrote on Day 1-2:
 4. Add a `WorkflowReplayer` test per file.
 5. Modify the Workflow to reorder Activities; watch the test fail.
 
+> Javadoc: [`WorkflowReplayer`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/testing/WorkflowReplayer.html)
+
 <!--
 This is the safety net for the rest of the year.
 
@@ -4322,6 +4332,8 @@ A saga is a sequence of steps where, if a later one fails, you **undo the earlie
 - The SDK's `Saga` helper just tracks the compensation stack; *you* write the undo Activities.
 
 > "Authorize → reserve → ship", with a matching "cancel → restore → notify" if anything throws.
+
+> Javadoc: [`Saga`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/workflow/Saga.html)
 
 <!--
 Lead-in before the Saga code. The mental model is a stack: push a compensation
