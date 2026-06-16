@@ -2424,6 +2424,38 @@ If it does, they're using bare start - debug it.
 
 ---
 
+<!-- _class: image -->
+
+## The bridge, in the history
+
+![Event History for order-100 (one Workflow per order key): event 1 is WorkflowExecutionStarted and events 2, 7, 11 are WorkflowExecutionSignaled with signal name orderEvent — three Kafka messages for the same key produced one start and two signals, never a second Workflow](assets/ui-kafka-bridge.png)
+
+<!--
+Captured live: kcat produced 3 events (created/paid/shipped) for key 100 to the
+'orders' topic; the bridge did SignalWithStartWorkflow each time. One Started,
+the rest Signaled. The next slide reads it.
+-->
+
+---
+
+## What you're seeing
+
+Three Kafka messages for key `100` → **one** Workflow `order-100`:
+
+- **Event 1 `WorkflowExecutionStarted`** — the *first* message started it (via `signalWithStart`).
+- **Events 2, 7, 11 `WorkflowExecutionSignaled`** (`orderEvent`) — every later message **signals the running execution**.
+- **No second Workflow** — bare `start()` would throw `AlreadyStarted` on message #2.
+
+> One long-lived Workflow per key, fed by Signals — the Kafka-bridge pattern, proven in the history.
+
+<!--
+Docs: https://docs.temporal.io/develop/java · Javadoc:
+https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html
+The activity (PublishOutcome → order-outcomes topic) is the producer half.
+-->
+
+---
+
 # Partition fan-out
 
 Two strategies:
@@ -4474,6 +4506,42 @@ kubectl get scaledobject,pods -l app=temporal-transform-worker -w
 ```
 
 > Watch replica count climb from 1 → ~5 as backlog grows.
+
+---
+
+<!-- _class: code -->
+
+## KEDA autoscaling, live
+
+300 workflow tasks backlogged on `transform`, nothing draining → KEDA scales the Deployment to max:
+
+```text
+$ kubectl get scaledobject,hpa,deploy
+ScaledObject  temporal-transform-worker   TRIGGER=temporal  READY=True  ACTIVE=True
+HPA           keda-hpa-…transform-worker   TARGETS=30/20 (avg)          REPLICAS=10
+Deployment    transform-worker            READY=10/10   AVAILABLE=10
+```
+
+> Real run on kind: an in-cluster Temporal + KEDA; replicas went **1 → 10** within one poll.
+
+<!--
+Captured live: kind cluster + KEDA, an in-cluster dev server, a 300-task backlog
+on 'transform'. The repo manifests assume an in-cluster temporal-frontend +
+production namespace; this used a streamlined equivalent.
+-->
+
+---
+
+## What you're seeing
+
+KEDA scaled `transform-worker` from **1 → 10** off the Temporal task-queue backlog:
+
+- KEDA's **Temporal scaler** polls `DescribeTaskQueue` — **no Prometheus exporter** needed for this one.
+- **Backlog ÷ `targetQueueSize` (20)** drives the HPA: 300 / 20 = 15 → **capped at `maxReplicaCount` 10**.
+- Drain the backlog and it scales back to `minReplicaCount` — which can be **0** (scale-to-zero).
+- CPU/memory would never catch this — Workers are I/O-bound; **queue depth** is the real demand signal.
+
+> Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
 
 ---
 
