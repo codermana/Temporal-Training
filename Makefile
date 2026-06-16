@@ -361,12 +361,19 @@ aws-buckets: ## List LocalStack S3 buckets
 # Slides (Marp)
 # ---------------------------------------------------------------------------
 
-.PHONY: slides slides-deps slides-why slides-fundamentals slides-html slides-pdf slides-pptx slides-lint
+.PHONY: slides slides-deps slides-css slides-why slides-fundamentals slides-html slides-pdf slides-pptx slides-lint
 
 slides-deps: ## Install Marp CLI for a deck (DECK=why-temporal|temporal-fundamentals)
 	@DECK=$${DECK:-why-temporal}
 	@if [ ! -d "slides/$$DECK" ]; then echo "Unknown deck: $$DECK"; exit 2; fi
 	cd "slides/$$DECK" && npm install
+
+slides-css: ## Compile the shared theme slides/themes/base.scss -> base.css
+	@if [ ! -d "slides/temporal-fundamentals/node_modules" ]; then \
+		echo ">> Installing slide tooling"; \
+		cd "slides/temporal-fundamentals" && npm install; \
+	fi
+	cd "slides/temporal-fundamentals" && npm run css
 
 slides: ## Preview a Marp deck (DECK=why-temporal|temporal-fundamentals [PORT=8080])
 	@DECK=$${DECK:-why-temporal}

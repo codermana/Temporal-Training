@@ -32,8 +32,24 @@ npm run pptx       # dist/slides.pptx
 ## Edit
 
 - Content: `slides.md`
-- Theme: `../themes/base.css`
+- Theme **source**: `../themes/base.scss` (shared by both decks)
 - Images: `assets/images/`
+
+### Theme (Sass)
+
+`../themes/base.css` is **generated** from `base.scss` — don't edit it by hand.
+The `preview`/`html`/`pdf`/`pptx` scripts recompile it automatically (a `pre*`
+hook runs `npm run css`). To rebuild it on its own:
+
+```bash
+npm run css          # this deck
+make slides-css      # from the repo root
+```
+
+The compile (`scripts/build-theme.mjs`) prepends Marp's `@import 'default';`
+after Sass runs — Dart Sass can't emit that bare import, and Marpit only inlines
+its built-in default theme for exactly that form. `base.css` stays committed
+because GitHub Pages and the Marp exports consume it directly.
 
 ## Deploy
 

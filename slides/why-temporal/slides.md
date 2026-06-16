@@ -3,7 +3,17 @@ marp: true
 theme: base
 paginate: true
 size: 16:9
+
+# --- Motion controls (theme source: ../themes/base.scss) -----------------
+# Two knobs, kept together. OS "Reduce motion" disables BOTH at once.
+#   transition: slide-to-slide animation. Comment the line out to disable;
+#               override per slide with <!-- _transition: ... -->.
+#   class:      uncomment `no-anim` to disable entrance animations deck-wide
+#               (or add <!-- _class: no-anim --> to a single slide).
 transition: fade 0.4s
+# class: no-anim
+# -------------------------------------------------------------------------
+
 title: Why Temporal
 description: Durable execution for engineers tired of writing recovery runbooks.
 author: Gaurav Agarwal
