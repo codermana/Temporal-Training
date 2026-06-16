@@ -986,8 +986,6 @@ explains why. JSON is from the Event History "JSON" toggle / `workflow show -o j
 
 > This is exactly why the Workflow survives when you kill the Worker mid-run (the Hello lab's lesson) — the sticky cache is an optimisation, the normal queue + history is the guarantee.
 
-> Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
-
 ---
 
 <!-- _class: dense -->
@@ -1798,8 +1796,6 @@ Read the history top-down (Ascending):
 
 A *sequential* version interleaves schedule → start → complete per item — one Workflow Task each, staggered.
 
-> Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
-
 </div>
 </div>
 
@@ -1909,8 +1905,6 @@ While an Activity is retrying, the **Pending Activities** tab is the only place 
 - **Last Failure** — the error thrown by the previous attempt (here a `GatewayTimeout` application error).
 
 Once the Activity succeeds the panel empties — the **history keeps only the final `ActivityTaskStarted`** (with its `attempt` count + last failure), not one event per retry.
-
-> Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
 
 </div>
 </div>
@@ -2204,8 +2198,6 @@ The **Queries** tab runs a Query against the *live* Workflow, on demand:
 
 > Empty tab? No Worker is polling — a Query needs a live Worker with the run cached.
 
-> Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
-
 </div>
 </div>
 
@@ -2485,8 +2477,6 @@ Unlike Queries, **Signals and Updates are durable events** — they show up in h
 
 > Replay re-applies these events, so Signal/Update effects survive restarts; a Query you just re-run.
 
-> Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
-
 </div>
 </div>
 
@@ -2640,8 +2630,6 @@ The **Schedules** tab (left rail) lists every Schedule; click one for this detai
 - **Recent Runs** — what has fired; **Pause** stops firing without deleting the Schedule.
 - A Schedule is a **durable server object** (not a cron line on a box) — it survives redeploys, and `Overlap` decides what happens when a run is still going.
 
-> Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
-
 </div>
 </div>
 
@@ -2773,8 +2761,6 @@ The parent's **Relationships** tab shows the tree it spawned:
 - They ran **in parallel** (overlapping start/end) and each Completed independently.
 
 > A child is a first-class Workflow, not a sub-step hidden in the parent's history — that's the point of composing.
-
-> Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
 
 </div>
 </div>
@@ -3427,8 +3413,6 @@ A Workflow's **Workers → Pollers** tab answers "is anything polling this Task 
 - The **Workflow / Activity Handler** ticks show what that Worker registered.
 - **No pollers** → tasks pile up, nothing runs — first thing to check when a Workflow is stuck.
 
-> Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
-
 </div>
 </div>
 
@@ -3894,8 +3878,6 @@ The Worker exports **SDK metrics** to Prometheus; Grafana renders the overview:
 - All `temporal_*` families — counters (`*_total`) and latency histograms (`*_seconds`).
 
 > Wire metrics on day one — schedule-to-start latency is the number KEDA autoscales on (Day 6).
-
-> Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
 
 </div>
 </div>
@@ -4553,8 +4535,6 @@ right; the takeaways continue on the next slide.
 
 > Temporal rolls nothing back for you. Compensation is just **more Activities you orchestrate** — the Saga pattern + your code own the "undo."
 
-> Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
-
 </div>
 </div>
 
@@ -4776,8 +4756,6 @@ The **Relationships** tab exposes the chain continue-as-new builds:
 - The current Run started fresh — its history is small, not the sum of every iteration.
 
 > One business identity, many physical Runs — exactly the Workflow ID vs Run ID distinction from Day 1.
-
-> Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
 
 </div>
 </div>
@@ -5507,8 +5485,6 @@ KEDA scaled `transform-worker` from **1 → 10** off the Temporal task-queue bac
 - **Backlog ÷ `targetQueueSize` (20)** drives the HPA: 300 / 20 = 15 → **capped at `maxReplicaCount` 10**.
 - Drain the backlog and it scales back to `minReplicaCount` — which can be **0** (scale-to-zero).
 - CPU/memory would never catch this — Workers are I/O-bound; **queue depth** is the real demand signal.
-
-> Docs: [Java SDK guide](https://docs.temporal.io/develop/java) · [`temporal-sdk` Javadoc](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
 
 ---
 
