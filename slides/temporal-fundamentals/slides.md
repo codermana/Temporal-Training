@@ -534,6 +534,63 @@ dependency is already familiar.
 
 ---
 
+<!-- _class: code -->
+
+# Serialization — your data becomes Payloads
+
+Every value crossing the boundary — Workflow args & result, Activity args & result, Signals, Queries, Updates — is converted to a **`Payload`** (bytes + metadata) by the **`DataConverter`**, then converted back on the other side.
+
+```text
+greet("Ada")  ──DataConverter──▶  Payload {
+                                    metadata: { "encoding": "json/plain" }
+                                    data:     "Ada"           ← UTF-8 bytes
+                                  }  ──▶ stored in Event History
+```
+
+- Default chain tries converters **in order**: `null` → `byte[]` → Protobuf → **JSON (Jackson)**. Your POJOs/records land on JSON.
+- The `encoding` metadata tells the *receiver* how to decode — both sides must run a **compatible** converter.
+
+> You pass objects; the SDK ships bytes. Keep them JSON-friendly and both ends agree.
+
+> Javadoc: [`DataConverter`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/common/converter/DataConverter.html) · [`DefaultDataConverter`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/common/converter/DefaultDataConverter.html) · [`PayloadConverter`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/common/converter/PayloadConverter.html)
+
+<!--
+The bullet from "What the SDK actually does" (payload (de)serialization) cashed
+out. The mental model: nothing custom crosses the wire - it's all Payloads.
+DefaultDataConverter is a chain of PayloadConverters; JSON is the catch-all that
+handles records/POJOs, which is why "make it JSON-serializable" is the rule.
+Override the converter at WorkflowClientOptions (Day 6 codec slide stacks a
+PayloadCodec on top to encrypt). Limits are the next slide - the "so what".
+-->
+
+---
+
+<!-- _class: dense -->
+
+# Serialization — the limits
+
+The "so what" of shipping bytes through history:
+
+- **Must serialize cleanly** — default JSON needs fields/getters and a no-arg path; no live handles (sockets, threads, streams, `Connection`s).
+- **Size** — one payload hard-caps at **2 MB** (the gRPC message limit); the SDK **warns ~256 KB**. The whole history caps at **50 MB / 51,200 events**.
+- **Replay cost** — every arg & result is stored in history *and re-read on every replay*. Big payloads = slow replay and a bloating history.
+- **Schema evolution** — a payload outlives the code that wrote it. **Add** fields, tolerate unknown ones; don't repurpose or remove — an in-flight Workflow will fail to deserialize old history.
+
+> History is a **control plane, not a data bus** — keep payloads small, stable, and JSON-clean. Big blobs go to S3; pass a **URI**, not the bytes *(Day 6)*.
+
+<!--
+This is the slide they asked "limits?" about. Four kinds of limit, not just size:
+serializability, size, replay cost, and schema evolution - the last is the
+sneaky one. Tie size back to the 2 MB / 256 KB figures and the 50 MB / 51,200
+event history cap from the event-sourcing section. The fix for big data (S3
+reference payload) and for sensitive data (PayloadCodec encryption) both land on
+Day 6 - this slide plants the rule, Day 6 shows the pattern. Jackson default:
+unknown properties are ignored, so additive changes are safe; renaming a field
+is a breaking change for any open Workflow whose history holds the old name.
+-->
+
+---
+
 <!-- _class: section -->
 <!-- _transition: slide 0.5s -->
 
