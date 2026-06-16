@@ -115,6 +115,20 @@ Open in VSCode: examples/01-foundations/airflow_dag_vs_temporal_workflow.java + 
 
 ---
 
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 1 · on-ramp
+
+# Why Temporal exists
+
+- **Where this fits** — Your first hour: before any API, the *problem* every orchestrator you've used leaves on your plate.
+- **Why it matters** — If the failure modes don't land, the rest of the week looks like needless ceremony.
+- **By the end** — You'll name the work cron, Airflow, Step Functions and Kafka each leave to *you*.
+
+---
+
+
 # Every backend has these
 
 * "Charge the card, ship the order, send the receipt."
@@ -210,6 +224,20 @@ Run: make run-hello
 
 
 ---
+
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 1 · on-ramp
+
+# Core concepts
+
+- **Where this fits** — You've seen what breaks; these are the four pieces Temporal gives you to fix it.
+- **Why it matters** — Every Workflow, saga and pipeline later this week is built from just these four.
+- **By the end** — You'll read Workflow, Activity, Worker and Task Queue in one file and run them.
+
+---
+
 
 <!-- _class: cards -->
 
@@ -363,6 +391,20 @@ Reference throughout: javadoc.io/doc/io.temporal/temporal-sdk/latest
 
 ---
 
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 1 · on-ramp
+
+# The Temporal SDK
+
+- **Where this fits** — You've met the primitives; now the library that turns ordinary Java into a durable execution.
+- **Why it matters** — Knowing which package does what heads off the "why won't this compile or replay" confusion later.
+- **By the end** — You'll know where `Workflow`, `WorkflowClient` and the annotations live, and what each is for.
+
+---
+
+
 # What the SDK actually does
 
 One dependency, two responsibilities — it's both how you *talk to* the cluster and how you *run* your code under its rules:
@@ -505,6 +547,20 @@ Workflows in one language and Workers in another against the same cluster.
 
 ---
 
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 1 · on-ramp
+
+# Other SDKs — same model
+
+- **Where this fits** — A short detour: the same primitives you just learned, in Python and Go.
+- **Why it matters** — Your platform is polyglot — a Go Worker and a Java Worker can share one Workflow contract.
+- **By the end** — You'll recognize the identical model across all three SDKs and read each in idiomatic form.
+
+---
+
+
 <!-- _class: code -->
 
 ###### Optional
@@ -601,6 +657,20 @@ Open in VSCode: examples/01-foundations/deterministic_replay_bad.java vs determi
 
 
 ---
+
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 1 · on-ramp
+
+# Event sourcing & deterministic replay
+
+- **Where this fits** — The one idea under everything: how a Workflow survives a crash and resumes mid-flight.
+- **Why it matters** — This is the concept that most often breaks Airflow intuition — get it now, debug less later.
+- **By the end** — You'll explain why Workflow code re-executes while Activity results are replayed from history.
+
+---
+
 
 # The replay rule
 
@@ -1037,6 +1107,20 @@ Run: make run-hello, then read the Web UI event history. Dump it from the CLI wi
 
 ---
 
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 1 · on-ramp
+
+# Architecture
+
+- **Where this fits** — You've used Temporal from the outside; now a look inside the box you've been talking to.
+- **Why it matters** — Knowing the services and task flow demystifies timeouts, sticky queues and "stuck" Workflows.
+- **By the end** — You'll trace one Workflow start through Frontend, History, Matching and your Worker.
+
+---
+
+
 <!-- _class: code -->
 
 ## The cluster
@@ -1261,6 +1345,24 @@ Show it now; it'll come back on Day 4 for replay tests.
 
 ---
 
+<!-- _class: middle -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 1 · the whole picture
+
+# How it all fits together
+
+1. You **start a Workflow** by a business ID — your durable handle to it.
+2. A **Worker** polling a **Task Queue** picks it up and runs your Workflow code.
+3. Workflow code calls **Activities** for anything with side effects — retried for you.
+4. Every step is appended to the **Event History** — the one source of truth.
+5. Crash anywhere, and the Worker **replays that history**: Workflow code re-executes, Activity results are restored.
+
+> Durable execution = your code, plus a history that lets it resume exactly where it left off.
+
+---
+
+
 <!-- _class: takeaway -->
 
 # Day 1 takeaways
@@ -1312,6 +1414,20 @@ Run: make run-async
 
 
 ---
+
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 2 · on-ramp
+
+# Async and parallel Activity execution
+
+- **Where this fits** — Day 1 ran one Activity at a time; today you fan work out and wait on many.
+- **Why it matters** — This is how a 10-minute serial pipeline becomes a 1-minute parallel one — safely.
+- **By the end** — You'll start Activities concurrently with Promises and join them without threads.
+
+---
+
 
 ## Blocking: the model you already have
 
@@ -1707,6 +1823,20 @@ Open in VSCode: examples/02-reliability/retry_and_timeouts.java, heartbeat_long_
 
 ---
 
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 2 · on-ramp
+
+# Retries, timeouts, heartbeats
+
+- **Where this fits** — Async got work running; now you make each step survive a flaky downstream.
+- **Why it matters** — Pick the wrong timeout and you either hang forever or give up too soon — both page someone.
+- **By the end** — You'll know what each of the three timeouts controls and when a heartbeat earns its keep.
+
+---
+
+
 <!-- _class: dense -->
 
 # Three timeouts
@@ -1914,6 +2044,20 @@ Open in VSCode: examples/02-reliability/workflow_time.java - durable sleep recor
 
 ---
 
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 2 · on-ramp
+
+# Determinism, reinforced
+
+- **Where this fits** — A checkpoint: the handful of rules that keep replay honest, now that you're writing real logic.
+- **Why it matters** — These are the traps that pass code review and then fail on the first replay in production.
+- **By the end** — You'll spot the common non-determinism bugs before the SDK does.
+
+---
+
+
 # Common traps
 
 * `Map.Entry.getKey()` iteration over `HashMap` - JVM-version-dependent.
@@ -1949,6 +2093,20 @@ Run: make run-approval
 
 
 ---
+
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 2 · on-ramp
+
+# Signals and Queries
+
+- **Where this fits** — So far Workflows ran start-to-finish alone; now you talk to one while it's running.
+- **Why it matters** — This is how a long-running Workflow takes input and exposes state — without a database.
+- **By the end** — You'll push a Signal in and pull state out with a Query, and read both in the history.
+
+---
+
 
 <!-- _class: dense -->
 
@@ -2092,6 +2250,20 @@ Run: make run-approval
 
 
 ---
+
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 2 · on-ramp
+
+# Updates
+
+- **Where this fits** — Signals are fire-and-forget; an Update is the request/response version that can reject bad input.
+- **Why it matters** — It replaces the "Signal, then poll a Query" dance with one validated, blocking call.
+- **By the end** — You'll call into a running Workflow and get a result back, with a validator guarding the door.
+
+---
+
 
 ## Updates — a validated, blocking call
 
@@ -2333,6 +2505,20 @@ Run: make run-schedules
 
 ---
 
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 2 · on-ramp
+
+# Schedules
+
+- **Where this fits** — This is the piece that directly replaces Airflow's scheduler.
+- **Why it matters** — Cron specs, catchup and overlap policy live in Temporal now — one less system to babysit.
+- **By the end** — You'll define a recurring Workflow and control what happens when runs pile up.
+
+---
+
+
 ## Defining a Schedule
 
 A Schedule is a **durable server object** that starts a Workflow on a spec — Temporal's replacement for cron / Airflow's scheduler.
@@ -2496,6 +2682,20 @@ Open in VSCode: examples/03-interactions/child_workflow.java, workflow_and_run_t
 
 ---
 
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 2 · on-ramp
+
+# Child Workflows and timeouts
+
+- **Where this fits** — You've built single Workflows; now you compose them and bound how long anything runs.
+- **Why it matters** — Knowing child-vs-Activity and which timeout to set keeps big workflows from sprawling.
+- **By the end** — You'll decide when to spawn a child and how to cap a Workflow's lifetime.
+
+---
+
+
 <!-- _class: dense -->
 
 ## Child Workflow vs Activity — when?
@@ -2641,6 +2841,20 @@ Open in VSCode: examples/04-kafka/kafka_consumer_activity.java, producer_activit
 
 ---
 
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 3 · on-ramp
+
+# Temporal + Kafka architecture
+
+- **Where this fits** — You live in Kafka already; today is where Kafka and Temporal divide the work.
+- **Why it matters** — Used wrong, they overlap and fight; used right, each does the job it's best at.
+- **By the end** — You'll say which problems belong to Kafka and which to Temporal, and why.
+
+---
+
+
 <!-- _class: dense -->
 
 # Who owns what
@@ -2785,6 +2999,20 @@ Run: make run-kafka
 
 ---
 
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 3 · on-ramp
+
+# Signal-driven Workflows
+
+- **Where this fits** — The concrete migration: a Kafka-triggered Airflow DAG becomes a Signal-driven Workflow.
+- **Why it matters** — It removes the brittle "consumer kicks off a DAG" glue you maintain today.
+- **By the end** — You'll bridge a Kafka topic to a running Workflow with Signals.
+
+---
+
+
 # The pattern
 
 1) One Workflow per business entity (e.g. per orderId).
@@ -2831,6 +3059,20 @@ Run: make run-kafka (Worker + bridge). Produce with make kafka-produce TOPIC=ord
 
 
 ---
+
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 3 · on-ramp
+
+# End-to-end pipeline
+
+- **Where this fits** — The pieces assembled: Kafka in, Temporal in the middle, Kafka out.
+- **Why it matters** — This is the shape of most event-driven systems you'll actually ship.
+- **By the end** — You'll run a full consume → orchestrate → produce pipeline and read it in the history.
+
+---
+
 
 <!-- _class: lab -->
 
@@ -3023,6 +3265,20 @@ Open in VSCode: examples/05-production/get_version_patch.java, versioning_behavi
 
 ---
 
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 4 · on-ramp
+
+# Workflow versioning
+
+- **Where this fits** — Your code is running in production; now you change it without breaking in-flight Workflows.
+- **Why it matters** — A careless deploy can non-deterministically corrupt every executing Workflow at once.
+- **By the end** — You'll ship a behavior change safely with the versioning API.
+
+---
+
+
 # Why versioning exists
 
 Day 1: deploy v1. Workflow runs against v1 history.
@@ -3107,6 +3363,20 @@ Open in VSCode: examples/05-production/worker_options_manual.java, worker_tuner.
 
 
 ---
+
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 4 · on-ramp
+
+# Worker sizing & Task Queue design
+
+- **Where this fits** — Workflows work; now you make Workers carry production load.
+- **Why it matters** — Task Queues are sized by resource profile, not domain — get this wrong and you over- or under-provision.
+- **By the end** — You'll know the levers — slots, pollers, tuners — and how to set them deliberately.
+
+---
+
 
 <!-- _class: dense -->
 
@@ -3389,6 +3659,20 @@ Stack: make stack-obs, then make grafana
 
 ---
 
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 4 · on-ramp
+
+# Observability
+
+- **Where this fits** — Before you trust this in production, you need to see inside it.
+- **Why it matters** — Temporal emits the metrics; wiring them on day one saves the 2 AM blind debugging session.
+- **By the end** — You'll expose SDK metrics, add your own, and trace one request across Workflow and Activities.
+
+---
+
+
 <!-- _class: dense -->
 
 # Key SDK metrics
@@ -3576,6 +3860,20 @@ Open in VSCode: examples/05-production/namespace_strategy.md
 
 ---
 
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 4 · on-ramp
+
+# Namespace strategy
+
+- **Where this fits** — One more production decision: how you carve tenants and environments apart.
+- **Why it matters** — A namespace is an isolation boundary, not a routing key — confusing the two bites later.
+- **By the end** — You'll decide when to split namespaces and how retention applies to each.
+
+---
+
+
 <!-- _class: dense -->
 
 # When to split namespaces
@@ -3626,6 +3924,20 @@ Run: make run-testing (no server needed)
 
 
 ---
+
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 4 · on-ramp
+
+# Testing
+
+- **Where this fits** — You've written Workflows; now you test them without a server or a real clock.
+- **Why it matters** — Fast in-process tests with time-skipping make day-long timers testable in milliseconds.
+- **By the end** — You'll unit-test a Workflow with mocked Activities and skipped time.
+
+---
+
 
 ## Testing Workflows — no server, no clock
 
@@ -3743,6 +4055,20 @@ Open in VSCode: examples/05-production/replay_test.java
 
 ---
 
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 4 · on-ramp
+
+# Workflow replay testing
+
+- **Where this fits** — The test that specifically guards the determinism rules from Day 2.
+- **Why it matters** — It catches the version-breaking change before the deploy, not after.
+- **By the end** — You'll replay a recorded history against new code and catch the regression.
+
+---
+
+
 <!-- _class: code -->
 
 ## Capture & replay
@@ -3828,6 +4154,20 @@ A decision framework.
 
 ---
 
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 4 · on-ramp
+
+# Migrating Airflow DAGs
+
+- **Where this fits** — Stepping back: a framework for deciding what to move, and in what order.
+- **Why it matters** — Not every DAG should move; knowing which saves wasted migrations.
+- **By the end** — You'll have a decision rule for migrate-or-keep and a safe migration order.
+
+---
+
+
 <!-- _class: dense -->
 
 # Migrate or not?
@@ -3901,6 +4241,20 @@ Run: make run-saga
 
 
 ---
+
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 5 · on-ramp
+
+# Order-processing saga
+
+- **Where this fits** — Everything so far, assembled into the canonical real workflow: pay → reserve → ship.
+- **Why it matters** — Distributed transactions have no rollback; the saga is how you undo across services.
+- **By the end** — You'll read a saga's forward steps and compensations and watch one undo itself in history.
+
+---
+
 
 ## The Saga pattern — forward steps + undo
 
@@ -4153,6 +4507,20 @@ Open in VSCode: examples/06-saga-spring/spring_temporal_config.java, kafka_liste
 
 ---
 
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 5 · on-ramp
+
+# Saga in Spring Boot
+
+- **Where this fits** — The same saga, wired the way your services actually run — in Spring Boot.
+- **Why it matters** — This is the production plumbing: client beans, Worker registration, sync and async entry points.
+- **By the end** — You'll drive a saga over HTTP and over Kafka from a Spring app.
+
+---
+
+
 ## Temporal in Spring Boot — the shape
 
 Temporal isn't a framework you hand control to — it's a **client + Worker** you wire into Spring's lifecycle:
@@ -4384,6 +4752,20 @@ Scaffold from examples/runnable/07-saga/ (Run: make run-saga). Challenge: day-05
 
 ---
 
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 5 · on-ramp
+
+# Capstone
+
+- **Where this fits** — You build: take a Kafka-triggered Airflow DAG and redesign it as a Temporal saga.
+- **Why it matters** — It's the rehearsal for the migration you'll do back at work.
+- **By the end** — You'll have a working saga you designed, against a clear acceptance bar.
+
+---
+
+
 # The task
 
 > A customer signup flow. Kafka event `customer-signup` arrives with `{userId, email, plan}`. The DAG runs four tasks: create user, charge first month, provision tenant, send welcome email. Failure handling today is ad hoc.
@@ -4512,6 +4894,20 @@ Open in VSCode: examples/07-aws-containers/aws_mapping.md, step_functions_before
 
 ---
 
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 6 · on-ramp
+
+# The AWS orchestration problem
+
+- **Where this fits** — The morning's premise: where Lambda + Glue + Step Functions hide their complexity.
+- **Why it matters** — Naming the pain points tells you exactly what Temporal is replacing, and why.
+- **By the end** — You'll map each AWS piece to the state and recovery burden it leaves you.
+
+---
+
+
 # State scatters
 
 * **EventBridge** rule fires.
@@ -4571,6 +4967,20 @@ Run: make run-aws
 
 
 ---
+
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 6 · on-ramp
+
+# Glue Spark as an Activity
+
+- **Where this fits** — The core AWS pattern: supervise long external compute from a Workflow.
+- **Why it matters** — It's the template for wrapping any slow, out-of-process job — Glue, EMR, a batch API.
+- **By the end** — You'll launch and supervise a Glue job as an Activity, heartbeating its progress.
+
+---
+
 
 ## Supervising external compute — the pattern
 
@@ -4804,6 +5214,20 @@ Open in VSCode: examples/07-aws-containers/Dockerfile, worker_deployment.yaml, k
 
 
 ---
+
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 6 · on-ramp
+
+# Workers as containers
+
+- **Where this fits** — The afternoon: running Workers the way the rest of your services run — as containers.
+- **Why it matters** — A Worker has no HTTP port, so health checks and shutdown work differently than your web apps.
+- **By the end** — You'll containerize a Worker, set the right probes, and autoscale it on queue backlog.
+
+---
+
 
 # Mental model
 
