@@ -424,10 +424,10 @@ serves just sits there retrying. Homogeneous within a queue, heterogeneous acros
 
 ```text
                    Task Queue        Worker pool (registers)
-  OrderWorkflow ─▶ "orders"   ─────▶ Orchestrator [OrderWorkflow]
+  OrderWorkflow ─→ "orders"   ─────→ Orchestrator [OrderWorkflow]
        │
-       ├ charge ─▶ "payments" ─────▶ Payments pool [PaymentActivities]
-       └ render ─▶ "media"    ─────▶ Media pool    [MediaActivities]  (GPU)
+       ├ charge ─→ "payments" ─────→ Payments pool [PaymentActivities]
+       └ render ─→ "media"    ─────→ Media pool    [MediaActivities]  (GPU)
 ```
 
 > No single pool registers everything. Each stub's `setTaskQueue` picks the pool — scale and hardware follow the queue.
@@ -684,10 +684,10 @@ dependency is already familiar.
 Every value crossing the boundary is converted to a **`Payload`** (bytes + metadata) by the **`DataConverter`**, then converted back on the other side. That includes Workflow args & result, Activity args & result, Signals, Queries, and Updates.
 
 ```text
-greet("Ada")  ──DataConverter──▶  Payload {
+greet("Ada")  ──DataConverter──→  Payload {
                                     metadata: { "encoding": "json/plain" }
                                     data:     "Ada"           ← UTF-8 bytes
-                                  }  ──▶ stored in Event History
+                                  }  ──→ stored in Event History
 ```
 
 - Default chain tries converters **in order**: `null` → `byte[]` → Protobuf → **JSON (Jackson)**. Your POJOs/records land on JSON.
@@ -1362,7 +1362,7 @@ Run: make run-hello, then read the Web UI event history. Dump it from the CLI wi
 
 ```
                     ┌──────────────┐
-   SDK / CLI  ───▶ │   Frontend   │   gRPC API
+   SDK / CLI  ────→ │   Frontend   │   gRPC API
                     └──────┬───────┘
                     ┌──────▼───────┐
                     │   History    │   workflow state machine
@@ -1531,14 +1531,14 @@ event 4 won't match — that's the non-determinism error they'll meet on Day 3.
 
 ```
 Client   Frontend History  Matching Worker
-│───────▶│───────▶│        │        │  StartWorkflowExecution
-│        │        │───────▶│        │  persist WFExecStarted,WFTScheduled → Matching
-│        │        │        │◀───────│  PollWorkflowTask
-│        │        │◀───────│        │  RecordWorkflowTaskStarted
-│        │        │────────────────▶│  persist WFTStarted; deliver task + events
+│───────→│───────→│        │        │  StartWorkflowExecution
+│        │        │───────→│        │  persist WFExecStarted,WFTScheduled → Matching
+│        │        │        │←───────│  PollWorkflowTask
+│        │        │←───────│        │  RecordWorkflowTaskStarted
+│        │        │────────────────→│  persist WFTStarted; deliver task + events
 │        │        │        │        │  Worker runs code → blocks
-│        │        │◀────────────────│  RespondWFTCompleted [ScheduleActivity]
-│        │        │───────▶│        │  persist WFTCompleted,ActivityTaskScheduled → Matching
+│        │        │←────────────────│  RespondWFTCompleted [ScheduleActivity]
+│        │        │───────→│        │  persist WFTCompleted,ActivityTaskScheduled → Matching
 │        │        │        │        │  … Activity task, then final WFT → Completed
 ```
 
@@ -1583,7 +1583,7 @@ History, so only Command-shaped effects are durable and replayable.
 ## Lifecycle: the Worker's inner loop
 
 ```
-   ┌─▶ ① poll Task Queue → Workflow Task + history
+   ┌─→ ① poll Task Queue → Workflow Task + history
    │   ② replay history → rebuild SDK state
    │   ③ run code from the cursor until it blocks
    │   ④ collect the Commands the code produced
@@ -1609,12 +1609,12 @@ optimization that skips ② when the same Worker holds the run in memory.
 ## Lifecycle: the states a run moves through
 
 ```
-                      ┌─▶ Completed
-                      ├─▶ Failed
-   start ─▶ Running ──┼─▶ Timed Out
-                      ├─▶ Canceled
-                      ├─▶ Terminated
-                      └─▶ Continued-As-New → new run, fresh history
+                      ┌─→ Completed
+                      ├─→ Failed
+   start ─→ Running ──┼─→ Timed Out
+                      ├─→ Canceled
+                      ├─→ Terminated
+                      └─→ Continued-As-New → new run, fresh history
 ```
 
 - The whole event trace lives **inside** `Running`; every other box is terminal.
