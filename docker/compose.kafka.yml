@@ -23,7 +23,11 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
       KAFKA_SHARE_COORDINATOR_STATE_TOPIC_MIN_ISR: "1"
       KAFKA_SHARE_COORDINATOR_STATE_TOPIC_REPLICATION_FACTOR: "1"
-      KAFKA_LOG_DIRS: "/tmp/kraft-combined-logs"
+      # Use the image's canonical data dir. It exists in the image owned by the
+      # kafka runtime user (uid 1000), so a freshly created named volume inherits
+      # that ownership. Pointing at /tmp/... instead yields a root-owned volume
+      # that uid 1000 cannot write, so KRaft fails to format and the broker exits.
+      KAFKA_LOG_DIRS: "/var/lib/kafka/data"
       CLUSTER_ID: "4L6g3nShT-eMCtK--X86sw"
     healthcheck:
       test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
@@ -31,7 +35,7 @@ services:
       timeout: 5s
       retries: 10
     volumes:
-      - kafka-data:/tmp/kraft-combined-logs
+      - kafka-data:/var/lib/kafka/data
 
 volumes:
   kafka-data:
