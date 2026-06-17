@@ -5196,12 +5196,15 @@ right; the takeaways continue on the next slide.
 
 ###### Day 5
 
-# Saga in Spring Boot
+# Spring Boot + Temporal
 
-Wiring + interaction patterns.
+How Temporal lives inside a Spring app.
 
 <!--
-Open in VSCode: examples/06-saga-spring/spring_temporal_config.java, kafka_listener_trigger.java, sync_saga_update.java, async_saga_signal.java, continue_as_new.java
+The generic integration, before any saga specifics. Open in VSCode:
+examples/06-saga-spring/spring_temporal_config.java (manual wiring) and the
+runnable starter app examples/runnable/16-spring-boot. Saga-specific triggers
+(sync Update, Kafka Signal) come in the next section.
 -->
 
 
@@ -5212,11 +5215,11 @@ Open in VSCode: examples/06-saga-spring/spring_temporal_config.java, kafka_liste
 
 ###### Day 5 · on-ramp
 
-# Saga in Spring Boot
+# Spring Boot + Temporal
 
-- **Where this fits** — The same saga, wired the way your services actually run — in Spring Boot.
-- **Why it matters** — This is the production plumbing: client beans, Worker registration, sync and async entry points.
-- **By the end** — You'll drive a saga over HTTP and over Kafka from a Spring app.
+- **Where this fits** — Before the saga: how Temporal plugs into a Spring Boot app at all.
+- **Why it matters** — Temporal is a **client + Worker** you wire into Spring's lifecycle — not a framework you hand control to.
+- **By the end** — You'll run a basic Temporal Spring Boot app and start a Workflow from a REST endpoint.
 
 ---
 
@@ -5309,7 +5312,7 @@ lines naming the task queue - that IS the Worker the starter stood up.
 
 <!-- _class: lab -->
 
-###### Demo · Day 5
+###### Lab · Day 5 · optional
 
 # Basic Temporal Spring Boot — the starter, end to end
 
@@ -5324,14 +5327,45 @@ curl -s localhost:8080/greetings/Ada      # Query the Workflow's status
 # {"message":"DONE"}
 ```
 
-> No `@Configuration`, no `registerWorkflowImplementationTypes` — the REST handler started a durable Workflow, the auto-stood-up Worker ran it.
+> Optional, self-contained: one Spring process is both the client and the Worker. No `@Configuration`, no `registerWorkflowImplementationTypes` — the REST handler started a durable Workflow, the auto-stood-up Worker ran it.
 
 <!--
-Run this live. One Spring process is both the client and the Worker. Show the
-startup log auto-discovering GreetingWorkflowImpl onto the 'greetings' queue,
-POST to start+block for the result, GET to Query, then open greeting-Ada in the
-Web UI. Lands the "client + Worker you wire in" framing with zero Temporal config.
+OPTIONAL hands-on (or run it live as a demo). One Spring process is both the
+client and the Worker. Show the startup log auto-discovering GreetingWorkflowImpl
+onto the 'greetings' queue, POST to start+block for the result, GET to Query, then
+open greeting-Ada in the Web UI. Skip for time — the saga-in-Spring lab is the
+required one. Lands "client + Worker you wire in" with zero Temporal config.
 -->
+
+---
+
+<!-- _class: section -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 5
+
+# Saga in Spring Boot
+
+Driving the saga — sync over HTTP, async over Kafka.
+
+<!--
+Now the saga-specific wiring on top of the Spring Boot + Temporal basics. Open in
+VSCode: examples/06-saga-spring/sync_saga_update.java, async_saga_signal.java,
+kafka_listener_trigger.java, continue_as_new.java
+-->
+
+---
+
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 5 · on-ramp
+
+# Saga in Spring Boot
+
+- **Where this fits** — You've wired Temporal into Spring; now drive the **order saga** through it.
+- **Why it matters** — Same Workflow, two front doors: a synchronous HTTP Update and an async Kafka Signal.
+- **By the end** — You'll start and resolve the saga over HTTP, and trigger it from a `@KafkaListener`.
 
 ---
 

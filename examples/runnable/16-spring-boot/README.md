@@ -8,6 +8,10 @@ plumbing is visible; **this project is what that plumbing automates.**
 > Java only — the starter is a Java/Spring artifact. The saga and other labs ship
 > in three SDKs; this one does not.
 
+> **Optional lab.** This basic app is the *Spring Boot + Temporal* on-ramp — an
+> optional, self-contained hands-on (or a quick live demo). The required Spring
+> exercise is wiring the saga in: [`challenges/day-05-saga-spring/lab-2-saga-spring-boot`](../../../challenges/day-05-saga-spring/lab-2-saga-spring-boot.md).
+
 ## What the starter does for you
 
 There is **no `@Configuration` class** in this project. Everything is in
