@@ -480,7 +480,7 @@ Reference throughout: javadoc.io/doc/io.temporal/temporal-sdk/latest
 
 # What the SDK actually does
 
-One dependency, two responsibilities — it's both how you *talk to* the cluster and how you *run* your code under its rules:
+One dependency, two jobs. It's how you *talk to* the cluster, and it's how you *run* your code under the cluster's rules:
 
 * **Client side** — connect to Frontend over gRPC; start, signal, query, and update Workflows.
 * **Worker side** — long-poll Task Queues, dispatch Workflow & Activity tasks, replay history.
@@ -609,7 +609,7 @@ dependency is already familiar.
 
 # Serialization — your data becomes Payloads
 
-Every value crossing the boundary — Workflow args & result, Activity args & result, Signals, Queries, Updates — is converted to a **`Payload`** (bytes + metadata) by the **`DataConverter`**, then converted back on the other side.
+Every value crossing the boundary is converted to a **`Payload`** (bytes + metadata) by the **`DataConverter`**, then converted back on the other side. That includes Workflow args & result, Activity args & result, Signals, Queries, and Updates.
 
 ```text
 greet("Ada")  ──DataConverter──▶  Payload {
@@ -642,12 +642,12 @@ PayloadCodec on top to encrypt). Limits are the next slide - the "so what".
 
 The "so what" of shipping bytes through history:
 
-- **Must serialize cleanly** — default JSON needs fields/getters and a no-arg path; no live handles (sockets, threads, streams, `Connection`s).
-- **Size** — one payload hard-caps at **2 MB** (the gRPC message limit); the SDK **warns ~256 KB**. The whole history caps at **50 MB / 51,200 events**.
-- **Replay cost** — every arg & result is stored in history *and re-read on every replay*. Big payloads = slow replay and a bloating history.
-- **Schema evolution** — a payload outlives the code that wrote it. **Add** fields, tolerate unknown ones; don't repurpose or remove — an in-flight Workflow will fail to deserialize old history.
+- **Must serialize cleanly** — default JSON needs fields/getters and a no-arg constructor. No live handles: sockets, threads, streams, `Connection`s.
+- **Size** — one payload hard-caps at **2 MB** (the gRPC message limit). The SDK **warns at ~256 KB**. The whole history caps at **50 MB / 51,200 events**.
+- **Replay cost** — every arg & result is stored in history, then re-read on every replay. Big payloads mean slow replay and a bloating history.
+- **Schema evolution** — a payload outlives the code that wrote it. **Add** fields and tolerate unknown ones. Don't repurpose or remove a field: an in-flight Workflow will fail to deserialize old history.
 
-> History is a **control plane, not a data bus** — keep payloads small, stable, and JSON-clean. Big blobs go to S3; pass a **URI**, not the bytes *(Day 6)*.
+> History is a **control plane, not a data bus**. Keep payloads small, stable, and JSON-clean. Big blobs go to S3 — pass a **URI**, not the bytes *(Day 6)*.
 
 <!--
 This is the slide they asked "limits?" about. Four kinds of limit, not just size:
@@ -1037,9 +1037,9 @@ Per **Run** (one Workflow execution) — the caps that decide when to Continue-A
 | Pending Activities / Child Workflows | — | **~2,000** each | bounded batches, not all at once |
 
 - **Open Runs** — exactly **one** per Workflow ID per Namespace; the ID frees up once that run closes.
-- These are server **defaults** (dynamic config), but the event/size caps are real stops: blow past **51,200 events / 50 MB** and the server **terminates** the Workflow.
+- These are server **defaults** (dynamic config), but the event and size caps are real stops. Blow past **51,200 events / 50 MB** and the server **terminates** the Workflow.
 
-> The history caps are the true ceiling — **Continue-As-New** is how every unbounded Workflow stays under them.
+> The history caps are the true ceiling. **Continue-As-New** is how every unbounded Workflow stays under them.
 
 <!--
 The consolidated "limits?" reference — pairs with the retention/pruning slides
@@ -1069,7 +1069,7 @@ make run-hello           # terminal 1: the Worker (stays up, polls the queue)
 make run-hello-starter   # terminal 2: the starter — starts one Workflow
 ```
 
-Worker and starter are **separate processes**, as in production — they share only the Task Queue name. Order doesn't matter: start the Workflow first and the server holds it on the queue until a Worker polls.
+Worker and starter are **separate processes**, just like in production. They share only the Task Queue name. Order doesn't matter — start the Workflow first and the server holds it on the queue until a Worker polls.
 
 <!--
 This is the real production topology, not a toy wiring: the Worker is a
@@ -1133,7 +1133,7 @@ explains why. JSON is from the Event History "JSON" toggle / `workflow show -o j
 ## Normal vs Sticky Task Queues
 
 - **`NORMAL`** — the durable queue you name. Every Worker on that name competes for its tasks. **All Activities** and the **first** Workflow Task of each run land here.
-- **`STICKY`** — an ephemeral, per-Worker queue the SDK creates automatically. After a Worker runs a Workflow Task it **caches the run in memory**, so the server routes that run's *next* Workflow Tasks back to the **same** Worker — which continues **without replaying** the whole history.
+- **`STICKY`** — an ephemeral, per-Worker queue the SDK creates automatically. After a Worker runs a Workflow Task, it **caches the run in memory**. The server then routes that run's *next* Workflow Tasks back to the **same** Worker, which continues **without replaying** the whole history.
 
 > Sticky is pure Worker optimisation (the "Workflow cache"). You never name one, and Activities are never sticky.
 
@@ -1145,7 +1145,7 @@ explains why. JSON is from the Event History "JSON" toggle / `workflow show -o j
 - If that Worker is **gone or busy** past `StickyScheduleToStartTimeout` (~5s default), the task **falls back to the normal queue**.
 - Another Worker then picks it up and **replays from event 1** to rebuild state — correctness is never at risk, only the replay shortcut is lost.
 
-> This is exactly why the Workflow survives when you kill the Worker mid-run (the Hello lab's lesson) — the sticky cache is an optimisation, the normal queue + history is the guarantee.
+> This is exactly why the Workflow survives when you kill the Worker mid-run (the Hello lab's lesson). The sticky cache is an optimisation; the normal queue plus history is the guarantee.
 
 ---
 
@@ -1180,7 +1180,7 @@ physical attempt. continue-as-new keeps the ID, mints a new Run - the Day-5 lab.
 | Case | What happened |
 |---|---|
 | Server rejects request | No Workflow started: bad Namespace, auth, invalid options, ID conflict |
-| Connectivity / timeout | Ambiguous: request may not have reached Temporal, or response was lost after start |
+| Connectivity / timeout | Ambiguous: the request may never have reached Temporal, or the response was lost after a successful start |
 | Start accepted | `WorkflowExecutionStarted` is persisted; Workflow is durable from that point |
 | First Workflow Task fails | Start still succeeded; the running Workflow now follows retry/failure rules |
 
@@ -1352,7 +1352,7 @@ The Worker YOU write and deploy is a separate process polling Matching via Front
 # History Service & shards
 
 - Workflow state is partitioned into **shards** (e.g. 512 / 4096); each shard owns a slice of executions by hashed Workflow ID.
-- A shard is owned by exactly **one** History host at a time → single-writer, no contention per workflow.
+- A shard is owned by exactly **one** History host at a time. That means a single writer and no per-workflow contention.
 - Each shard drives its executions and processes internal **task queues**:
 
 | Internal queue | Drives |
@@ -1400,7 +1400,7 @@ The Worker YOU write and deploy is a separate process polling Matching via Front
             → persist [WorkflowTaskCompleted, WorkflowExecutionCompleted]  ✓
 ```
 
-Nothing the Worker does is durable until **History persists the resulting Event** — every arrow above is a write before any Worker sees it.
+Nothing the Worker does is durable until **History persists the resulting Event**. Every arrow above is a write that happens before any Worker sees it.
 
 <!--
 Walk this slowly on the whiteboard. Two services the Worker never talks to
@@ -1495,10 +1495,10 @@ poll/response turns into a persisted event.
 | `CompleteWorkflowExecution` | `WorkflowExecutionCompleted` |
 | `ContinueAsNewWorkflowExecution` | `WorkflowExecutionContinuedAsNew` |
 
-> The Worker only ever **proposes** Commands. History decides, records the matching Event, and dispatches the resulting task. On replay the code re-derives the same Commands from these Events — that's the determinism contract.
+> The Worker only ever **proposes** Commands. History decides, records the matching Event, and dispatches the resulting task. On replay, the code re-derives the same Commands from these Events. That's the determinism contract.
 
 <!--
-The single rule behind every lifecycle diagram: a Command is intent, an Event is
+The single rule behind every lifecycle diagram: a Command is intent; an Event is
 fact. The names even rhyme — Schedule→Scheduled, Start→Started/Initiated. This is
 why "do I/O in Activities, not Workflow code": only Commands round-trip through
 History, so only Command-shaped effects are durable and replayable.
@@ -2106,10 +2106,10 @@ Then run and verify their prediction was right (or wrong - even better).
 Read the history top-down (Ascending):
 
 - **1–4** — the Workflow starts; the Worker runs its **first Workflow Task**.
-- **5, 6, 7** — three `ActivityTaskScheduled` in a row, all emitted by that *one* Workflow Task → the fan-out is concurrent.
-- **8 onward** — the activities start, complete, and a final Workflow Task closes the run with `WorkflowExecutionCompleted`.
+- **5, 6, 7** — three `ActivityTaskScheduled` in a row. One Workflow Task emitted all three, so the fan-out is concurrent.
+- **8 onward** — the activities start and complete. A final Workflow Task then closes the run with `WorkflowExecutionCompleted`.
 
-A *sequential* version interleaves schedule → start → complete per item — one Workflow Task each, staggered.
+A *sequential* version interleaves schedule, start, and complete for each item — one Workflow Task per item, staggered.
 
 </div>
 </div>
@@ -2219,7 +2219,7 @@ While an Activity is retrying, the **Pending Activities** tab is the only place 
 - **Next Retry** — when the backoff fires (`InitialInterval × BackoffCoefficient`, capped by `MaximumInterval`).
 - **Last Failure** — the error thrown by the previous attempt (here a `GatewayTimeout` application error).
 
-Once the Activity succeeds the panel empties — the **history keeps only the final `ActivityTaskStarted`** (with its `attempt` count + last failure), not one event per retry.
+Once the Activity succeeds, the panel empties. The **history keeps only the final `ActivityTaskStarted`** — with its `attempt` count and last failure — not one event per retry.
 
 </div>
 </div>
@@ -2263,7 +2263,7 @@ ON by default (unlimited). Workflow retry is opt-in and restarts the whole run.
 A long Activity (export 1000 pages, transcode a video) has a problem: if the Worker dies at page 900, a plain retry restarts at **page 0**.
 
 - A **heartbeat** is a periodic "still alive — at page N" ping from the Activity to the server.
-- It buys two things: **liveness** — miss the `heartbeatTimeout` and the server reschedules the Activity on another Worker; and **resumability** — the retry reads the last heartbeat detail and continues from **page N**.
+- It buys two things. **Liveness**: miss the `heartbeatTimeout` and the server reschedules the Activity on another Worker. **Resumability**: the retry reads the last heartbeat detail and continues from **page N**.
 - Only **long-running** Activities need it; short ones finish before any timeout.
 
 > A heartbeat checkpoints an *Activity*, the way continue-as-new checkpoints a *Workflow*.
@@ -2305,7 +2305,7 @@ public String exportLargeTable(String tableName) {
 Sometimes a long Activity must be **abandoned** if it overruns — but you still want it to clean up first.
 
 - A **`CancellationScope`** wraps the Activity; cancelling the scope sends a cancellation to it.
-- That cancellation arrives on the Activity's **next heartbeat** (which throws) — so it can delete partial work before exiting.
+- That cancellation arrives on the Activity's **next heartbeat**, which throws. The Activity catches it and deletes partial work before exiting.
 - Drive it with `Workflow.await(deadline, …)` to enforce the time budget.
 
 > Cancellation is cooperative — it rides the heartbeat, so only heartbeating Activities can be stopped mid-flight.
@@ -2508,7 +2508,7 @@ public String currentState() { return state; }
 The **Queries** tab runs a Query against the *live* Workflow, on demand:
 
 - Pick a registered **Query Type** (`currentState`) and hit **Run Query**.
-- The result is the Workflow's **current in-memory state** — rebuilt by replaying to "now" on a Worker that has it cached.
+- The result is the Workflow's **current in-memory state**. A Worker that has the run cached rebuilds it by replaying to "now".
 - **Nothing is written to history** — Queries are read-only, so you can poll them freely.
 
 > Empty tab? No Worker is polling — a Query needs a live Worker with the run cached.
@@ -2626,8 +2626,8 @@ interface CartWorkflow {
 
 A typed `addItem(...)` call **blocks** until the Update finishes. When you'd rather fire it and keep working:
 
-- **`startUpdate(...)`** returns a **handle** as soon as the Update reaches a chosen stage.
-- The `WorkflowUpdateStage` (`ACCEPTED` or `COMPLETED`) is **required** — it says how far to wait before handing back the handle.
+- **`startUpdate(...)`** returns a **handle** as soon as the Update reaches the stage you pick.
+- The `WorkflowUpdateStage` is **required** — it says how far to wait before handing back the handle. Pick `ACCEPTED` or `COMPLETED`.
 - Call `handle.getResult()` later, only when you actually need the value.
 
 > Same Update; the only choice is *when* you block — now (typed call) or later (handle).
@@ -2665,9 +2665,9 @@ Example: examples/03-interactions/update_completed.java
 
 ## Start-or-signal — one idempotent entry
 
-A Kafka consumer (or any event source) can't know whether the Workflow for a key exists yet. Bare `start()` **throws** on the second event for that key.
+A Kafka consumer — or any event source — can't know whether the Workflow for a key already exists. So bare `start()` **throws** on the second event for that key.
 
-- **`signalWithStart`** = "start the Workflow if absent, then deliver this Signal" — atomic, every time.
+- **`signalWithStart`** means: start the Workflow if absent, then deliver this Signal. It's atomic, every time.
 - First event for `order-123` starts it; every later event just signals the running execution.
 
 > The idempotent entry point for event-driven Workflows — never branch on "does it exist yet?"
@@ -2838,7 +2838,7 @@ Run: make run-schedules
 
 A Schedule is a **durable server object** that starts a Workflow on a spec — Temporal's replacement for cron / Airflow's scheduler.
 
-- A **`Schedule`** = an **action** (which Workflow, which Task Queue) + a **spec** (when) + a **policy** (overlap, jitter, catchup).
+- A **`Schedule`** has three parts: an **action** (which Workflow, which Task Queue), a **spec** (when to fire), and a **policy** (overlap, jitter, catchup).
 - The **server** owns it; you manage it with `ScheduleClient` — create, pause, trigger, delete.
 
 > You define *what* and *when*; the server fires it. No always-on scheduler process of your own.
@@ -2889,7 +2889,7 @@ scheduleClient.createSchedule("hourly-orders", schedule, ScheduleOptions.newBuil
 Two questions every scheduler must answer — Temporal makes both explicit knobs:
 
 - **When** — a cron expression or calendar/interval spec, with optional **jitter** to avoid thundering herds.
-- **If it's late or still running** — `catchupWindow` bounds backfill after downtime; the **overlap policy** decides what happens when the previous run hasn't finished.
+- **If it's late or still running** — `catchupWindow` bounds how much it backfills after downtime. The **overlap policy** decides what happens when the previous run hasn't finished.
 
 > Airflow's `schedule_interval` + `catchup` + `max_active_runs`, but as explicit, bounded settings.
 
@@ -2943,7 +2943,7 @@ The **Schedules** tab (left rail) lists every Schedule; click one for this detai
 - **Spec** — the calendar/interval you set (`Every day at 9:00 AM UTC`) + the **Upcoming Runs** it implies.
 - **Schedule Input** — the argument handed to each run (`"daily-sales"`).
 - **Recent Runs** — what has fired; **Pause** stops firing without deleting the Schedule.
-- A Schedule is a **durable server object** (not a cron line on a box) — it survives redeploys, and `Overlap` decides what happens when a run is still going.
+- A Schedule is a **durable server object**, not a cron line on a box — it survives redeploys. `Overlap` decides what happens when a run is still going.
 
 </div>
 </div>
@@ -3006,8 +3006,8 @@ Open in VSCode: examples/03-interactions/child_workflow.java, workflow_and_run_t
 
 # Child Workflows and timeouts
 
-- **Where this fits** — You've built single Workflows; now you compose them and bound how long anything runs.
-- **Why it matters** — Knowing child-vs-Activity and which timeout to set keeps big workflows from sprawling.
+- **Where this fits** — You've built single Workflows. Now you compose them, and you cap how long anything runs.
+- **Why it matters** — Picking child vs. Activity, and the right timeout, keeps big workflows from sprawling.
 - **By the end** — You'll decide when to spawn a child and how to cap a Workflow's lifetime.
 
 ---
@@ -3072,10 +3072,10 @@ Promise.allOf(fraudDecision, shippingPlan).get();
 The parent's **Relationships** tab shows the tree it spawned:
 
 - The **parent** (`BatchWorkflow`, `batch-parent-demo`) with **Child Count 3**.
-- Each **child** (`ItemWorkflow`, `item-A/B/C`) is its **own Workflow** — own ID, own history, own page (click a row to open it).
+- Each **child** (`ItemWorkflow`, `item-A/B/C`) is its **own Workflow**: own ID, own history, own page. Click a row to open it.
 - They ran **in parallel** (overlapping start/end) and each Completed independently.
 
-> A child is a first-class Workflow, not a sub-step hidden in the parent's history — that's the point of composing.
+> A child is a first-class Workflow, not a sub-step hidden in the parent's history. That's the point of composing.
 
 </div>
 </div>
@@ -3164,7 +3164,7 @@ Open in VSCode: examples/04-kafka/kafka_consumer_activity.java, producer_activit
 # Temporal + Kafka architecture
 
 - **Where this fits** — You live in Kafka already; today is where Kafka and Temporal divide the work.
-- **Why it matters** — Used wrong, they overlap and fight; used right, each does the job it's best at.
+- **Why it matters** — Used wrong, they overlap and fight. Used right, each does the job it's best at.
 - **By the end** — You'll say which problems belong to Kafka and which to Temporal, and why.
 
 ---
@@ -3225,8 +3225,8 @@ Heartbeat the topic:partition:offset so retries can resume.
 When a Workflow needs to **publish** a result, wrap the producer in an Activity:
 
 - The send is a **side effect** → it lives in an Activity, never in Workflow code.
-- Make the producer **idempotent** (`enable.idempotence`, `acks=all`) with a **stable key**, so a retried Activity doesn't duplicate.
-- Temporal's at-least-once + an idempotent keyed producer ≈ **effectively-once** per key.
+- Make the producer **idempotent** (`enable.idempotence`, `acks=all`) and give it a **stable key**. Then a retried Activity won't duplicate.
+- Temporal is at-least-once. Add an idempotent keyed producer and you get **effectively-once** per key.
 
 > The Worker may retry the send; idempotent + keyed is what makes that safe.
 
@@ -3260,9 +3260,9 @@ public void publishOutcome(String orderId, String outcome) {
 
 ## Atomic DB write + event — the outbox
 
-You can't atomically **write your DB and publish to Kafka** — two systems, no shared transaction (and 2PC is the thing to avoid).
+You can't atomically **write your DB and publish to Kafka**. They're two systems with no shared transaction — and 2PC is the thing to avoid.
 
-- Write the business row **and** an `outbox` row in **one DB transaction** — they commit or fail together.
+- Write the business row **and** an `outbox` row in **one DB transaction**. They commit or fail together.
 - A separate Activity (or Debezium) reads the outbox and publishes to Kafka, marking rows sent.
 
 > Turn "two side effects across systems" into "one local transaction + a relay."
@@ -3632,10 +3632,10 @@ if (v == Workflow.DEFAULT_VERSION) {
 
 When you deploy new code, what happens to **in-flight** runs? Choose per Workflow type:
 
-- **`PINNED`** — in-flight runs stay on the **old** code until they finish; new code only takes new runs. Right for short-lived Workflows (drain, then deploy).
+- **`PINNED`** — in-flight runs stay on the **old** code until they finish. New code only takes new runs. Right for short-lived Workflows: drain, then deploy.
 - **`AUTO_UPGRADE`** — long-runners pick up newer **compatible** code automatically. Right for Workflows that live for months.
 
-> Short-lived → PINNED; long-lived → AUTO_UPGRADE. (`getVersion`, previous slide, patches *within* one definition.)
+> Short-lived → PINNED. Long-lived → AUTO_UPGRADE. (`getVersion`, from the previous slide, patches *within* one definition.)
 
 <!--
 Lead-in before the @WorkflowVersioningBehavior code. The decision is run lifetime:
@@ -3751,7 +3751,7 @@ orders Task Queue
 ```
 
 - Every Worker polling the same Task Queue is in the **same pool**.
-- Matching hands each task to **one** available poller; Workers compete, they do not coordinate directly.
+- Matching hands each task to **one** available poller. Workers compete for tasks; they don't coordinate directly.
 - Total capacity is roughly: `machines × Worker processes × execution slots`.
 - Sticky Workflow cache is **per Worker process**; if that process disappears, another Worker replays from history.
 
@@ -3814,7 +3814,7 @@ Worker worker = factory.newWorker(
 
 Activity slots cost threads. On **JDK 21+**, virtual threads make those threads almost free:
 
-- `setUsingVirtualWorkflowThreads(true)` runs execution on **virtual threads**, so one Worker can hold far more concurrent (especially I/O-bound) Activities per host.
+- `setUsingVirtualWorkflowThreads(true)` runs execution on **virtual threads**. One Worker can then hold far more concurrent Activities per host — especially I/O-bound ones.
 - Frees you from sizing slot counts around OS-thread limits.
 
 > The easy lever for high-concurrency, I/O-heavy Activity workloads (JDK 21+ only).
@@ -3994,7 +3994,7 @@ The detail page's **More Actions** menu has three ways to intervene — *not* in
 | Effect | graceful stop | hard stop | **rewind to an earlier event**, re-run from there |
 | Use when | "stop, but tidy up" | "it's wedged, stop now" | "bad deploy/bug — replay with fixed code" |
 
-> Cancel is cooperative; Terminate is `kill -9`; Reset is a time machine — a new Run from a past point.
+> Cancel is cooperative. Terminate is `kill -9`. Reset is a time machine — a new Run from a past point.
 
 <!--
 The most dangerous menu for newcomers. Terminate forfeits compensation - prefer
@@ -4116,7 +4116,7 @@ Example: examples/05-production/custom_activity_metric.java
 
 A request that spans a Workflow and several Activities should be **one distributed trace**, not disconnected spans:
 
-- An OpenTelemetry **interceptor** propagates trace context across Workflow → Activity → child-Workflow boundaries.
+- An OpenTelemetry **interceptor** carries the trace context across every boundary: Workflow → Activity → child-Workflow.
 - Spans land in your existing backend (Jaeger, Tempo, Honeycomb…).
 
 > Wire the interceptor once on the client + Worker; causality across the whole execution comes for free.
@@ -4188,7 +4188,7 @@ In Grafana, open the **Temporal Training - Overview** dashboard and watch:
 
 The Worker exports **SDK metrics** to Prometheus; Grafana renders the overview:
 
-- **Tasks scheduled** + **schedule-to-start latency (p95)** — your **capacity** signal. Rising latency = Workers can't keep up.
+- **Tasks scheduled** + **schedule-to-start latency (p95)** — your **capacity** signal. Rising latency means Workers can't keep up.
 - **Workflow completed / failed** and **Activity attempts / failures** — the **health** signals.
 - All `temporal_*` families — counters (`*_total`) and latency histograms (`*_seconds`).
 
@@ -4304,7 +4304,7 @@ Run: make run-testing (no server needed)
 Workflow logic is deterministic, so you can test it **in-process** — no Docker, no real Temporal, no waiting:
 
 - **`TestWorkflowEnvironment`** runs a Worker + client inside your test JVM.
-- **Time-skipping** is the headline: a Workflow that sleeps 30 days completes in **milliseconds** — the test clock jumps straight to the next timer.
+- **Time-skipping** is the headline: a Workflow that sleeps 30 days completes in **milliseconds**. The test clock jumps straight to the next timer.
 
 > Unit-test orchestration like ordinary code — fast and hermetic.
 
@@ -4622,7 +4622,7 @@ Run: make run-saga
 
 ## The Saga pattern — forward steps + undo
 
-A saga is a sequence of steps where, if a later one fails, you **undo the earlier ones** — there's no distributed transaction to roll back for you:
+A saga is a sequence of steps. If a later step fails, you **undo the earlier ones** yourself — there's no distributed transaction to roll back for you:
 
 - After each forward Activity, **register its compensation** (the inverse Activity).
 - On failure, run the registered compensations — by default **LIFO** (reverse order).
@@ -4671,7 +4671,7 @@ public String process(String orderId) {
 
 * **Orchestration** - one central Workflow coordinates all steps & compensations. Single audit trail. **Temporal's natural shape.**
 * **Choreography** - each service reacts to events and emits its own. No central state.
-* Temporal supports both: a Workflow can be the orchestrator, or one service's durable participant in a larger event choreography.
+* Temporal supports both. A Workflow can be the orchestrator. Or it can be one service's durable participant inside a larger event choreography.
 
 > For cross-team flows from Airflow + Kafka, orchestration wins.
 
@@ -4887,9 +4887,9 @@ Open in VSCode: examples/06-saga-spring/spring_temporal_config.java, kafka_liste
 
 ## Temporal in Spring Boot — the shape
 
-Temporal isn't a framework you hand control to — it's a **client + Worker** you wire into Spring's lifecycle:
+Temporal isn't a framework you hand control to. It's a **client + Worker** you wire into Spring's lifecycle:
 
-- Expose **`WorkflowServiceStubs` → `WorkflowClient` → `WorkerFactory`** as `@Bean`s; bind the factory's **start / shutdown** to the app context.
+- Expose **`WorkflowServiceStubs` → `WorkflowClient` → `WorkerFactory`** as `@Bean`s. Then bind the factory's **start / shutdown** to the app context.
 - **Activities are Spring beans** — inject DataSources, HTTP clients, repositories as usual.
 - Drive Workflows from a **`@RestController`** (start / signal / query); the Worker just polls in the background.
 
@@ -5013,7 +5013,7 @@ void onOrder(OrderRequest request) {
 
 ## Continue-as-new — why
 
-History grows with **every event**. A Workflow that loops forever (a subscription, a counter, an actor) would grow its history without bound — slower replay, eventual hard limits.
+History grows with **every event**. A Workflow that loops forever — a subscription, a counter, an actor — would grow its history without bound. That means slower replay and, eventually, hard limits.
 
 - **Continue-as-new** atomically **ends the current run** and **starts a fresh one** — same Workflow ID, clean history.
 - You hand forward only the state the next run needs: a **checkpoint**, not a memory dump.
@@ -5348,7 +5348,7 @@ Run: make run-aws
 
 ## Supervising external compute — the pattern
 
-You can't make a 30-minute Glue / EMR / Batch job *itself* durable. So wrap it in an Activity that **supervises** it:
+You can't make a 30-minute Glue / EMR / Batch job *itself* durable. So wrap it in an Activity that **supervises** the job:
 
 1. **Start** the external job — get back a job-run ID.
 2. **Poll** its status in a loop, **heartbeating** the run ID each time.
@@ -5419,7 +5419,7 @@ scripts/start-workflow.sh transform 1 ImportWorkflow "s3://imports-incoming/test
 
 # Big data? Pass a reference, not the bytes
 
-Every payload — Workflow args, results, Signals — is stored in **history**, which has a hard **2 MB** cap (the SDK warns around 256 KB).
+Every payload — Workflow args, results, Signals — is stored in **history**. History has a hard **2 MB** cap, and the SDK warns around 256 KB.
 
 - Keep the **bytes in S3** (or any blob store); pass only a **URI + metadata** through the Workflow.
 - The Activity reads/writes the object; history stays tiny and replay stays fast.
@@ -5450,10 +5450,10 @@ record TransformResult(String outputS3Uri, long rowCount) {}
 
 ## Encrypting payloads — the codec
 
-Workflow inputs, results, and Activity args are stored in **history as plaintext** by default. For sensitive data, encrypt at the SDK boundary:
+By default, Workflow inputs, results, and Activity args are stored in **history as plaintext**. For sensitive data, encrypt at the SDK boundary:
 
 - A **`PayloadCodec`** encrypts on the way out and decrypts on the way in — the server only ever stores ciphertext.
-- A **codec server** lets the Web UI / CLI decrypt for *authorized* viewers, so history stays human-readable without being exposed at rest.
+- A **codec server** lets the Web UI and CLI decrypt for *authorized* viewers. So history stays human-readable, but it's never exposed at rest.
 
 > End-to-end encryption — the Temporal server (and its operators) never see your plaintext.
 
@@ -5510,7 +5510,7 @@ Take a hypothetical existing pipeline that writes a checkpoint S3 key after ever
 
 ## From state machine to code
 
-Migrating an AWS Step Functions state machine? The mapping is direct, and the win is leaving ASL/JSON behind:
+Migrating an AWS Step Functions state machine? The mapping is direct. The payoff: you leave ASL/JSON behind.
 
 - **States → plain code** — choices become `if`, parallel states become `Async`, retriers become a `RetryPolicy`.
 - **No 25,000-event / 1-year ceilings**, no JSON DSL — it's just a Workflow function.
@@ -5596,7 +5596,7 @@ and where its config/secrets live. All three run on free LocalStack.
 
 # SQS as the trigger
 
-An `EventBridge → Lambda → StartExecution` chain collapses into a **long-poll SQS consumer** that `signalWithStart`s a Workflow. The consumer is plain glue — outside any Workflow, so no determinism rules.
+An `EventBridge → Lambda → StartExecution` chain collapses into a **long-poll SQS consumer** that `signalWithStart`s a Workflow. The consumer is plain glue. It lives outside any Workflow, so the determinism rules don't apply.
 
 > "Standard queues ensure at-least-once message delivery, but due to the highly distributed architecture, more than one copy of a message might be delivered, and messages may occasionally arrive out of order."
 >
@@ -5680,14 +5680,14 @@ awslocal sqs send-message --queue-url \
 
 # SNS to notify outward
 
-The final `notify` step moves *into* Temporal as an Activity that publishes to SNS — subscribers stay decoupled.
+The final `notify` step moves *into* Temporal as an Activity that publishes to SNS. Subscribers stay decoupled.
 
 > "The *Fanout* scenario is when a message published to an SNS topic is replicated and pushed to multiple endpoints, such as Firehose delivery streams, Amazon SQS queues, HTTP(S) endpoints, and Lambda functions."
 >
 > — *Amazon SNS Developer Guide* · docs.aws.amazon.com
 
 - Publishing is **I/O → it's an Activity**, never Workflow code.
-- Activities are at-least-once, so a retry may **double-publish** — put `workflowId`+`runId` in the message and let subscribers dedup.
+- Activities are at-least-once, so a retry may **double-publish**. To handle it, put `workflowId`+`runId` in the message and let subscribers dedup.
 
 <!--
 Source: https://docs.aws.amazon.com/sns/latest/dg/welcome.html
@@ -5746,7 +5746,7 @@ Stop baking config into the image or passing secrets as plaintext env. Read them
 > — *AWS Systems Manager User Guide* · docs.aws.amazon.com
 
 - **Config loads in process-startup code**, not Workflow code (reading SSM in a Workflow is non-deterministic).
-- A value a *step* needs at runtime is read **inside an Activity** — e.g. a `fetchApiKey` Activity decrypting a `SecureString`.
+- If a *step* needs a value at runtime, read it **inside an Activity** — for example, a `fetchApiKey` Activity that decrypts a `SecureString`.
 
 <!--
 Source: https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html
@@ -5810,7 +5810,7 @@ Open in VSCode: examples/07-aws-containers/Dockerfile, worker_deployment.yaml, k
 
 * A Worker is a long-lived process polling Task Queues *outbound*.
 * **No inbound traffic.** No Service, no Ingress.
-* Health = "is the process polling?" `pgrep` exec probe, or an HTTP `/health` (Actuator/`HttpServer`) returning 200 only after `WorkerFactory.start()`.
+* Health = "is the process polling?" Use a `pgrep` exec probe, or an HTTP `/health` endpoint (Actuator or `HttpServer`) that returns 200 only after `WorkerFactory.start()`.
 * Graceful shutdown = drain in-flight Activities; SIGTERM, then heartbeat-cancel.
 
 ---
@@ -5924,7 +5924,7 @@ kubectl logs -l app=temporal-transform-worker --tail=20
 
 ## Autoscaling on Task Queue backlog
 
-CPU is the wrong scaling signal for a Worker — the right one is **how much work is waiting**:
+CPU is the wrong scaling signal for a Worker. The right signal is **how much work is waiting**:
 
 - **KEDA** scales the Worker Deployment on a **Temporal metric**: the Task Queue's backlog / schedule-to-start lag.
 - Backlog grows → add Worker pods; the queue drains → scale back down (even to zero).
