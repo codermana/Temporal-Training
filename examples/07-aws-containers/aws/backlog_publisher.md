@@ -1,24 +1,24 @@
-# Backlog publisher — the metric KEDA gives you for free
+# Backlog publisher: the metric KEDA gives you for free
 
 KEDA's native Temporal scaler polls `DescribeTaskQueue` for you and feeds the
 backlog straight into a Kubernetes HPA. **ECS has no equivalent scaler.** So you
 publish the signal yourself: a tiny loop calls `DescribeTaskQueue`, computes the
 backlog, and writes it to CloudWatch as a custom metric. Application Auto Scaling
-(see `ecs_autoscaling.json`) then target-tracks on that metric — the CloudWatch
+(see `ecs_autoscaling.json`) then target-tracks on that metric, the CloudWatch
 analog of KEDA's `targetQueueSize`.
 
 **Where it runs.** Either is fine:
 
 - A **sidecar container** in the same task definition as the Worker (one publisher
-  per task — cheap, co-located, scales with the service). Or
+  per task, cheap, co-located, scales with the service). Or
 - A **single scheduled task** / standalone service that publishes once for the
-  whole queue (one publisher total — simpler metric, but its own thing to keep
+  whole queue (one publisher total, simpler metric, but its own thing to keep
   alive). Prefer this when you don't want N publishers all writing the same point.
 
 The metric namespace, name, and dimensions below must match `ecs_autoscaling.json`
 exactly (`Temporal/Worker` / `TaskQueueBacklog` / `TaskQueue=transform`).
 
-## The loop (illustrative Java — AWS SDK v2 + Temporal SDK)
+## The loop (illustrative Java: AWS SDK v2 + Temporal SDK)
 
 ```java
 // Runs forever; one DescribeTaskQueue + one PutMetricData per tick (~15s).
@@ -56,7 +56,7 @@ while (true) {
 ```
 
 > **IAM:** the publisher needs `cloudwatch:PutMetricData` on its **task role**
-> (not the execution role — see the lab) plus whatever credential reaches your
+> (not the execution role, see the lab) plus whatever credential reaches your
 > Temporal Frontend (an SSM-sourced API key for Temporal Cloud, or network reach
 > to a self-hosted Frontend).
 

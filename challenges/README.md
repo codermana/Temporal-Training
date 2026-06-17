@@ -3,7 +3,7 @@
 Lab instructions for the 6-day Temporal training. Each lab is a self-contained
 challenge: a scenario, the starter code you need, the tasks to complete, and a
 checklist to confirm you got it right. **The instructions deliberately do not
-contain the finished implementation** — that is the work.
+contain the finished implementation**; that is the work.
 
 > Reference solutions exist for instructors in [`examples/runnable/`](../examples/runnable/).
 > Resist peeking until you have a working attempt (or are truly stuck). Each lab
@@ -16,7 +16,7 @@ contain the finished implementation** — that is the work.
 challenges/
   day-01-foundations/     Local setup, first Workflow, reading history
   day-02-reliability/     Async/parallel, signals/queries, updates, schedules
-  day-03-kafka/           Kafka↔Temporal pipeline, partition fan-out
+  day-03-kafka/           Kafka<->Temporal pipeline, partition fan-out
   day-04-production/      Observability, unit testing, replay testing
   day-05-saga-spring/     Order saga, Spring Boot saga, capstone
   day-06-aws-containers/  Glue/S3/Step Functions migration, SQS/SNS/SSM,
@@ -32,7 +32,7 @@ and one `lab-N-*.md` per hands-on exercise.
 2. Bring up the **Prerequisites** stack listed for that day.
 3. Create a working project from the **Starter code** section. Every lab tells
    you either to scaffold a fresh Maven module or gives the interfaces/stubs to
-   paste. Starter code is intentionally incomplete — `// TODO` marks the gaps.
+   paste. Starter code is intentionally incomplete: `// TODO` marks the gaps.
 4. Work the **Tasks** in order.
 5. Run the **Verification** steps and tick off the **Definition of done**.
 6. If stuck, expand **Hints** one at a time. Then try **Stretch goals**.
@@ -41,7 +41,7 @@ and one `lab-N-*.md` per hands-on exercise.
 
 - **Where you write code.** Keep your attempts out of `examples/runnable/`.
   Create a scratch area, e.g. `mkdir -p work/day-01` at the repo root (already
-  covered by `.gitignore` patterns for build output — confirm before committing).
+  covered by `.gitignore` patterns for build output; confirm before committing).
 - **Java / SDK versions.** JDK 17+ (JDK 21 for the virtual-threads stretch on
   Day 4), Temporal Java SDK `1.32.1`. The dependency block is in
   [`outline/detailed.md`](../outline/detailed.md#java-sdk-dependency-reference).
@@ -55,7 +55,7 @@ and one `lab-N-*.md` per hands-on exercise.
   | 3 | your lab | `mvn ...` or `make run-<name>` |
 
   **The `make` targets are shortcuts, not magic.** Each one just runs a `temporal`,
-  `mvn`, or `docker compose` command you could type yourself — and you should know
+  `mvn`, or `docker compose` command you could type yourself, and you should know
   which, because production won't have this Makefile. Every lab now includes an
   *"Under the hood"* callout next to its `make` commands revealing the real
   invocation (and the `TEMPORAL_*` env vars that drive connections). The table
@@ -75,7 +75,7 @@ and one `lab-N-*.md` per hands-on exercise.
   | `make stack-down` | `docker compose -f <files> down -v` (tears down + removes volumes) |
   | `make run-<name>` | runs the lab's **Worker** (`cd examples/runnable/<module> && mvn -q compile exec:java`; see `scripts/run-example.sh`) |
   | `make run-<name>-starter` | runs the lab's standalone **starter** (client) in a second terminal, for the split labs (`hello`, `connect`, `async`, `approval`, `retries`, `child`, `continue`) |
-  | `make run-connect` | the env-driven Worker — reads `TEMPORAL_ADDRESS` / `TEMPORAL_NAMESPACE` / `TEMPORAL_API_KEY` / `TEMPORAL_TLS_CERT` / `TEMPORAL_TLS_KEY`; defaults to plaintext `127.0.0.1:7233` / `default` (start a Workflow with `make run-connect-starter`) |
+  | `make run-connect` | the env-driven Worker, reads `TEMPORAL_ADDRESS` / `TEMPORAL_NAMESPACE` / `TEMPORAL_API_KEY` / `TEMPORAL_TLS_CERT` / `TEMPORAL_TLS_KEY`; defaults to plaintext `127.0.0.1:7233` / `default` (start a Workflow with `make run-connect-starter`) |
   | `make run-testing`, `run-replay` | `mvn -q test` in the module (no server needed) |
   | `make start-workflow QUEUE=q ID=n` | `temporal workflow start --task-queue q --type ImportWorkflow --workflow-id importworkflow-n --input "..."` |
   | `make kafka-topic TOPIC=t` | `docker exec temporal-training-kafka .../kafka-topics.sh --bootstrap-server localhost:9092 --create --topic t ...` |

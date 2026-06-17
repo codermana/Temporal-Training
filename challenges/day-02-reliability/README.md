@@ -1,4 +1,4 @@
-# Day 2 — Building reliable workflows
+# Day 2: Building reliable workflows
 
 Today you make Workflows do real work: run Activities in parallel, interact with
 running executions from the outside (signals, queries, updates), and replace
@@ -21,7 +21,7 @@ make temporal
 | 3 | [Updates](lab-3-updates.md) | 40 min | ★★ |
 | 4 | [Schedules](lab-4-schedules.md) | 35 min | ★★ |
 
-Labs 2 and 3 build on the **same** approval Workflow — do 2 before 3.
+Labs 2 and 3 build on the **same** approval Workflow; do 2 before 3.
 
 ## Cross-cutting concept: determinism
 
@@ -38,5 +38,5 @@ bites.
 | Parallel tasks / `TaskGroup` | `Async.function` + `Promise.allOf` | 1 |
 | External trigger / sensor poke | Signal | 2 |
 | Reading task state | Query | 2 |
-| (no direct equivalent) | Update — request/response into a running Workflow | 3 |
+| (no direct equivalent) | Update, request/response into a running Workflow | 3 |
 | `schedule_interval` + `catchup` | Temporal Schedule + overlap policy | 4 |

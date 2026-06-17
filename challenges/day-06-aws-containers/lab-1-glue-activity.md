@@ -1,4 +1,4 @@
-# Lab 6.1 — Wrap a Glue job as an Activity
+# Lab 6.1: Wrap a Glue job as an Activity
 
 **Time:** ~50 min · **Difficulty:** ★★ · **Stack:** Temporal + LocalStack
 
@@ -25,7 +25,7 @@ make temporal      # terminal 1
 make stack-aws     # terminal 2: LocalStack on :4566
 ```
 
-<details><summary>Under the hood — what <code>make temporal</code> runs</summary>
+<details><summary>Under the hood: what <code>make temporal</code> runs</summary>
 
 ```bash
 temporal server start-dev \
@@ -36,7 +36,7 @@ temporal server start-dev \
 
 </details>
 
-<details><summary>Under the hood — what <code>make stack-aws</code> runs</summary>
+<details><summary>Under the hood: what <code>make stack-aws</code> runs</summary>
 
 ```bash
 docker compose -f docker/compose.localstack.yml up -d
@@ -45,7 +45,7 @@ docker compose -f docker/compose.localstack.yml up -d
 
 </details>
 
-> **Note — Glue is Pro-only on LocalStack Community.** `awslocal glue create-job`
+> **Note: Glue is Pro-only on LocalStack Community.** `awslocal glue create-job`
 > returns `InternalFailure: ... not yet implemented or pro feature`, so the
 > runnable **mocks `GlueClient`** and the job-run states are simulated. The
 > deliverable is the supervise-via-Activity pattern (start → poll + heartbeat →
@@ -76,7 +76,7 @@ public interface GlueJobActivities {
 }
 ```
 
-**Activity impl — complete the submit/poll loop:**
+**Activity impl, complete the submit/poll loop:**
 
 ```java
 public class GlueJobActivitiesImpl implements GlueJobActivities {
@@ -105,9 +105,9 @@ Point the `GlueClient` at LocalStack: override the endpoint to
 Reference ports: [`examples/07-aws-containers/python/glue_activity.py`](../../examples/07-aws-containers/python/glue_activity.py)
 and [`.../go/glue_activity.go`](../../examples/07-aws-containers/go/glue_activity.go).
 Try the TODOs yourself before peeking. (`boto3` / `aws-sdk-go-v2` may be absent
-offline — the Temporal-side submit/heartbeat/poll loop is the deliverable.)
+offline; the Temporal-side submit/heartbeat/poll loop is the deliverable.)
 
-**Python** (`temporalio`) — module-level Activity, lazy `boto3`:
+**Python** (`temporalio`), module-level Activity, lazy `boto3`:
 
 ```python
 import asyncio
@@ -129,7 +129,7 @@ async def run_glue_job(job_name: str, input_s3_uri: str) -> str:
         await asyncio.sleep(timedelta(seconds=15).total_seconds())   # back off between polls
 ```
 
-**Go** (`go.temporal.io/sdk`) — heartbeat, then map terminal state to a typed failure:
+**Go** (`go.temporal.io/sdk`), heartbeat, then map terminal state to a typed failure:
 
 ```go
 func (a *GlueActivities) RunGlueJob(ctx context.Context, jobName, inputS3URI string) (string, error) {
@@ -175,7 +175,7 @@ typed `ApplicationFailure`/`ApplicationError`.
 Since Glue is mocked (Pro-only on LocalStack Community), verify from the
 Temporal side rather than `awslocal glue get-job-runs` (which errors on
 Community). The mocked `GlueClient` logs each `startJobRun`/`getJobRun` to the
-Worker console — watch the poll loop there.
+Worker console; watch the poll loop there.
 
 In the Temporal Web UI: the successful run's Activity completes with the
 `jobRunId`; the failed run shows an `ActivityTaskFailed` carrying the
@@ -192,17 +192,17 @@ In the Temporal Web UI: the successful run's Activity completes with the
 
 ## Pitfalls
 
-- **`Thread.sleep` is fine here** — this is Activity code, not Workflow code. The
+- **`Thread.sleep` is fine here**: this is Activity code, not Workflow code. The
   determinism rules apply to Workflows, not Activities.
 - **Heartbeat or die.** Without heartbeats, a Worker restart loses the job-run
   context and Temporal can't tell a stuck job from a slow one. Heartbeat the
   `jobRunId` so a resumed Activity can re-attach (`getHeartbeatDetails`).
 - **Timeout alignment.** If `startToCloseTimeout` is shorter than the job,
-  Temporal kills the Activity mid-job and retries — submitting the job twice.
+  Temporal kills the Activity mid-job and retries, submitting the job twice.
 
 ## Hints
 
-<details><summary>Hint 1 — LocalStack GlueClient</summary>
+<details><summary>Hint 1: LocalStack GlueClient</summary>
 
 ```java
 GlueClient.builder()
@@ -214,10 +214,10 @@ GlueClient.builder()
 ```
 </details>
 
-<details><summary>Hint 2 — resume after restart</summary>
+<details><summary>Hint 2: resume after restart</summary>
 
 On entry, check `Activity.getExecutionContext().getHeartbeatDetails(String.class)`
-— if present, a previous attempt already started a run; re-attach to that
+if present, a previous attempt already started a run; re-attach to that
 `jobRunId` instead of starting a new one.
 </details>
 

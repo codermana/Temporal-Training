@@ -1,4 +1,4 @@
-# Hello Temporal, anywhere — runnable lab (Java · Python · Go)
+# Hello Temporal, anywhere: runnable lab (Java · Python · Go)
 
 The same Hello workflow, but the **connection is env-driven** so one binary
 targets a local dev server (Lab 1.2b Docker) or Temporal Cloud (Lab 1.2c) with no
@@ -6,18 +6,18 @@ code change. The connection mode is chosen by which variables are set:
 
 | Variables set | Mode |
 | --- | --- |
-| _none_ | Plaintext to `TEMPORAL_ADDRESS` (default `127.0.0.1:7233`) — local / Docker |
+| _none_ | Plaintext to `TEMPORAL_ADDRESS` (default `127.0.0.1:7233`), local / Docker |
 | `TEMPORAL_API_KEY` | Temporal Cloud over TLS via API key |
 | `TEMPORAL_TLS_CERT` + `TEMPORAL_TLS_KEY` | Temporal Cloud over mTLS |
 
 Shared: `TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE` (default `default`).
 
-The Worker and the client (starter) are **separate, standalone processes** — as
+The Worker and the client (starter) are **separate, standalone processes**, as
 they are in production. They never talk to each other directly; both only talk
 to the Temporal server, agreeing on a Task Queue name and the Workflow
 definition. Run the Worker in one terminal and the starter in another. Order
 doesn't matter: start the Workflow first and the server holds it on the queue
-until a Worker polls. The **same env-driven connection applies to both** — set
+until a Worker polls. The **same env-driven connection applies to both**: set
 the same `TEMPORAL_*` variables for the Worker and the starter so they dial the
 same server. The starter additionally reads `GREET_NAME` (default `Ada`) to
 choose the greeting input.
@@ -58,16 +58,16 @@ Activity live in `go/greeting.go` (package `hello`) and the connection helper in
 `go/connections.go`, so both commands import them.
 
 Cloud example (set the same env on **both** the Worker and the starter, in their
-respective terminals):
+respective terminals).
 
 ```bash
-# terminal 1 — Worker
+# terminal 1: Worker
 TEMPORAL_ADDRESS=us-east-1.aws.api.temporal.io:7233 \
 TEMPORAL_NAMESPACE=your-ns.acct \
 TEMPORAL_API_KEY=$(cat key.txt) \
   uv run worker.py
 
-# terminal 2 — starter
+# terminal 2: starter
 TEMPORAL_ADDRESS=us-east-1.aws.api.temporal.io:7233 \
 TEMPORAL_NAMESPACE=your-ns.acct \
 TEMPORAL_API_KEY=$(cat key.txt) \

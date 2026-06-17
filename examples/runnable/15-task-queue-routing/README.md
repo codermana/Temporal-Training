@@ -1,8 +1,8 @@
-# Task-queue routing — runnable demo (Java · Python · Go)
+# Task-queue routing: runnable demo (Java · Python · Go)
 
 One Workflow whose Activities run on **different Worker pools**, chosen by Task
 Queue. The teaching point: *the unit of "who registers what" is the Task Queue,
-not the Worker* — no single Worker registers the full set of Activities.
+not the Worker* (no single Worker registers the full set of Activities).
 
 Topology:
 
@@ -17,7 +17,7 @@ Topology:
 The `OrderWorkflow` runs on `orders`; its `charge` Activity stub names the
 `payments` queue and its `render` stub names the `media` queue. The Worker
 process starts all three pools (one per Task Queue), each registering only its
-subset — in production each pool would be its own deployment.
+subset; in production each pool would be its own deployment.
 
 The Worker and the client (starter) are separate, standalone processes. Run the
 Worker in one terminal and the starter in another. Both connect to a local
@@ -64,7 +64,7 @@ The starter prints:
 Workflow result: order-1001: charged $42.00 / s3://receipts/order-1001.pdf
 ```
 
-In the **Worker** terminal, two different pools log independently — proof the
+In the **Worker** terminal, two different pools log independently, proof the
 Activities were routed to separate Workers:
 
 ```text

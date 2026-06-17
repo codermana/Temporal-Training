@@ -10,42 +10,42 @@ Audience: Software engineers transitioning from Airflow · Java · Kafka-heavy s
 
 ---
 
-## Day 1 — Foundations: Rethinking orchestration
+## Day 1: Foundations, Rethinking orchestration
 
 ### Morning · 2 hrs
 
-- **Why Temporal exists — the failure modes of cron-based orchestration** `[airflow]`
-- **Core concepts — Workflows, Activities, Workers, Task Queues**
+- **Why Temporal exists: the failure modes of cron-based orchestration** `[airflow]`
+- **Core concepts: Workflows, Activities, Workers, Task Queues**
   - Mapping Airflow primitives to Temporal equivalents
 - **Event sourcing and deterministic replay**
 - **Temporal architecture overview**
 
 ### Afternoon · 2 hrs
 
-- **Local dev setup — Temporal CLI, Docker Compose, Temporal Web UI** `[lab]`
-- **First Workflow in Java — "Hello Temporal"** `[lab]`
+- **Local dev setup: Temporal CLI, Docker Compose, Temporal Web UI** `[lab]`
+- **First Workflow in Java: "Hello Temporal"** `[lab]`
 - **Reading the Event History** `[lab]`
 
 ---
 
-## Day 2 — Building reliable workflows
+## Day 2: Building reliable workflows
 
 ### Morning · 2 hrs
 
 - **Async and parallel Activity execution** `[lab]`
 - **Retries, timeouts, and heartbeating**
-- **Determinism constraints — the rules that keep replay honest**
+- **Determinism constraints: the rules that keep replay honest**
 
 ### Afternoon · 2 hrs
 
-- **Signals and Queries — interacting with running Workflows** `[lab]`
-- **Updates — synchronous request/response against a running Workflow** `[lab]`
-- **Schedules — replacing Airflow's scheduler** `[airflow]` `[lab]`
+- **Signals and Queries: interacting with running Workflows** `[lab]`
+- **Updates: synchronous request/response against a running Workflow** `[lab]`
+- **Schedules: replacing Airflow's scheduler** `[airflow]` `[lab]`
 - **Child Workflows and workflow timeouts** `[airflow]`
 
 ---
 
-## Day 3 — Kafka integration & event-driven patterns
+## Day 3: Kafka integration & event-driven patterns
 
 ### Morning · 2 hrs
 
@@ -56,51 +56,51 @@ Audience: Software engineers transitioning from Airflow · Java · Kafka-heavy s
 
 ### Afternoon · 2 hrs
 
-- **Lab — end-to-end Kafka → Temporal → Kafka pipeline** `[lab]` `[kafka]`
+- **Lab: end-to-end Kafka → Temporal → Kafka pipeline** `[lab]` `[kafka]`
 - **Fan-out with Kafka partitions** `[lab]` `[kafka]`
-- **Dead-letter handling — DLQ vs. Temporal retry exhaustion** `[kafka]`
+- **Dead-letter handling: DLQ vs. Temporal retry exhaustion** `[kafka]`
 
 ---
 
-## Day 4 — Production engineering
+## Day 4: Production engineering
 
 ### Morning · 2 hrs
 
-- **Workflow versioning — patching, the versioning API, and safe deploys** `[airflow]`
+- **Workflow versioning: patching, the versioning API, and safe deploys** `[airflow]`
 - **Worker sizing, Task Queue design, and auto-tuning**
-- **Observability — Prometheus, Grafana, and OpenTelemetry** `[lab]`
-- **Namespace strategy — multi-tenancy, isolation, and data retention**
+- **Observability: Prometheus, Grafana, and OpenTelemetry** `[lab]`
+- **Namespace strategy: multi-tenancy, isolation, and data retention**
 
 ### Afternoon · 2 hrs
 
-- **Testing Workflows — the Temporal Java testing framework** `[lab]`
-- **Workflow replay testing — catching determinism regressions** `[lab]`
-- **Migrating Airflow DAGs — a decision framework** `[airflow]`
+- **Testing Workflows: the Temporal Java testing framework** `[lab]`
+- **Workflow replay testing: catching determinism regressions** `[lab]`
+- **Migrating Airflow DAGs: a decision framework** `[airflow]`
 
 ---
 
-## Day 5 — Saga pattern, Spring Boot & capstone
+## Day 5: Saga pattern, Spring Boot & capstone
 
 ### Morning · 2 hrs
 
-- **Real-world Workflow walkthrough — order processing saga** `[lab]`
+- **Real-world Workflow walkthrough: order processing saga** `[lab]`
 - **Saga pattern in Spring Boot** `[lab]`
   - Orchestration vs. choreography; compensation logic; sync and async interaction patterns
   - Spring Boot wiring: `WorkflowClient`, Worker registration, Kafka trigger, graceful shutdown
-- **Continue-as-New — long-running sagas and history size limits**
+- **Continue-as-New: long-running sagas and history size limits**
 
 ### Afternoon · 2 hrs
 
-- **Capstone — design and implement a transactional saga** `[lab]` `[airflow]` `[kafka]`
+- **Capstone: design and implement a transactional saga** `[lab]` `[airflow]` `[kafka]`
   - Redesign a Kafka-triggered Airflow DAG as a Temporal Saga in Spring Boot
-- **Capstone review — compare implementations, discuss trade-offs**
-- **Q&A and open migration planning — bring your own workflow**
+- **Capstone review: compare implementations, discuss trade-offs**
+- **Q&A and open migration planning: bring your own workflow**
 
 ---
 
-## Day 6 — AWS migration & container workloads
+## Day 6: AWS migration & container workloads
 
-### Morning · 2 hrs — Replacing AWS Glue + Lambda + S3 with Temporal
+### Morning · 2 hrs: Replacing AWS Glue + Lambda + S3 with Temporal
 
 - **The AWS orchestration problem** `[aws]`
   - Hidden complexity in Lambda + Glue + Step Functions; the cost of distributed state
@@ -110,9 +110,9 @@ Audience: Software engineers transitioning from Airflow · Java · Kafka-heavy s
 - **Replacing S3-based checkpointing** `[aws]` `[lab]`
 - **Migrating a Lambda + Step Functions pipeline end-to-end** `[aws]` `[lab]`
 
-### Afternoon · 2 hrs — Running Temporal Workers as container workloads
+### Afternoon · 2 hrs: Running Temporal Workers as container workloads
 
-- **Temporal Worker as a containerised service — the mental model** `[containers]`
+- **Temporal Worker as a containerised service: the mental model** `[containers]`
 - **Dockerfile for a Java Temporal Worker** `[containers]` `[lab]`
   - Multi-stage build, JVM container flags, graceful shutdown, health check
 - **Kubernetes Deployment for Temporal Workers** `[containers]` `[lab]`
@@ -120,8 +120,8 @@ Audience: Software engineers transitioning from Airflow · Java · Kafka-heavy s
 - **Autoscaling Workers with KEDA** `[containers]` `[lab]`
   - Task Queue backlog as the scaling signal; Activity vs. Workflow worker pools
 - **Running Glue-replacement Activities in containers** `[aws]` `[containers]`
-- **Temporal Cloud vs. self-hosted on EKS — operational trade-offs** `[aws]` `[containers]`
-- **Lab — containerised end-to-end: S3 trigger → Temporal Worker → S3 output** `[aws]` `[containers]` `[lab]`
+- **Temporal Cloud vs. self-hosted on EKS: operational trade-offs** `[aws]` `[containers]`
+- **Lab: containerised end-to-end: S3 trigger → Temporal Worker → S3 output** `[aws]` `[containers]` `[lab]`
 
 ---
 
@@ -138,8 +138,8 @@ All labs run on a laptop with Docker. Minimum recommended RAM: 8 GB.
 | LocalStack | Day 6 | Mocks Glue, S3, SQS locally |
 | `kind` + KEDA | Day 6 | Local Kubernetes for container labs |
 
-> Day 4 testing uses `TestWorkflowEnvironment` (in-process) — no Docker required.
-> Day 6 AWS labs use LocalStack — no real AWS credentials needed.
+> Day 4 testing uses `TestWorkflowEnvironment` (in-process); no Docker required.
+> Day 6 AWS labs use LocalStack; no real AWS credentials needed.
 
 ---
 

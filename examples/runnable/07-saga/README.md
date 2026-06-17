@@ -1,4 +1,4 @@
-# Order saga — runnable lab (Java · Python · Go)
+# Order saga: runnable lab (Java · Python · Go)
 
 The same order **saga** in three SDKs: `authorize payment → reserve inventory →
 ship`, with a **compensation** for each forward step. If `ship` fails, the
@@ -8,11 +8,11 @@ customer is never charged for goods they won't receive.
 The teaching point is identical everywhere: **register a compensation only after
 its forward step succeeds, and run them in reverse on failure.** Java has a
 built-in `Saga` helper; Python and Go don't, so they manage the compensation stack
-by hand — a list/slice you unwind in reverse.
+by hand, a list/slice you unwind in reverse.
 
 > **Bound the retries.** Each forward Activity uses `maximumAttempts(3)`. Without
 > it, a permanent `ship` failure retries forever and the saga never reaches
-> compensation — the #1 saga mistake.
+> compensation, the #1 saga mistake.
 
 All three connect to a local dev server. Start one first:
 
@@ -63,7 +63,7 @@ Entry point: `go/main.go` (workflow + activities in `go/saga.go`).
 
 `order-OK` returns `COMPLETED`; `order-fail` returns `COMPENSATED`. In the Web UI
 history of the failing run you'll see `cancelPayment` and `restoreInventory`
-Activities executing **after** `ship` exhausts its retries — proof the saga
+Activities executing **after** `ship` exhausts its retries: proof the saga
 unwound in reverse.
 
 ```bash

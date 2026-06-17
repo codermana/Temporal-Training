@@ -1,4 +1,4 @@
-# Temporal Fundamentals — slide deck
+# Temporal Fundamentals: slide deck
 
 Technical companion deck for the training. ~60 slides, ~3 hours including demos. Built with [Marp](https://marp.app).
 
@@ -37,7 +37,7 @@ npm run pptx       # dist/slides.pptx
 
 ### Theme (Sass)
 
-`../themes/base.css` is **generated** from `base.scss` — don't edit it by hand.
+`../themes/base.css` is **generated** from `base.scss`; don't edit it by hand.
 The `preview`/`html`/`pdf`/`pptx` scripts recompile it automatically (a `pre*`
 hook runs `npm run css`). To rebuild it on its own:
 
@@ -47,7 +47,7 @@ make slides-css      # from the repo root
 ```
 
 The compile (`scripts/build-theme.mjs`) prepends Marp's `@import 'default';`
-after Sass runs — Dart Sass can't emit that bare import, and Marpit only inlines
+after Sass runs, because Dart Sass can't emit that bare import, and Marpit only inlines
 its built-in default theme for exactly that form. `base.css` stays committed
 because GitHub Pages and the Marp exports consume it directly.
 

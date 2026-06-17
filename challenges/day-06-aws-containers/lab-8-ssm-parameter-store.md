@@ -1,4 +1,4 @@
-# Lab 6.8 — Worker config & secrets from SSM Parameter Store
+# Lab 6.8: Worker config & secrets from SSM Parameter Store
 
 **Time:** ~40 min · **Difficulty:** ★★ · **Stack:** Temporal + LocalStack
 
@@ -14,16 +14,17 @@ LocalStack stands in for SSM.
 
 ## Learning goals
 
-- Bootstrap config lives in **process startup code, not Workflow code** — an SSM
+- Bootstrap config lives in **process startup code, not Workflow code**: an SSM
   read is non-deterministic and can change between replays.
 - A secret accessed at **use-time** belongs in an **Activity**, not the Workflow.
 - `SecureString` parameters + `WithDecryption` (KMS) vs. plain `String` config.
 - How this maps onto **ECS task roles / EKS IRSA**: the SSM client authenticates
   from the runtime identity, so there are **no static keys** in the image.
 
+
 > "SecureString parameters encrypt values using AWS Key Management Service, making them a practical choice for lightweight encrypted configuration values that don't require rotation or other advanced secret lifecycle capabilities."
 >
-> — *AWS Systems Manager User Guide*, docs.aws.amazon.com
+> *AWS Systems Manager User Guide*, docs.aws.amazon.com
 
 <!-- source: https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html -->
 
@@ -34,7 +35,7 @@ make temporal      # terminal 1
 make stack-aws     # terminal 2: LocalStack on :4566
 ```
 
-<details><summary>Under the hood — what <code>make temporal</code> runs</summary>
+<details><summary>Under the hood: what <code>make temporal</code> runs</summary>
 
 ```bash
 temporal server start-dev \
@@ -45,7 +46,7 @@ temporal server start-dev \
 
 </details>
 
-<details><summary>Under the hood — what <code>make stack-aws</code> runs</summary>
+<details><summary>Under the hood: what <code>make stack-aws</code> runs</summary>
 
 ```bash
 docker compose -f docker/compose.localstack.yml up -d
@@ -71,7 +72,7 @@ awslocal ssm put-parameter --name /temporal-training/worker/api-key \
 > **Coming from AWS:** the old pattern is **env vars / a mounted secrets file**
 > baked into the task definition. Here it becomes **SSM Parameter Store read at
 > startup** for config, and **a secret fetched inside an Activity** at use-time.
-> In ECS/EKS the SSM client authenticates via the **task role / IRSA** — no
+> In ECS/EKS the SSM client authenticates via the **task role / IRSA**, no
 > static access keys travel in the image.
 
 ## Starter code
@@ -86,12 +87,12 @@ Extend the `training.temporal.aws` module. `pom.xml` adds AWS SDK v2 SSM:
 </dependency>
 ```
 
-**Config-loader skeleton — complete the TODOs:**
+**Config-loader skeleton, complete the TODOs:**
 
 ```java
 public class WorkerBootstrap {
 
-  // Immutable snapshot, cached at boot — read SSM once, not per task.
+  // Immutable snapshot, cached at boot: read SSM once, not per task.
   record WorkerConfig(String temporalAddress, String namespace,
                       String taskQueue, String orderApiUrl) {}
 
@@ -111,7 +112,7 @@ public class WorkerBootstrap {
   }
 
   static WorkerFactory bootstrap() {
-    // TODO 4: read config from SSM (startup code — this is allowed here),
+    // TODO 4: read config from SSM (startup code, this is allowed here),
     //   build WorkflowServiceStubs(target=temporalAddress) + WorkflowClient
     //   (namespace), then a WorkerFactory + Worker on taskQueue.
     throw new UnsupportedOperationException("TODO");
@@ -119,7 +120,7 @@ public class WorkerBootstrap {
 }
 ```
 
-**`fetchApiKey` Activity skeleton — read the SecureString at use-time:**
+**`fetchApiKey` Activity skeleton, read the SecureString at use-time:**
 
 ```java
 @ActivityInterface
@@ -146,9 +147,9 @@ public class SecretActivitiesImpl implements SecretActivities {
 Reference ports: [`examples/07-aws-containers/python/ssm_parameter_config.py`](../../examples/07-aws-containers/python/ssm_parameter_config.py)
 and [`.../go/ssm_parameter_config.go`](../../examples/07-aws-containers/go/ssm_parameter_config.go).
 Try the TODOs yourself before peeking. (`boto3` / `aws-sdk-go-v2` may be absent
-offline — the load-at-boot + secret-in-an-Activity split is the deliverable.)
+offline; the load-at-boot + secret-in-an-Activity split is the deliverable.)
 
-**Python** (`temporalio`) — config loaded at boot, secret behind an Activity:
+**Python** (`temporalio`), config loaded at boot, secret behind an Activity:
 
 ```python
 from dataclasses import dataclass
@@ -183,13 +184,13 @@ async def fetch_api_key() -> str:                      # read at use-time, in an
 ```
 
 ```python
-# bootstrap (process startup — reading SSM here is fine):
+# bootstrap (process startup, reading SSM here is fine):
 cfg = load_config()
 client = await Client.connect(cfg.temporal_address, namespace=cfg.namespace)
 worker = Worker(client, task_queue=cfg.task_queue, activities=[fetch_api_key])
 ```
 
-**Go** (`go.temporal.io/sdk`) — same split; SSM behind a small interface:
+**Go** (`go.temporal.io/sdk`), same split; SSM behind a small interface:
 
 ```go
 func LoadConfig(ctx context.Context, ssm SsmAPI, path string) (WorkerConfig, error) {
@@ -206,7 +207,7 @@ func (a *SecretActivities) FetchAPIKey(ctx context.Context) (string, error) {
 ```
 
 The rule is identical in all three SDKs: **load config once at startup in process
-code**, and **read the secret at use-time inside an Activity** — never in Workflow
+code**, and **read the secret at use-time inside an Activity**, never in Workflow
 code, where the non-deterministic read would break replay.
 
 </details>
@@ -230,14 +231,14 @@ awslocal ssm get-parameters-by-path \
 ```
 
 Expected: the four params print, and `api-key` shows its plaintext value (not an
-encrypted blob). The Worker logs show it booted from the SSM values — task queue
+encrypted blob). The Worker logs show it booted from the SSM values: task queue
 `transform`, target `127.0.0.1:7233`. In the Temporal Web UI, a Workflow that
 needs the key triggers the `fetchApiKey` Activity, visible as its own
 `ActivityTaskCompleted`.
 
 ## Definition of done
 
-- [ ] Config is read from SSM **at startup**, in process code — not in a Workflow.
+- [ ] Config is read from SSM **at startup**, in process code, not in a Workflow.
 - [ ] `getParametersByPath` loads the whole tree with decryption and pagination.
 - [ ] The Worker builds its stubs / factory from the loaded `WorkerConfig`.
 - [ ] The API key is read **inside the `fetchApiKey` Activity** when a step needs
@@ -246,18 +247,18 @@ needs the key triggers the `fetchApiKey` Activity, visible as its own
 ## Pitfalls
 
 - **NEVER read SSM inside Workflow code.** It's non-deterministic I/O, and the
-  parameter value can change between the original run and a replay — that breaks
+  parameter value can change between the original run and a replay, which breaks
   determinism. Config goes in startup code; per-run secrets go in an Activity.
 - **Don't log decrypted secrets.** Once `WithDecryption` returns plaintext, keep
   it out of logs, Workflow history, and Activity *inputs*. Pass it straight into
   the downstream call.
-- **Cache config at boot — don't hammer SSM per task.** Read the tree once at
+- **Cache config at boot, don't hammer SSM per task.** Read the tree once at
   startup into an immutable snapshot; re-reading on every task adds latency and
   burns the Parameter Store throttle limit.
 
 ## Hints
 
-<details><summary>Hint 1 — LocalStack SsmClient</summary>
+<details><summary>Hint 1: LocalStack SsmClient</summary>
 
 Same builder shape as Lab 1's `GlueClient`:
 
@@ -270,11 +271,11 @@ SsmClient.builder()
     .build();
 ```
 
-In ECS/EKS, drop the endpoint override and credentials provider — the default
+In ECS/EKS, drop the endpoint override and credentials provider; the default
 chain picks up the task role / IRSA identity automatically.
 </details>
 
-<details><summary>Hint 2 — getParametersByPath pagination + decryption</summary>
+<details><summary>Hint 2: getParametersByPath pagination + decryption</summary>
 
 `getParametersByPath` returns at most ~10 params per page, so loop on
 `NextToken` until it's null. Set `recursive(true)` so nested keys come back and
@@ -293,7 +294,7 @@ GetParametersByPathRequest.builder()
 ## Stretch goals
 
 - React to a **parameter change** (e.g. a new `task-queue` value) by triggering a
-  rolling restart of the Worker fleet — config changes shouldn't need a rebuild,
+  rolling restart of the Worker fleet; config changes shouldn't need a rebuild,
   but they do need a restart since the snapshot is cached at boot.
 - Back the `SecureString` with a **dedicated KMS key alias** instead of the
   default `aws/ssm` key, and confirm `--with-decryption` still resolves it (in

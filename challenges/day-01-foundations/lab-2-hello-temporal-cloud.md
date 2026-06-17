@@ -1,11 +1,11 @@
-# Lab 1.2c — Hello Temporal on Temporal Cloud
+# Lab 1.2c: Hello Temporal on Temporal Cloud
 
 **Time:** ~40 min · **Difficulty:** ★★ · **Stack:** Temporal Cloud
 
 ## Scenario
 
 This is a variant of [Lab 1.2](lab-2-hello-temporal.md). The Workflow, Activity,
-and Worker are **identical** — the only thing that changes is *where the client
+and Worker are **identical**; the only thing that changes is *where the client
 connects*. In Lab 1.2 you pointed at a local dev server with
 `WorkflowServiceStubs.newLocalServiceStubs()`. Here you connect to **Temporal
 Cloud**, the managed service, which adds the two things a production cluster
@@ -25,7 +25,7 @@ not a rewrite.
 
 > **Coming from Airflow `[airflow]`:** this is the equivalent of repointing your
 > scheduler/workers from a local Postgres+executor to a managed Airflow
-> (MWAA/Astronomer). Your DAGs don't change — connection string and credentials
+> (MWAA/Astronomer). Your DAGs don't change; connection string and credentials
 > do.
 
 ## Prerequisites
@@ -36,8 +36,8 @@ not a rewrite.
   [shared runnable module](../../examples/runnable/01b-hello-temporal-anywhere)
   falls back to a local server, so you can still build and study the code.
 - One set of credentials for your Cloud namespace:
-  - **API key** (recommended — simplest): create one in the Cloud UI under
-    *Settings → API Keys*, or `temporal cloud apikey create --name hello --duration 24h`.
+  - **API key** (recommended, simplest): create one in the Cloud UI under
+    *Settings -> API Keys*, or `temporal cloud apikey create --name hello --duration 24h`.
   - **mTLS**: a client certificate + private key pair (PKCS#8) whose CA is
     attached to the namespace. See `temporal cloud namespace` docs.
 
@@ -51,25 +51,25 @@ WorkflowClient client = WorkflowClient.newInstance(service);
 ```
 
 For Temporal Cloud you build `WorkflowServiceStubsOptions` (target + TLS + auth)
-and set your Cloud namespace on the client. Everything below the connection —
-`WorkerFactory`, `registerWorkflowImplementationTypes`, the typed stub, `greet`
-— stays byte-for-byte the same.
+and set your Cloud namespace on the client. Everything below the connection
+(`WorkerFactory`, `registerWorkflowImplementationTypes`, the typed stub, `greet`)
+stays byte-for-byte the same.
 
 > **Shared base with Lab 1.2b.** Both this lab and the
 > [Docker variant](lab-2-hello-temporal-docker.md) build on the *same*
-> `Connections.fromEnv()` helper — a one-time refactor of Lab 1.2 that picks the
+> `Connections.fromEnv()` helper, a one-time refactor of Lab 1.2 that picks the
 > connection from environment variables. The Docker/local case is the trivial
 > **plaintext** branch (just a target). This lab implements the interesting
-> branches: **API key** and **mTLS**. Same worker, same helper — only the
+> branches: **API key** and **mTLS**. Same worker, same helper; only the
 > environment differs.
 
 ## Starter code
 
 Refactor your Lab 1.2 worker once to read its connection from the environment
-(the `pom.xml` is unchanged — `temporal-sdk` already bundles everything needed
+(the `pom.xml` is unchanged; `temporal-sdk` already bundles everything needed
 for TLS and API keys). Keep credentials out of source by reading them from env.
 
-**`Connections.java`** — the shared helper. The plaintext branch is already done
+**`Connections.java`**: the shared helper. The plaintext branch is already done
 (that's what Lab 1.2b uses); fill in the three Cloud TODOs:
 
 ```java
@@ -123,14 +123,14 @@ public final class Connections {
 }
 ```
 
-Then change one line in your worker — swap the local-stubs block for:
+Then change one line in your worker, swapping the local-stubs block for:
 
 ```java
 WorkflowClient client = Connections.fromEnv();
 ```
 
 (See the [shared runnable module](../../examples/runnable/01b-hello-temporal-anywhere)
-for the completed `Connections.java` and `HelloWorker.java` — the same module
+for the completed `Connections.java` and `HelloWorker.java`, the same module
 Lab 1.2b uses.)
 
 ## Tasks
@@ -140,9 +140,9 @@ Lab 1.2b uses.)
    `WorkflowServiceStubs.newLocalServiceStubs()`.
 3. Export the right environment variables for your auth method (below) and run.
 4. Confirm the greeting prints **and** that the execution shows up in the
-   **Cloud** Web UI for your namespace — not your local UI.
+   **Cloud** Web UI for your namespace, not your local UI.
 
-### Environment — API key
+### Environment: API key
 
 ```bash
 export TEMPORAL_ADDRESS="us-east-1.aws.api.temporal.io:7233"   # your region's gRPC endpoint
@@ -150,7 +150,7 @@ export TEMPORAL_NAMESPACE="my-namespace.a1b2c"                 # <namespace>.<ac
 export TEMPORAL_API_KEY="$(cat ~/.temporal/hello.key)"        # never hard-code this
 ```
 
-### Environment — mTLS
+### Environment: mTLS
 
 ```bash
 export TEMPORAL_ADDRESS="my-namespace.a1b2c.tmprl.cloud:7233"  # namespace gRPC endpoint
@@ -162,12 +162,12 @@ export TEMPORAL_TLS_KEY="/path/to/client.key"
 ## Verification
 
 ```bash
-# from your module (or examples/runnable/01b-hello-temporal-anywhere) — two terminals
+# from your module (or examples/runnable/01b-hello-temporal-anywhere): two terminals
 make run-connect           # terminal A: Worker (or: mvn -q compile exec:java)
 make run-connect-starter   # terminal B: starts the Workflow, prints the greeting
 ```
 
-<details><summary>Under the hood — what these run</summary>
+<details><summary>Under the hood: what these run</summary>
 
 ```bash
 cd examples/runnable/01b-hello-temporal-anywhere
@@ -207,11 +207,11 @@ same execution is visible in the Temporal Cloud Web UI.
 - [ ] Running the program prints the greeting.
 - [ ] The execution is **Completed** in the Cloud namespace (CLI + Cloud UI),
       and does **not** appear in your local dev server's UI.
-- [ ] No credentials are hard-coded — everything comes from the environment.
+- [ ] No credentials are hard-coded; everything comes from the environment.
 
 ## Hints
 
-<details><summary>Hint 1 — API key connection refused / UNAUTHENTICATED</summary>
+<details><summary>Hint 1: API key connection refused / UNAUTHENTICATED</summary>
 
 API keys require TLS: you must call `setEnableHttps(true)`. The `address` for
 API keys is the **regional** endpoint (e.g. `us-east-1.aws.api.temporal.io:7233`),
@@ -219,7 +219,7 @@ not the `*.tmprl.cloud` namespace endpoint used for mTLS. The namespace still
 has to be set on the `WorkflowClient` via `WorkflowClientOptions`.
 </details>
 
-<details><summary>Hint 2 — namespace not found</summary>
+<details><summary>Hint 2: namespace not found</summary>
 
 A Cloud namespace identifier includes the account suffix:
 `my-namespace.a1b2c`, not just `my-namespace`. Set it with
@@ -227,7 +227,7 @@ A Cloud namespace identifier includes the account suffix:
 on `default`, which doesn't exist in Cloud.
 </details>
 
-<details><summary>Hint 3 — mTLS handshake / "no private key" error</summary>
+<details><summary>Hint 3: mTLS handshake / "no private key" error</summary>
 
 `SimpleSslContextBuilder.forPKCS8(certStream, keyStream)` expects a **PKCS#8**
 private key. If your key is PKCS#1 (`-----BEGIN RSA PRIVATE KEY-----`), convert
@@ -237,12 +237,12 @@ it: `openssl pkcs8 -topk8 -nocrypt -in client.key -out client.pk8.key`.
 ## Stretch goals
 
 - Run a Worker against Cloud while a *second* Worker on the same Task Queue runs
-  locally against `make temporal`. Confirm they're fully isolated — different
+  locally against `make temporal`. Confirm they're fully isolated: different
   namespaces, different histories.
 - Add a `temporal-namespace` header check: connect with the wrong namespace and
   read the gRPC error. Understand why the namespace is part of routing, not just
   authorization.
 - Replace the long-lived API key with a short-duration one
   (`temporal cloud apikey create --duration 1h`) and observe the Worker losing
-  auth after expiry — motivation for `addApiKey(Supplier)` re-reading a rotating
+  auth after expiry: motivation for `addApiKey(Supplier)` re-reading a rotating
   source rather than a captured string.

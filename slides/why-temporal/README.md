@@ -1,4 +1,4 @@
-# Why Temporal — slide deck
+# Why Temporal: slide deck
 
 Persuasive intro deck. ~30 slides, ~25 minutes. Built with [Marp](https://marp.app).
 

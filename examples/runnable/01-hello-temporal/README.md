@@ -1,9 +1,9 @@
-# Hello Temporal — runnable lab (Java · Python · Go)
+# Hello Temporal: runnable lab (Java · Python · Go)
 
 The smallest end-to-end Temporal program in three SDKs: a Workflow that calls one
 Activity and returns its greeting.
 
-The Worker and the client (starter) are **separate, standalone processes** — as
+The Worker and the client (starter) are **separate, standalone processes**, as
 they are in production. They never talk to each other directly; both only talk
 to the Temporal server, agreeing on a Task Queue name (`hello-temporal`) and the
 Workflow definition. Run the Worker in one terminal and the starter in another.

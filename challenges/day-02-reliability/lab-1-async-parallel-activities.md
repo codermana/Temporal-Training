@@ -1,4 +1,4 @@
-# Lab 2.1 — Async & parallel Activities
+# Lab 2.1: Async & parallel Activities
 
 **Time:** ~50 min · **Difficulty:** ★★ · **Stack:** Temporal dev server
 
@@ -6,7 +6,7 @@
 
 An order contains several line-item SKUs. Pricing each SKU is an independent
 Activity call. Done sequentially, an order with 8 SKUs takes 8× one call. You'll
-fan these out to run concurrently and fan the results back in to a total — the
+fan these out to run concurrently and fan the results back in to a total: the
 bread-and-butter parallelism pattern.
 
 ## Learning goals
@@ -16,15 +16,15 @@ bread-and-butter parallelism pattern.
 - Understand fan-out/fan-in and how partial failures surface.
 
 > **Coming from Airflow `[airflow]`:** this is a dynamic `TaskGroup` of parallel
-> tasks whose count depends on runtime input — without writing a custom operator
+> tasks whose count depends on runtime input, without writing a custom operator
 > or mapping plugin. It's just a `stream().map(...)` in Workflow code.
 
-## Warm-up — reason before you code (5 min, no keyboard)
+## Warm-up: reason before you code (5 min, no keyboard)
 
 New to async/Promises? Do this on paper first; it makes the code below obvious.
 
 1. **Claim-ticket check.** `Async.function(activities::price, sku)` returns a
-   `Promise<Integer>` *immediately* — the price isn't computed yet. Which single
+   `Promise<Integer>` *immediately*: the price isn't computed yet. Which single
    call actually *waits* for the price: getting the Promise, or calling `.get()`?
 2. **Predict the clock.** Each `price(...)` call takes 1s. For 8 SKUs:
    - A sequential loop that calls `.get()` each pass takes how long?
@@ -34,12 +34,12 @@ New to async/Promises? Do this on paper first; it makes the code below obvious.
 
 <details><summary>Answers</summary>
 
-1. `.get()` waits. Building the Promise is instant — that's what lets you start
+1. `.get()` waits. Building the Promise is instant, which is what lets you start
    all 8 before waiting on any.
-2. Sequential ≈ 8s (1s × 8). Fan-out ≈ 1s — all 8 run at once, you wait for the
+2. Sequential ≈ 8s (1s × 8). Fan-out ≈ 1s: all 8 run at once, you wait for the
    slowest.
 3. `.get()` blocks until *that* Promise resolves, so the loop can't start the
-   next Activity until the current one finishes — back to one-at-a-time. Collect
+   next Activity until the current one finishes: back to one-at-a-time. Collect
    all Promises first, then join with `Promise.allOf(...).get()`.
 
 </details>
@@ -48,7 +48,7 @@ New to async/Promises? Do this on paper first; it makes the code below obvious.
 
 - Day 1 complete; `make temporal` running.
 
-<details><summary>Under the hood — what <code>make temporal</code> runs</summary>
+<details><summary>Under the hood: what <code>make temporal</code> runs</summary>
 
 ```bash
 temporal server start-dev \
@@ -97,7 +97,7 @@ public interface PricingActivities {
 }
 ```
 
-**Activity impl** — complete it (a small price lookup is fine):
+**Activity impl**: complete it (a small price lookup is fine):
 
 ```java
 // PricingActivitiesImpl.java
@@ -115,7 +115,7 @@ public class PricingActivitiesImpl implements PricingActivities {
 }
 ```
 
-**Workflow impl** — the core of the lab:
+**Workflow impl**: the core of the lab:
 
 ```java
 // OrderPricingWorkflowImpl.java
@@ -148,7 +148,7 @@ public class OrderPricingWorkflowImpl implements OrderPricingWorkflow {
 }
 ```
 
-**Worker + starter** — two separate processes, same shape as Lab 1.2. Fill a
+**Worker + starter**: two separate processes, same shape as Lab 1.2. Fill a
 `PricingWorker` that registers `OrderPricingWorkflowImpl` + `PricingActivitiesImpl`
 and polls the `pricing` Task Queue, and a separate `PricingStarter` that starts
 the Workflow with, e.g., `List.of("book","lamp","desk")` and prints the total.
@@ -160,7 +160,7 @@ Reference solution: [`examples/runnable/02-async-parallel-activities/python`](..
 and [`.../go`](../../examples/runnable/02-async-parallel-activities/go). Try the
 TODOs yourself before peeking.
 
-**Python** (`temporalio`) — fan out with `asyncio.gather`:
+**Python** (`temporalio`): fan out with `asyncio.gather`:
 
 ```python
 from datetime import timedelta
@@ -184,7 +184,7 @@ class OrderPricingWorkflow:
         raise NotImplementedError
 ```
 
-**Go** (`go.temporal.io/sdk`) — collect Futures, then `Get` each:
+**Go** (`go.temporal.io/sdk`): collect Futures, then `Get` each:
 
 ```go
 func Price(ctx context.Context, sku string) (int, error) {
@@ -222,7 +222,7 @@ before you wait on any of them.** Awaiting inside the loop serializes them.
 
 ## Verification
 
-Worker and starter are separate processes — run them in two terminals:
+Worker and starter are separate processes; run them in two terminals:
 
 ```bash
 mvn -q compile exec:java                                                       # terminal 1: Worker
@@ -243,14 +243,14 @@ in the **same** Workflow Task, before any results come back.
 ## Pitfalls
 
 - Calling `activities.price(sku)` directly inside the loop makes it
-  **sequential** — each call blocks until it returns. You must use
+  **sequential**: each call blocks until it returns. You must use
   `Async.function` to get concurrency.
-- Don't `.get()` each promise inside the loop either — that also serializes
+- Don't `.get()` each promise inside the loop either, since that also serializes
   them. Schedule them all first, then join.
 
 ## Hints
 
-<details><summary>Hint 1 — the fan-out one-liner</summary>
+<details><summary>Hint 1: the fan-out one-liner</summary>
 
 ```java
 List<Promise<Integer>> prices =
@@ -260,7 +260,7 @@ Then `Promise.allOf(prices).get();` and sum with
 `prices.stream().mapToInt(Promise::get).sum();`.
 </details>
 
-<details><summary>Hint 2 — partial failure behavior</summary>
+<details><summary>Hint 2: partial failure behavior</summary>
 
 If one SKU's Activity exhausts its retries, `Promise.allOf(...).get()` throws.
 That's the fail-fast default. The stretch goal explores tolerating it.
@@ -272,6 +272,6 @@ That's the fail-fast default. The stretch goal explores tolerating it.
   to skip failed line items and total the rest. (Hint: don't join with
   `allOf`; resolve each promise in a try/catch.)
 - **Race instead of join.** Use `Promise.anyOf(...)` to return as soon as the
-  first price resolves — when would you want that?
+  first price resolves: when would you want that?
 - **Cancellation.** Wrap the fan-out in a `CancellationScope` and cancel the
   remaining calls once you have "enough" prices.

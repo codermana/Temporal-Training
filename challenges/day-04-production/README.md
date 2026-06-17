@@ -1,4 +1,4 @@
-# Day 4 — Production engineering
+# Day 4: Production engineering
 
 Today is about running Temporal safely in production: see what your Workers are
 doing (observability), prove your Workflows are correct without a server (unit
@@ -9,9 +9,9 @@ testing).
 
 | Lab | Stack |
 |---|---|
-| 1 — Observability | `make temporal` + `make stack-obs` (Prometheus :9091, Grafana :3000) |
-| 2 — Testing | **None.** Runs fully in-process via `TestWorkflowEnvironment`. |
-| 3 — Replay testing | A captured history JSON (no live server needed to replay). |
+| 1, Observability | `make temporal` + `make stack-obs` (Prometheus :9091, Grafana :3000) |
+| 2, Testing | **None.** Runs fully in-process via `TestWorkflowEnvironment`. |
+| 3, Replay testing | A captured history JSON (no live server needed to replay). |
 
 ```bash
 make temporal      # labs 1
@@ -25,7 +25,7 @@ Grafana: <http://127.0.0.1:3000> (admin / admin) · Prometheus:
 
 | # | Lab | Time | Difficulty |
 |---|-----|------|-----------|
-| 1 | [Observability — metrics & dashboards](lab-1-observability.md) | 50 min | ★★ |
+| 1 | [Observability: metrics & dashboards](lab-1-observability.md) | 50 min | ★★ |
 | 2 | [Testing Workflows](lab-2-testing-workflows.md) | 45 min | ★★ |
 | 3 | [Replay testing](lab-3-replay-testing.md) | 40 min | ★★★ |
 

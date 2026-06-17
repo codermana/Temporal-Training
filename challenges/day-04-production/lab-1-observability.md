@@ -1,4 +1,4 @@
-# Lab 4.1 — Observability: metrics & dashboards
+# Lab 4.1: Observability: metrics & dashboards
 
 **Time:** ~50 min · **Difficulty:** ★★ · **Stack:** Temporal + Prometheus + Grafana
 
@@ -24,7 +24,7 @@ make temporal      # terminal 1
 make stack-obs     # terminal 2: Prometheus :9091 + Grafana :3000
 ```
 
-<details><summary>Under the hood — what <code>make temporal</code> runs</summary>
+<details><summary>Under the hood: what <code>make temporal</code> runs</summary>
 
 ```bash
 temporal server start-dev \
@@ -35,7 +35,7 @@ temporal server start-dev \
 
 </details>
 
-<details><summary>Under the hood — what <code>make stack-obs</code> runs</summary>
+<details><summary>Under the hood: what <code>make stack-obs</code> runs</summary>
 
 ```bash
 docker compose -f docker/compose.observability.yml up -d
@@ -84,10 +84,10 @@ PrometheusMeterRegistry registry =
 Reference snippets: [`examples/05-production/python`](../../examples/05-production/python)
 (`prometheus_metrics.py`, `custom_activity_metric.py`) and
 [`.../go`](../../examples/05-production/go) (`prometheus_metrics.go`,
-`custom_activity_metric.go`). Neither SDK uses Micrometer — the Core runtime
+`custom_activity_metric.go`). Neither SDK uses Micrometer; the Core runtime
 exposes Prometheus directly.
 
-**Python** (`temporalio`) — the runtime serves `/metrics` itself; no `HttpServer`:
+**Python** (`temporalio`): the runtime serves `/metrics` itself; no `HttpServer`:
 
 ```python
 from temporalio.client import Client
@@ -97,19 +97,19 @@ from temporalio import activity
 async def make_client() -> Client:
     # TODO 1: build a Runtime whose TelemetryConfig.metrics is a PrometheusConfig
     #         bound to the host/port Prometheus scrapes.
-    # TODO 2: pass runtime=... into Client.connect — SDK metrics now flow.
+    # TODO 2: pass runtime=... into Client.connect, SDK metrics now flow.
     runtime = Runtime(telemetry=TelemetryConfig(
         metrics=PrometheusConfig(bind_address="0.0.0.0:9090")))
     return await Client.connect("127.0.0.1:7233", runtime=runtime)
 
 @activity.defn
 async def price(sku: str) -> int:
-    # TODO 3: custom metric — same runtime, queryable in Prometheus.
+    # TODO 3: custom metric, same runtime, queryable in Prometheus.
     activity.metric_meter().create_counter("orders_priced_total").add(1)
     return 0
 ```
 
-**Go** (`go.temporal.io/sdk`) — set a `client.MetricsHandler` (built from the
+**Go** (`go.temporal.io/sdk`): set a `client.MetricsHandler` (built from the
 `go.temporal.io/sdk/contrib/tally` module + a Prometheus reporter):
 
 ```go
@@ -145,8 +145,8 @@ in Prometheus. In Go the resource-based tuner is not exposed; size slots manuall
 2. Expose `/metrics` (plain `HttpServer`) on the port Prometheus expects.
 3. Run the Worker and generate some Workflow load.
 4. Confirm Prometheus is scraping you; open the Grafana dashboard.
-5. **Add a custom metric** in an Activity — e.g. a counter
-   `orders_priced_total` or a timer around the work — and watch it appear in
+5. **Add a custom metric** in an Activity, e.g. a counter
+   `orders_priced_total` or a timer around the work, and watch it appear in
    Prometheus.
 
 ## Verification
@@ -176,7 +176,7 @@ dashboard and watch panels move as you drive Workflow load.
 
 - **Scrape mismatch.** If Prometheus shows the target `DOWN`, your endpoint
   host/port doesn't match `docker/observability/prometheus.yml`. From inside the
-  Prometheus container, your laptop is `host.docker.internal` (macOS) — check the
+  Prometheus container, your laptop is `host.docker.internal` (macOS); check the
   provided config before changing it.
 - **Metrics scope vs. client.** The scope must be attached to the
   `WorkflowServiceStubs` options, not the `WorkflowClient`, or SDK metrics won't
@@ -186,7 +186,7 @@ dashboard and watch panels move as you drive Workflow load.
 
 ## Hints
 
-<details><summary>Hint 1 — minimal metrics endpoint</summary>
+<details><summary>Hint 1: minimal metrics endpoint</summary>
 
 ```java
 HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
@@ -199,11 +199,11 @@ server.start();
 ```
 </details>
 
-<details><summary>Hint 2 — custom metric from an Activity</summary>
+<details><summary>Hint 2: custom metric from an Activity</summary>
 
 Hold a reference to the same `PrometheusMeterRegistry` (or `Metrics.globalRegistry`)
 and `registry.counter("orders_priced_total").increment();` inside the Activity
-impl. Activities are normal Java — no determinism limits apply.
+impl. Activities are normal Java; no determinism limits apply.
 </details>
 
 ## Stretch goals

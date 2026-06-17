@@ -1,10 +1,10 @@
-# Schedules — runnable lab (Java · Python · Go)
+# Schedules: runnable lab (Java · Python · Go)
 
 The same daily **Schedule** in three SDKs: fire `DailyReportWorkflow` at 09:00
 every day, with `overlap=SKIP` (the Airflow `max_active_runs=1` equivalent).
 
 Unlike the other labs, each entry point is a **one-shot client program**, not a
-long-lived Worker — it registers the Schedule on the server and exits. The server
+long-lived Worker: it registers the Schedule on the server and exits. The server
 fires the Workflow on the spec from then on. (Run a Worker on the `reports` task
 queue separately if you want the scheduled runs to actually execute.)
 

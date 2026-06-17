@@ -1,4 +1,4 @@
-# Day 3 — Kafka integration & event-driven patterns
+# Day 3: Kafka integration & event-driven patterns
 
 Today you bridge Kafka and Temporal: consume order events, drive a Workflow per
 order key, produce outcome events back to Kafka, and fan out partition work
@@ -48,7 +48,7 @@ full setup (`make setup-mac-full` / `make setup-ubuntu-full`).
 Key idea: the **consumer is a plain Java thread** (the "bridge"), not Workflow
 code. It commits offsets only after `signalWithStart` succeeds, giving
 at-least-once delivery into durable Workflows. Workflow code never touches a
-Kafka client directly — all I/O is in Activities or the bridge.
+Kafka client directly; all I/O is in Activities or the bridge.
 
 ## Coming from Airflow / Kafka?
 

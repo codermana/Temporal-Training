@@ -1,10 +1,10 @@
-# Kafka → Temporal → Kafka bridge — runnable lab (Java · Python · Go)
+# Kafka → Temporal → Kafka bridge: runnable lab (Java · Python · Go)
 
 The same order pipeline in three SDKs: a plain Kafka consumer **bridge** turns
 records on the `orders` topic into Workflow Signals via `signalWithStart`, one
 long-lived `OrderWorkflow` runs per order key, and a producer **Activity** writes
 an outcome back to the `order-outcomes` topic. The teaching points are identical
-everywhere — *the consumer is not Workflow code, commit offsets only after the
+everywhere: *the consumer is not Workflow code, commit offsets only after the
 signal lands, and all Kafka I/O lives in the bridge or an Activity.*
 
 This lab needs **both** a Temporal dev server and a Kafka broker:
@@ -60,6 +60,6 @@ key=order-1 value=accepted:order-1:NEW:line-item-A
 ```
 
 A **second** event with the same key (`-k "order-1"`) signals the **same**
-Workflow execution — in the Web UI `order-order-1` shows one
+Workflow execution: in the Web UI `order-order-1` shows one
 `WorkflowExecutionStarted` followed by a `WorkflowExecutionSignaled` and an
 Activity completion per event, never a duplicate Workflow per key.

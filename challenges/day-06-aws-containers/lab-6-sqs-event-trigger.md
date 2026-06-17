@@ -1,4 +1,4 @@
-# Lab 6.6 — SQS event trigger → signalWithStart
+# Lab 6.6: SQS event trigger → signalWithStart
 
 **Time:** ~45 min · **Difficulty:** ★★ · **Stack:** Temporal + LocalStack
 
@@ -6,7 +6,7 @@
 
 A file lands in S3 and something has to kick off an import. In AWS this is an
 **EventBridge rule → Lambda → StartExecution** chain. Here you replace it with a
-single long-poll **SQS consumer** — a plain bridge process that runs *outside*
+single long-poll **SQS consumer**, a plain bridge process that runs *outside*
 any Workflow. It receives a file-arrival message and does **signalWithStart** on
 an `ImportWorkflow`. Because `signalWithStart` is idempotent on the Workflow ID,
 SQS's at-least-once redelivery just re-signals the *same* Workflow instead of
@@ -14,7 +14,7 @@ spawning a duplicate run. LocalStack provides the SQS queue.
 
 > "Standard queues ensure at-least-once message delivery, but due to the highly distributed architecture, more than one copy of a message might be delivered, and messages may occasionally arrive out of order."
 >
-> — *Amazon SQS Developer Guide*, docs.aws.amazon.com
+> *Amazon SQS Developer Guide*, docs.aws.amazon.com
 
 <!-- source: https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/standard-queues.html -->
 
@@ -27,7 +27,7 @@ spawning a duplicate run. LocalStack provides the SQS queue.
 > | `StartExecution` (and pray it's the first one) | `signalWithStart` (idempotent on Workflow ID) |
 > | Lambda returns → event is "done" | delete the SQS message **after** the signal is durable |
 >
-> The bridge is glue, not a Workflow or Activity — no determinism constraints,
+> The bridge is glue, not a Workflow or Activity: no determinism constraints,
 > so plain loops, `boto3`, blocking SDK calls are all fine.
 
 ## Learning goals
@@ -36,7 +36,7 @@ spawning a duplicate run. LocalStack provides the SQS queue.
   *inside* a Workflow.
 - Use `signalWithStart` for idempotency: at-least-once redelivery re-signals one
   Workflow rather than starting duplicates.
-- Order the delete **after** the signal is durable in Temporal — at-least-once,
+- Order the delete **after** the signal is durable in Temporal: at-least-once,
   never at-most-once.
 - Long-poll SQS (`WaitTimeSeconds=20`) instead of hot-spinning.
 
@@ -47,7 +47,7 @@ make temporal      # terminal 1
 make stack-aws     # terminal 2: LocalStack on :4566
 ```
 
-<details><summary>Under the hood — what <code>make temporal</code> runs</summary>
+<details><summary>Under the hood: what <code>make temporal</code> runs</summary>
 
 ```bash
 temporal server start-dev \
@@ -58,7 +58,7 @@ temporal server start-dev \
 
 </details>
 
-<details><summary>Under the hood — what <code>make stack-aws</code> runs</summary>
+<details><summary>Under the hood: what <code>make stack-aws</code> runs</summary>
 
 ```bash
 docker compose -f docker/compose.localstack.yml up -d
@@ -71,7 +71,7 @@ Create the queue the bridge will drain:
 
 ```bash
 awslocal sqs create-queue --queue-name imports-events
-# note the QueueUrl it prints — you'll pass it to the bridge and to send-message
+# note the QueueUrl it prints; you'll pass it to the bridge and to send-message
 ```
 
 This lab signals the `ImportWorkflow` from Labs 6.1–6.2. A Worker must be running
@@ -90,11 +90,11 @@ Extend the `training.temporal.aws` module. The bridge is an ordinary `main`/loop
 </dependency>
 ```
 
-**Given contract** — a long-poll pump that signal-with-starts one Workflow per
+**Given contract**: a long-poll pump that signal-with-starts one Workflow per
 message:
 
 ```java
-// SqsSignalBridge.java — runs outside any Workflow (plain glue code).
+// SqsSignalBridge.java: runs outside any Workflow (plain glue code).
 class SqsSignalBridge {
   private final WorkflowClient client;
   private final SqsClient sqs;
@@ -103,7 +103,7 @@ class SqsSignalBridge {
   void pump() {
     while (true) {
       // TODO 1: receiveMessage with maxNumberOfMessages(10) and
-      //         waitTimeSeconds(20) — long poll, NOT a hot spin.
+      //         waitTimeSeconds(20): long poll, NOT a hot spin.
       ReceiveMessageResponse resp = /* ... */;
 
       for (Message m : resp.messages()) {
@@ -118,7 +118,7 @@ class SqsSignalBridge {
         //   signalWithStart starts the Workflow if absent, signals it if running.
         //   Idempotent on the Workflow ID: redelivery re-signals the same run.
 
-        // TODO 4: deleteMessage(receiptHandle) — ONLY after the signal returns.
+        // TODO 4: deleteMessage(receiptHandle): ONLY after the signal returns.
         //   The signal is durable in Temporal before you delete -> at-least-once.
       }
     }
@@ -135,10 +135,10 @@ Point the `SqsClient` at LocalStack: override the endpoint to
 Reference ports: [`examples/07-aws-containers/python/sqs_signal_bridge.py`](../../examples/07-aws-containers/python/sqs_signal_bridge.py)
 and [`.../go/sqs_signal_bridge.go`](../../examples/07-aws-containers/go/sqs_signal_bridge.go).
 Try the TODOs yourself before peeking. (`boto3` / `aws-sdk-go-v2` may be absent
-offline — the Temporal-side `signalWithStart` + delete-after-durable ordering is
+offline; the Temporal-side `signalWithStart` + delete-after-durable ordering is
 the deliverable.)
 
-**Python** (`temporalio`) — plain async loop, lazy `boto3`; `start_signal` makes
+**Python** (`temporalio`), plain async loop, lazy `boto3`; `start_signal` makes
 `start_workflow` behave as signal-with-start:
 
 ```python
@@ -167,11 +167,11 @@ async def pump(client: Client, queue_url: str) -> None:
                 task_queue="transform",
                 start_signal="file_arrived", start_signal_args=[s3_uri],
             )
-            # Delete only after the signal is durable in Temporal — at-least-once.
+            # Delete only after the signal is durable in Temporal: at-least-once.
             sqs.delete_message(QueueUrl=queue_url, ReceiptHandle=m["ReceiptHandle"])
 ```
 
-**Go** (`go.temporal.io/sdk`, `aws-sdk-go-v2`) — `SignalWithStartWorkflow`, then
+**Go** (`go.temporal.io/sdk`, `aws-sdk-go-v2`), `SignalWithStartWorkflow`, then
 delete:
 
 ```go
@@ -197,7 +197,7 @@ func Pump(ctx context.Context, c client.Client, sqs SqsAPI, queueURL string) err
             if err != nil {
                 return err
             }
-            // Delete only after the signal is durable in Temporal — at-least-once.
+            // Delete only after the signal is durable in Temporal: at-least-once.
             if err := sqs.Delete(ctx, queueURL, m.ReceiptHandle); err != nil {
                 return err
             }
@@ -241,7 +241,7 @@ awslocal sqs send-message --queue-url "$QURL" \
   --message-body '{"bucket":"imports-incoming","key":"orders.csv","s3Uri":"s3://imports-incoming/incoming/orders.csv"}'
 ```
 
-Confirm **no second run** appears — the same Workflow ID is re-signalled, not
+Confirm **no second run** appears: the same Workflow ID is re-signalled, not
 restarted. That is the idempotency guarantee `signalWithStart` buys you.
 
 ## Definition of done
@@ -250,26 +250,26 @@ restarted. That is the idempotency guarantee `signalWithStart` buys you.
       Workflow/Activity.
 - [ ] Each message does `signalWithStart` on a Workflow ID derived from the event.
 - [ ] The SQS delete happens **only after** the signal returns (durable).
-- [ ] Re-sending the same message produces **no** second Workflow run — one run,
+- [ ] Re-sending the same message produces **no** second Workflow run: one run,
       re-signalled.
 
 ## Pitfalls
 
 - **Delete-before-durable loses events.** If you delete the message *before*
   `signalWithStart` returns, a crash in between drops the event entirely. Signal
-  first, delete second — at-least-once.
+  first, delete second: at-least-once.
 - **Don't make it at-most-once.** Acking/deleting on receive (or auto-delete)
   trades a duplicate (which Temporal de-dupes) for a *lost* import (which it
   can't recover). At-least-once + idempotent ID is the safe combination.
 - **The bridge is not a Workflow.** Don't put the receive loop inside a Workflow
-  or Activity — there are no determinism constraints on glue code, and blocking
+  or Activity; there are no determinism constraints on glue code, and blocking
   SDK calls / `WaitTimeSeconds` belong here, not in Workflow code.
 - **Don't hot-spin.** Omitting `WaitTimeSeconds` makes SQS return immediately and
   hammers the API. Long poll.
 
 ## Hints
 
-<details><summary>Hint 1 — LocalStack SqsClient</summary>
+<details><summary>Hint 1: LocalStack SqsClient</summary>
 
 ```java
 SqsClient.builder()
@@ -281,12 +281,12 @@ SqsClient.builder()
 ```
 </details>
 
-<details><summary>Hint 2 — why the ID makes it idempotent</summary>
+<details><summary>Hint 2: why the ID makes it idempotent</summary>
 
 `signalWithStart` keys on the Workflow ID. Two messages for the same file both
 resolve to `import-imports-incoming-orders.csv`: the first *starts* the Workflow,
 the second finds it already running and only *signals* it. Make the ID a pure
-function of the event (bucket + key) and redelivery is automatically harmless —
+function of the event (bucket + key) and redelivery is automatically harmless:
 no de-dup table needed.
 </details>
 
@@ -295,7 +295,7 @@ no de-dup table needed.
 - Wire a **dead-letter queue**: set a redrive policy on `imports-events` so a
   message that fails parsing N times lands on `imports-events-dlq`, and drain the
   DLQ into a compensation Workflow that records the bad event.
-- Handle a **full batch of 10**: `maxNumberOfMessages(10)` already pulls a batch —
+- Handle a **full batch of 10**: `maxNumberOfMessages(10)` already pulls a batch,
   signal each, and delete them with a single `deleteMessageBatch` only after all
   their signals are durable.
 </content>

@@ -1,4 +1,4 @@
-# Lab 6.2 — Replace S3 checkpointing
+# Lab 6.2: Replace S3 checkpointing
 
 **Time:** ~40 min · **Difficulty:** ★★ · **Stack:** Temporal + LocalStack
 
@@ -6,7 +6,7 @@
 
 A classic AWS pipeline writes each step's output to S3 so the next Lambda can
 pick it up and so a crash can resume from the last checkpoint. Temporal's durable
-state makes the *checkpoint-for-resumption* part unnecessary — the Workflow
+state makes the *checkpoint-for-resumption* part unnecessary; the Workflow
 already survives crashes. You'll keep S3 for **large payloads** (passing URIs,
 not bytes, between steps) but let Temporal own *whether each step ran*.
 
@@ -38,7 +38,7 @@ public interface ImportActivities {
 }
 ```
 
-**Activity impl — complete it.** Each step reads from one S3 URI and writes to
+**Activity impl, complete it.** Each step reads from one S3 URI and writes to
 the next; it returns the *next* URI, never the file contents:
 
 ```java
@@ -61,7 +61,7 @@ Reference ports: [`examples/07-aws-containers/python/s3_reference_payload.py`](.
 and [`.../go/s3_reference_payload.go`](../../examples/07-aws-containers/go/s3_reference_payload.go).
 Each step returns the **next URI**, never the bytes.
 
-**Python** (`temporalio`) — module-level Activities, lazy `boto3`:
+**Python** (`temporalio`), module-level Activities, lazy `boto3`:
 
 ```python
 from temporalio import activity, workflow
@@ -86,7 +86,7 @@ class ImportWorkflow:
         return f"{transformed}?rows={rows}"
 ```
 
-**Go** (`go.temporal.io/sdk`) — Activities return URIs; the Workflow sequences them:
+**Go** (`go.temporal.io/sdk`), Activities return URIs; the Workflow sequences them:
 
 ```go
 func Validate(ctx context.Context, inputS3URI string) (string, error) {
@@ -119,7 +119,7 @@ limit.
 3. Drive them from a Workflow (sequential: `validate → transform → load`) and
    confirm the row count comes back.
 4. Inspect the Workflow history: confirm only small URI strings appear in event
-   payloads — **not** file contents.
+   payloads, **not** file contents.
 
 ## Verification
 
@@ -146,22 +146,22 @@ count. In the Web UI, Activity inputs/outputs are short URIs.
 
 ## Pitfalls
 
-- **Don't return file contents from an Activity** if they can be large —
+- **Don't return file contents from an Activity** if they can be large;
   Workflow history has a payload size limit (keep individual payloads well under
   ~2 MB; total history bounded too). Return the URI; let the next Activity fetch.
-- The point isn't "stop using S3" — it's "stop using S3 as your durability
+- The point isn't "stop using S3"; it's "stop using S3 as your durability
   mechanism." Temporal provides durability; S3 stays a blob store.
 
 ## Hints
 
-<details><summary>Hint 1 — URI rewriting</summary>
+<details><summary>Hint 1: URI rewriting</summary>
 
 A simple convention makes the pipeline obvious:
 `s3://bucket/incoming/x.csv` → `.../validated/x.csv` → `.../transformed/x.csv`.
 Each step `getObject` from its input prefix and `putObject` to the next.
 </details>
 
-<details><summary>Hint 2 — large payloads in general</summary>
+<details><summary>Hint 2: large payloads in general</summary>
 
 For payloads that must live *in* history (not S3), look at a custom
 `PayloadConverter` / codec. For this lab, references-in-history is the right and

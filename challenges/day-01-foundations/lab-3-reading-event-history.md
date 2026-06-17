@@ -1,4 +1,4 @@
-# Lab 1.3 — Reading the Event History
+# Lab 1.3: Reading the Event History
 
 **Time:** ~30 min · **Difficulty:** ★ · **Stack:** Temporal dev server
 
@@ -16,7 +16,7 @@ turns the Hello Temporal run from Lab 1.2 into a thing you can read.
 - Explain what "deterministic replay" actually reconstructs.
 
 > **Coming from Airflow `[airflow]`:** there is no XCom table and no task-state
-> DB to cross-reference. The history *is* the source of truth — inputs, outputs,
+> DB to cross-reference. The history *is* the source of truth: inputs, outputs,
 > timers, retries, and signals, all in one ordered log.
 
 ## Prerequisites
@@ -41,12 +41,12 @@ turns the Hello Temporal run from Lab 1.2 into a thing you can read.
    ```
 
    Scroll through the events. Find and label, in order:
-   - `WorkflowExecutionStarted` — the input you passed.
-   - `WorkflowTaskScheduled` / `Started` / `Completed` — the Worker deciding
+   - `WorkflowExecutionStarted`: the input you passed.
+   - `WorkflowTaskScheduled` / `Started` / `Completed`: the Worker deciding
      what to do next.
-   - `ActivityTaskScheduled` / `Started` / `Completed` — the Activity call and
+   - `ActivityTaskScheduled` / `Started` / `Completed`: the Activity call and
      its **result**.
-   - `WorkflowExecutionCompleted` — the final return value.
+   - `WorkflowExecutionCompleted`: the final return value.
 
 3. **Find the inputs and outputs.** Locate the `name` argument inside the
    `WorkflowExecutionStarted` event and the greeting string inside the
@@ -77,7 +77,7 @@ You can answer all of these from the history alone:
 
 ## Hints
 
-<details><summary>Hint 1 — too much JSON</summary>
+<details><summary>Hint 1: too much JSON</summary>
 
 Pipe through a pager or `jq`. To see just event types in order:
 
@@ -87,7 +87,7 @@ temporal workflow show --workflow-id <id> --output json \
 ```
 </details>
 
-<details><summary>Hint 2 — where's the result?</summary>
+<details><summary>Hint 2: where's the result?</summary>
 
 Activity results live in the `activityTaskCompletedEventAttributes.result`
 payload; the Workflow's final result lives in
@@ -95,11 +95,11 @@ payload; the Workflow's final result lives in
 you under each event's payload section.
 </details>
 
-<details><summary>Hint 3 — replay answer</summary>
+<details><summary>Hint 3: replay answer</summary>
 
 Replay feeds the recorded history back through your Workflow code. Because
 `ActivityTaskCompleted` is already in the log, the SDK returns the recorded
-result instead of scheduling the Activity again — so it does **not** run twice.
+result instead of scheduling the Activity again, so it does **not** run twice.
 Only the un-recorded tail (the final completion) is produced fresh.
 </details>
 
@@ -108,6 +108,6 @@ Only the un-recorded tail (the final completion) is produced fresh.
 - Run the Workflow again with a different name and diff the two histories. Which
   events change, which stay structurally identical?
 - Use `temporal workflow show --workflow-id <id> --output json > history.json`
-  and keep the file — Day 4's replay-testing lab reuses exactly this artifact.
+  and keep the file; Day 4's replay-testing lab reuses exactly this artifact.
 - Force a retry (throw once from the Activity, as in Lab 1.2's stretch) and find
   the `ActivityTaskFailed` event plus the retry's second `ActivityTaskScheduled`.

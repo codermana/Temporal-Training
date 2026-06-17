@@ -1,4 +1,4 @@
-# Lab 3.2 — Fan-out with Kafka partitions
+# Lab 3.2: Fan-out with Kafka partitions
 
 **Time:** ~45 min · **Difficulty:** ★★★ · **Stack:** Temporal + Kafka
 
@@ -29,7 +29,7 @@ Workflow**: fan out one Activity per partition range, run them concurrently
   make kafka-topic TOPIC=batch-input PARTITIONS=6
   ```
 
-  <details><summary>Under the hood — what <code>make kafka-topic</code> runs</summary>
+  <details><summary>Under the hood: what <code>make kafka-topic</code> runs</summary>
 
   ```bash
   docker exec temporal-training-kafka \
@@ -44,7 +44,7 @@ Workflow**: fan out one Activity per partition range, run them concurrently
 
 ## Starter code
 
-New module (or extend Lab 3.1's). Sketch the contracts yourself this time —
+New module (or extend Lab 3.1's). Sketch the contracts yourself this time;
 you've seen the pattern. Target shape:
 
 ```java
@@ -79,15 +79,15 @@ public class PartitionFanoutWorkflowImpl implements PartitionFanoutWorkflow {
 
 The Activity impl can consume that partition with a `KafkaConsumer` assigned to
 the specific `TopicPartition` (use `assign`, not `subscribe`) and return a count.
-Keep it simple — the focus is the fan-out, not the consumer.
+Keep it simple: the focus is the fan-out, not the consumer.
 
 <details><summary><b>Doing this lab in Python or Go?</b> Starter scaffolds</summary>
 
 The capped fan-out pattern from [`examples/04-kafka`](../../examples/04-kafka)
-(`partition_fanout.py` / `.go`) — process partitions in chunks of `MAX_PARALLEL`
+(`partition_fanout.py` / `.go`): process partitions in chunks of `MAX_PARALLEL`
 so no more than that many Activities are in flight at once.
 
-**Python** (`temporalio`) — chunked `asyncio.gather`:
+**Python** (`temporalio`): chunked `asyncio.gather`:
 
 ```python
 import asyncio
@@ -119,7 +119,7 @@ class PartitionFanoutWorkflow:
         return total
 ```
 
-**Go** (`go.temporal.io/sdk`) — collect Futures per chunk, then `Get` each:
+**Go** (`go.temporal.io/sdk`): collect Futures per chunk, then `Get` each:
 
 ```go
 const MaxParallel = 4
@@ -148,7 +148,7 @@ func PartitionFanoutWorkflow(ctx workflow.Context, topic string, partitionCount 
 }
 ```
 
-The cap is the point: launch a chunk, join it, accumulate, then start the next —
+The cap is the point: launch a chunk, join it, accumulate, then start the next,
 never all partitions at once. Sum in a fixed (partition) order so the result is
 replay-stable.
 
@@ -169,14 +169,14 @@ Start the Workflow (via a small `main` or `temporal workflow start`) with
 `topic=batch-input, partitionCount=6`. Expected: the returned total equals the
 number of records you produced. In the Web UI history, confirm **at most
 `MAX_PARALLEL`** `ActivityTaskScheduled` events are outstanding before earlier
-ones complete — the cap is visible in the scheduling pattern.
+ones complete; the cap is visible in the scheduling pattern.
 
 ## Definition of done
 
 - [ ] One Activity processes one partition; results aggregate to a correct total.
 - [ ] Concurrency is capped at 4–6 in-flight, demonstrably (history shows
       batching, not all 6+ at once if cap < partitions).
-- [ ] The Workflow is deterministic — no partition iteration order leaks
+- [ ] The Workflow is deterministic: no partition iteration order leaks
       non-determinism into the result.
 
 ## Pitfalls
@@ -186,21 +186,21 @@ ones complete — the cap is visible in the scheduling pattern.
 - **Aggregation order.** Sum from the resolved promises in a fixed order; don't
   rely on completion order, which varies between runs/replays.
 - Assign the consumer to a specific `TopicPartition` (`consumer.assign(...)`),
-  not a subscription — you want *this* Activity to own *this* partition.
+  not a subscription: you want *this* Activity to own *this* partition.
 
 ## Hints
 
-<details><summary>Hint 1 — capping concurrency</summary>
+<details><summary>Hint 1: capping concurrency</summary>
 
 Process partitions in chunks of `MAX_PARALLEL`: launch a chunk with
 `Async.function`, `Promise.allOf(chunk).get()`, accumulate, then start the next
 chunk. Or maintain a sliding window of in-flight promises.
 </details>
 
-<details><summary>Hint 2 — deterministic sum</summary>
+<details><summary>Hint 2: deterministic sum</summary>
 
 Keep your `List<Promise<Long>>` in partition order and sum
-`promises.stream().mapToLong(Promise::get).sum()` after joining — the values are
+`promises.stream().mapToLong(Promise::get).sum()` after joining; the values are
 fixed once recorded, so the total is replay-stable.
 </details>
 

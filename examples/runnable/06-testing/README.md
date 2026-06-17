@@ -1,11 +1,11 @@
-# Testing Workflows — runnable lab (Java · Python · Go)
+# Testing Workflows: runnable lab (Java · Python · Go)
 
 The same reminder Workflow in three SDKs, exercised by a unit test that needs
 **no Temporal server**. A one-day `Workflow.sleep` completes in milliseconds
 because each SDK's test environment **skips time**. A second test mocks an
 Activity so the orchestration logic is verified in isolation.
 
-No dev server is required — every test runs fully in-process.
+No dev server is required; every test runs fully in-process.
 
 ## Java (`io.temporal:temporal-testing`)
 
@@ -48,5 +48,5 @@ Python: 3 passed
 Go:     ok  training.temporal/testing
 ```
 
-The one-day sleep adds no wall-clock time in any of the three — total runtime is
+The one-day sleep adds no wall-clock time in any of the three; total runtime is
 dominated by toolchain/test-server startup, not the simulated day.

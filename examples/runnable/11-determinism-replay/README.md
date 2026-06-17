@@ -1,4 +1,4 @@
-# Determinism & replay testing — runnable lab (Java · Python · Go)
+# Determinism & replay testing: runnable lab (Java · Python · Go)
 
 The same data-pipeline Workflow in three SDKs, plus a "harmless looking" refactor
 that **reorders** its two Activities. Each lab records a real history, then
@@ -22,7 +22,7 @@ mvn -q test
 ```
 
 Records history in-process via `TestWorkflowEnvironment`, then
-`WorkflowReplayer.replayWorkflowExecution(history, Impl.class)` — clean for the
+`WorkflowReplayer.replayWorkflowExecution(history, Impl.class)`: clean for the
 original, throws for the reordered impl. Test:
 `java/src/test/java/training/temporal/replay/ReplayDeterminismTest.java`.
 
@@ -45,7 +45,7 @@ go test ./...
 ```
 
 Records history against an in-process dev server
-(`testsuite.StartDevServer`, downloaded by the SDK — no external server), collects
+(`testsuite.StartDevServer`, downloaded by the SDK, no external server), collects
 the events into a `*historypb.History`, then `WorkflowReplayer.ReplayWorkflowHistory`.
 Both impls register under the **same** Workflow type name so the recorded history
 is replayed against each. Test: `go/replay_test.go`.
@@ -59,4 +59,4 @@ Go:     ok  training.temporal/replay
 ```
 
 The "breaks replay" test **passing** means replay correctly *detected* the
-non-determinism — that is the safety net working.
+non-determinism: that is the safety net working.

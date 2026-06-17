@@ -1,18 +1,18 @@
-# Day 6 — AWS migration & container workloads
+# Day 6: AWS migration & container workloads
 
 Two halves. **Morning:** replace AWS Glue + Lambda + S3 + Step Functions
 orchestration with Temporal, using LocalStack so no real AWS account is needed.
-**Afternoon:** run the Worker as a container — Dockerfile, Kubernetes Deployment,
-and KEDA autoscaling on Task Queue backlog — using a local `kind` cluster as an
+**Afternoon:** run the Worker as a container (Dockerfile, Kubernetes Deployment,
+and KEDA autoscaling on Task Queue backlog) using a local `kind` cluster as an
 EKS stand-in.
 
 Beyond the core five, two extra tiers go deeper into the AWS surface:
 
-- **Extended LocalStack labs (6–8)** — still free and local: an SQS *event
+- **Extended LocalStack labs (6–8)**: still free and local, an SQS *event
   trigger*, SNS *fan-out notifications*, and worker config/secrets from SSM
   **Parameter Store**. These round out the morning's "what drives a Workflow,
   and how does it talk back out".
-- **Optional real-AWS labs (9–12)** — ECS Fargate, EKS + IRSA, Aurora, and
+- **Optional real-AWS labs (9–12)**: ECS Fargate, EKS + IRSA, Aurora, and
   Route 53. LocalStack's free tier can't mock these, so each is **conceptual +
   reference manifests** with no `make` targets. Read the manifests and the
   reasoning; apply them only if you have an account (they cost real money, so
@@ -23,10 +23,10 @@ Beyond the core five, two extra tiers go deeper into the AWS surface:
 ```bash
 make temporal       # terminal 1: always
 
-# Morning (AWS labs) — LocalStack mocks S3/SQS/Glue:
+# Morning (AWS labs): LocalStack mocks S3/SQS/Glue:
 make stack-aws      # LocalStack on :4566
 
-# Afternoon (container labs) — local Kubernetes + KEDA:
+# Afternoon (container labs): local Kubernetes + KEDA:
 make kind-up        # create kind cluster + install KEDA via Helm
 make kind-load      # build the Worker image and load it into kind
 
@@ -48,7 +48,7 @@ from the full setup (`make setup-mac-full` / `make setup-ubuntu-full`).
 | 4 | [Containerize the Worker](lab-4-worker-container.md) | 45 min | ★★ | Docker |
 | 5 | [Kubernetes + KEDA autoscaling](lab-5-kubernetes-keda.md) | 70 min | ★★★ | `kind` + KEDA |
 
-**Extended LocalStack labs** — still free, still local (`make stack-aws`; `make aws-init` seeds the queue, topic, and params):
+**Extended LocalStack labs**: still free, still local (`make stack-aws`; `make aws-init` seeds the queue, topic, and params):
 
 | # | Lab | Time | Difficulty | Stack |
 |---|-----|------|-----------|-------|
@@ -56,7 +56,7 @@ from the full setup (`make setup-mac-full` / `make setup-ubuntu-full`).
 | 7 | [SNS fan-out notify Activity](lab-7-sns-fanout-notify.md) | 40 min | ★★ | `stack-aws` |
 | 8 | [Worker config & secrets from SSM Parameter Store](lab-8-ssm-parameter-store.md) | 40 min | ★★ | `stack-aws` |
 
-**Optional real-AWS labs** — conceptual + reference manifests only, **no `make` targets**, costs real money (tear down after):
+**Optional real-AWS labs**: conceptual + reference manifests only, **no `make` targets**, costs real money (tear down after):
 
 | # | Lab | Time | Difficulty | Stack |
 |---|-----|------|-----------|-------|
@@ -85,7 +85,7 @@ AWS shapes you'd run it on.
 | CloudWatch retry + DLQ | RetryOptions + compensation | 1–3 |
 | ECS service / EKS Deployment | Worker container (stateless, outbound-only) | 4–5, 9–10 |
 | HPA on CPU | KEDA on Task Queue backlog (EKS) / Application Auto Scaling on a published backlog metric (ECS) | 5, 9 |
-| IAM access keys in the image | IRSA (EKS) / task role (ECS) — no static keys | 8–10 |
+| IAM access keys in the image | IRSA (EKS) / task role (ECS), no static keys | 8–10 |
 | DynamoDB / Aurora idempotency table | At-least-once Activity + conditional/`ON CONFLICT` write = effectively-once | 11 |
 | ALB/NLB hostname hardcoded in config | Stable Route 53 name + health-checked failover | 12 |
 

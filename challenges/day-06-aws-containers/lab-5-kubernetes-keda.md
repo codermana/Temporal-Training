@@ -1,4 +1,4 @@
-# Lab 6.5 — Kubernetes + KEDA autoscaling
+# Lab 6.5: Kubernetes + KEDA autoscaling
 
 **Time:** ~70 min · **Difficulty:** ★★★ · **Stack:** kind + KEDA + Temporal
 
@@ -6,7 +6,7 @@
 
 The Worker image from Lab 6.4 now runs on Kubernetes. You'll deploy it with
 probes and a deploy strategy that won't kill in-flight Activities, then make it
-**autoscale on Task Queue backlog** with KEDA — the right signal for Temporal
+**autoscale on Task Queue backlog** with KEDA, the right signal for Temporal
 Workers (queue depth), not CPU. A local `kind` cluster stands in for EKS.
 
 ## Learning goals
@@ -19,13 +19,13 @@ Workers (queue depth), not CPU. A local `kind` cluster stands in for EKS.
 ## Prerequisites
 
 ```bash
-make temporal       # terminal 1 (or run Temporal in-cluster — see note)
+make temporal       # terminal 1 (or run Temporal in-cluster, see note)
 make kind-up        # create kind cluster + install KEDA via Helm
 make kind-load      # build the Worker image and load it into kind
 make kind-status    # cluster + KEDA + ScaledObject state
 ```
 
-<details><summary>Under the hood — what <code>make temporal</code> runs</summary>
+<details><summary>Under the hood: what <code>make temporal</code> runs</summary>
 
 ```bash
 temporal server start-dev \
@@ -36,7 +36,7 @@ temporal server start-dev \
 
 </details>
 
-<details><summary>Under the hood — what <code>make kind-up</code> runs</summary>
+<details><summary>Under the hood: what <code>make kind-up</code> runs</summary>
 
 ```bash
 kind create cluster --name temporal-training
@@ -48,7 +48,7 @@ helm install keda kedacore/keda --namespace keda --wait
 
 </details>
 
-<details><summary>Under the hood — what <code>make kind-load</code> runs</summary>
+<details><summary>Under the hood: what <code>make kind-load</code> runs</summary>
 
 ```bash
 docker build -t temporal-transform-worker:dev examples/runnable/08-aws-containers
@@ -57,7 +57,7 @@ kind load docker-image temporal-transform-worker:dev --name temporal-training
 
 </details>
 
-<details><summary>Under the hood — what <code>make kind-status</code> runs</summary>
+<details><summary>Under the hood: what <code>make kind-status</code> runs</summary>
 
 ```bash
 kubectl cluster-info
@@ -71,7 +71,7 @@ kubectl get scaledobjects -A
 > Easiest for the lab: run Temporal on the host and point the Deployment at
 > `host.docker.internal:7233` (or the kind node's gateway). The provided
 > `keda-scaledobject.yaml` references an in-cluster
-> `temporal-frontend.temporal.svc...` — adjust the endpoint to match wherever
+> `temporal-frontend.temporal.svc...`; adjust the endpoint to match wherever
 > your Frontend actually runs.
 
 ## Starter code
@@ -143,11 +143,11 @@ kubectl create configmap temporal-worker-config \
 
 <details><summary><b>Doing this lab in Python or Go?</b> Manifest scaffolds</summary>
 
-The `Deployment` and `ScaledObject` are **language-neutral** — KEDA's Temporal
+The `Deployment` and `ScaledObject` are **language-neutral**: KEDA's Temporal
 scaler watches Task Queue backlog on the server, not the Worker process, so the
 same `ScaledObject` works for any image. Two things change per language:
 
-1. **The image** you build and `kind load` (Java fat-JAR vs Python vs Go — see
+1. **The image** you build and `kind load` (Java fat-JAR vs Python vs Go, see
    the per-language Dockerfiles in
    [`examples/runnable/08-aws-containers`](../../examples/runnable/08-aws-containers)).
 2. **The exec probe's process name**, since the Worker is not an HTTP server:
@@ -164,9 +164,9 @@ readinessProbe:
   exec: { command: ["sh", "-c", "pgrep -f '^/worker' > /dev/null"] }
 ```
 
-Everything else — `maxUnavailable: 0`, `terminationGracePeriodSeconds` aligned
+Everything else (`maxUnavailable: 0`, `terminationGracePeriodSeconds` aligned
 with your longest `startToCloseTimeout`, the KEDA `temporal` trigger on
-`taskQueue: transform` with `queueType: ActivityTaskQueue` — is identical across
+`taskQueue: transform` with `queueType: ActivityTaskQueue`) is identical across
 languages. (Or add an HTTP `/health` endpoint in any language and switch all
 three to an `httpGet` probe.)
 
@@ -202,7 +202,7 @@ kubectl get hpa -w                 # KEDA manages an HPA under the hood
 kubectl get pods -w
 ```
 
-<details><summary>Under the hood — what <code>make load-transform</code> runs</summary>
+<details><summary>Under the hood: what <code>make load-transform</code> runs</summary>
 
 ```bash
 for i in $(seq 1 200); do
@@ -213,7 +213,7 @@ done
 
 </details>
 
-<details><summary>Under the hood — what <code>make start-workflow</code> runs</summary>
+<details><summary>Under the hood: what <code>make start-workflow</code> runs</summary>
 
 ```bash
 temporal workflow start \
@@ -241,9 +241,9 @@ work shows a graceful drain (`terminationGracePeriodSeconds`), not an abort.
 
 ## Pitfalls
 
-- **CPU-based HPA lags** for Temporal Workers — a poller can be idle on CPU while
+- **CPU-based HPA lags** for Temporal Workers: a poller can be idle on CPU while
   a deep backlog waits. Queue depth (KEDA Temporal scaler) is the correct signal.
-- **`minReplicaCount: 0`** for Workflow workers means no poller — sticky/timer
+- **`minReplicaCount: 0`** for Workflow workers means no poller: sticky/timer
   progress stalls. Keep Workflow workers ≥ 1; scale-to-zero only suits pure batch
   Activity pools.
 - **Grace period too short** kills Activities mid-run; set
@@ -253,14 +253,14 @@ work shows a graceful drain (`terminationGracePeriodSeconds`), not an abort.
 
 ## Hints
 
-<details><summary>Hint 1 — image not found / ImagePullBackOff</summary>
+<details><summary>Hint 1: image not found / ImagePullBackOff</summary>
 
 kind nodes don't have your local Docker images unless loaded. `make kind-load`
 builds and `kind load docker-image`s it. Set the Deployment `image:` to that
 exact tag and `imagePullPolicy: IfNotPresent` so it doesn't try a registry.
 </details>
 
-<details><summary>Hint 2 — separate Activity vs Workflow worker pools</summary>
+<details><summary>Hint 2: separate Activity vs Workflow worker pools</summary>
 
 For independent scaling, run two Deployments (different Task Queues / worker
 configs): an Activity-worker Deployment that can scale aggressively, and a
@@ -273,7 +273,7 @@ Workflow-worker Deployment held at a steady `minReplicaCount`. Two
 - Split into separate Activity-worker and Workflow-worker Deployments and scale
   them independently.
 - End-to-end: an **S3 event → SQS → Signal bridge** (LocalStack SQS) that starts
-  Workflows, so backlog is driven by "files arriving" rather than a manual loop —
+  Workflows, so backlog is driven by "files arriving" rather than a manual loop:
   the full *S3 trigger → containerized Worker → S3 output* pipeline.
 - Add IRSA-style credential injection (a mounted secret in the lab) so the
   containerized Activities can reach AWS without baked-in keys.

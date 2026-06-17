@@ -1084,10 +1084,10 @@ Then: "Questions?"
 
 ## Resources
 
-- **Docs** — https://docs.temporal.io
-- **Java SDK** — https://github.com/temporalio/sdk-java
-- **Slides** — https://temporal-training.slides.algogrit.com/why-temporal/
-- **Course repo** — https://github.com/CoderMana/temporal-training
+- **Docs**: https://docs.temporal.io
+- **Java SDK**: https://github.com/temporalio/sdk-java
+- **Slides**: https://temporal-training.slides.algogrit.com/why-temporal/
+- **Course repo**: https://github.com/CoderMana/temporal-training
 
 <!--
 Leave on screen during Q&A.

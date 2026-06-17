@@ -3,9 +3,9 @@
 These are complete mini-projects suitable for labs or live demos. The sibling
 numbered directories contain smaller snippets for explanations.
 
-Each lab ships in **three SDKs** under per-language subfolders — `java/`
+Each lab ships in **three SDKs** under per-language subfolders: `java/`
 (`io.temporal:temporal-sdk`), `python/` (`temporalio`), and `go/`
-(`go.temporal.io/sdk`) — with its own build file (`pom.xml`,
+(`go.temporal.io/sdk`), with its own build file (`pom.xml`,
 `pyproject.toml`, `go.mod`) and a `README.md` showing how to run all three.
 Pick a language with the script's optional arg:
 
@@ -16,7 +16,7 @@ scripts/run-example.sh hello go       # Go SDK
 ```
 
 Most labs run the **Worker** and the **client (starter)** as two separate,
-standalone processes — as you'd deploy them in production. Run the Worker in one
+standalone processes, as you'd deploy them in production. Run the Worker in one
 terminal and the starter in another with the optional `role` arg:
 
 ```bash
@@ -30,7 +30,7 @@ in a package at the module root); Python `worker.py` / `starter.py`; Java a
 and `05-kafka-bridge` are driven differently, `07-saga` and `08-aws-containers`
 run the Worker and are started from the Temporal CLI, and `06-testing` /
 `11-determinism-replay` run a test suite instead. `16-spring-boot` is a single
-Spring Boot process (Java only) — the starter hosts the Worker and the app serves
+Spring Boot process (Java only): the starter hosts the Worker and the app serves
 REST on `:8080`.
 
 | Lab | Day | Topic |

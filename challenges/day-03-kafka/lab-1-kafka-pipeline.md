@@ -1,4 +1,4 @@
-# Lab 3.1 — Kafka → Temporal → Kafka pipeline
+# Lab 3.1: Kafka → Temporal → Kafka pipeline
 
 **Time:** ~70 min · **Difficulty:** ★★ · **Stack:** Temporal + Kafka
 
@@ -28,7 +28,7 @@ key, and a producer **Activity** that writes the outcome back.
   make kafka-topic TOPIC=order-outcomes PARTITIONS=4
   ```
 
-  <details><summary>Under the hood — what <code>make kafka-topic</code> runs</summary>
+  <details><summary>Under the hood: what <code>make kafka-topic</code> runs</summary>
 
   ```bash
   docker exec temporal-training-kafka \
@@ -92,7 +92,7 @@ public interface OutcomeActivities {
 **Four files to complete** (stubs):
 
 ```java
-// OrderWorkflowImpl.java — long-lived, one per order key
+// OrderWorkflowImpl.java: long-lived, one per order key
 package training.temporal.kafka;
 
 import io.temporal.activity.ActivityOptions;
@@ -126,7 +126,7 @@ public class OrderWorkflowImpl implements OrderWorkflow {
 ```
 
 ```java
-// KafkaOutcomeActivities.java — the producer Activity impl
+// KafkaOutcomeActivities.java: the producer Activity impl
 package training.temporal.kafka;
 
 // TODO: implement OutcomeActivities.publishOutcome by producing a record to the
@@ -136,7 +136,7 @@ package training.temporal.kafka;
 ```
 
 ```java
-// KafkaSignalBridge.java — plain Java consumer thread (NOT workflow code)
+// KafkaSignalBridge.java: plain Java consumer thread (NOT workflow code)
 package training.temporal.kafka;
 
 // TODO: implements Runnable. In run():
@@ -150,7 +150,7 @@ package training.temporal.kafka;
 ```
 
 ```java
-// KafkaWorker.java — entrypoint
+// KafkaWorker.java: entrypoint
 package training.temporal.kafka;
 
 // TODO: start a Worker on the "orders" task queue registering OrderWorkflowImpl
@@ -165,7 +165,7 @@ Reference solution: [`examples/runnable/05-kafka-bridge/python`](../../examples/
 and [`.../go`](../../examples/runnable/05-kafka-bridge/go). Try the TODOs yourself
 before peeking.
 
-**Python** (`temporalio` + `kafka-python`) — a class-based producer Activity, a
+**Python** (`temporalio` + `kafka-python`): a class-based producer Activity, a
 Signal-fed Workflow, and a consumer bridge that uses `start_signal`:
 
 ```python
@@ -212,7 +212,7 @@ class OrderWorkflow:
 #   and consumer.commit() ONLY after start_workflow returns.
 ```
 
-**Go** (`go.temporal.io/sdk` + `segmentio/kafka-go`) — a Signal-channel Workflow
+**Go** (`go.temporal.io/sdk` + `segmentio/kafka-go`): a Signal-channel Workflow
 and a `SignalWithStartWorkflow` bridge:
 
 ```go
@@ -263,7 +263,7 @@ make run-kafka      # starts Worker + bridge
 # In another terminal: produce an order, key = order id
 ```
 
-<details><summary>Under the hood — what <code>make run-kafka</code> runs</summary>
+<details><summary>Under the hood: what <code>make run-kafka</code> runs</summary>
 
 ```bash
 cd examples/runnable/05-kafka-bridge && \
@@ -293,7 +293,7 @@ In the Web UI, `order-order-1` shows a `WorkflowExecutionStarted` followed by
 
 ## Pitfalls
 
-- **Don't run a Kafka client inside Workflow code.** Consuming/producing is I/O —
+- **Don't run a Kafka client inside Workflow code.** Consuming/producing is I/O;
   it belongs in the bridge thread (consume) and an Activity (produce). Workflow
   code stays deterministic.
 - **`signalWithStart`, not `start`.** The first event for a key must start the
@@ -304,7 +304,7 @@ In the Web UI, `order-order-1` shows a `WorkflowExecutionStarted` followed by
 
 ## Hints
 
-<details><summary>Hint 1 — signalWithStart shape</summary>
+<details><summary>Hint 1: signalWithStart shape</summary>
 
 ```java
 BatchRequest batch = client.newSignalWithStartRequest();
@@ -316,7 +316,7 @@ Build the typed stub with a `workflowId` derived from `record.key()` so the same
 key always maps to the same execution.
 </details>
 
-<details><summary>Hint 2 — bounding history</summary>
+<details><summary>Hint 2: bounding history</summary>
 
 Count processed events; when the count crosses a threshold (e.g. 1000), call
 `Workflow.continueAsNew(orderId)`. The new run starts with empty history and an

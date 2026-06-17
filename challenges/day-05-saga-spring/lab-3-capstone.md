@@ -1,12 +1,12 @@
-# Lab 5.3 — Capstone: design & build a transactional saga
+# Lab 5.3: Capstone: design & build a transactional saga
 
 **Time:** ~90 min · **Difficulty:** ★★★ · **Stack:** Temporal (+ optional Kafka)
 
 ## Scenario
 
 Your team is handed a multi-step, Kafka-triggered Airflow DAG that represents a
-business transaction. Redesign and implement it as a Temporal Saga in Spring Boot
-— end to end. This is open-ended: there's no single right answer, and that's the
+business transaction. Redesign and implement it as a Temporal Saga in Spring Boot,
+end to end. This is open-ended: there's no single right answer, and that's the
 point. You'll make and defend design decisions.
 
 ## The brief
@@ -22,11 +22,11 @@ You receive (or pick) a DAG like one of these:
   update_entitlements → notify`. Failures restore the previous plan and reverse
   proration.
 
-Pick one (or bring a real DAG from your own systems — encouraged).
+Pick one (or bring a real DAG from your own systems, encouraged).
 
 <details><summary><b>Doing this capstone in Python or Go?</b> Starter scaffolds</summary>
 
-The capstone is language-agnostic — pick the SDK you'll ship in. Two **new
+The capstone is language-agnostic: pick the SDK you'll ship in. Two **new
 real-world saga** references are provided in all three languages to copy the shape
 from:
 
@@ -39,15 +39,15 @@ from:
   · [`.../go/money_transfer_saga.go`](../../examples/06-saga-spring/go/money_transfer_saga.go)
 
 Wiring/lifecycle and triggers follow Lab 5.2's polyglot scaffold (FastAPI/Flask
-lifespan for Python, plain service `main` for Go — Spring Boot autoconfig is
+lifespan for Python, plain service `main` for Go; Spring Boot autoconfig is
 Java-only). The compensation pattern is identical to Lab 5.1: a manual stack
 (Python `list`) or slice of closures (Go) unwound in reverse.
 
 The `continueAsNew` stretch maps directly:
 - **Python:** `workflow.continue_as_new(args=[...])`
-  — see [`examples/runnable/12-continue-as-new/python`](../../examples/runnable/12-continue-as-new/python).
+  (see [`examples/runnable/12-continue-as-new/python`](../../examples/runnable/12-continue-as-new/python)).
 - **Go:** `return workflow.NewContinueAsNewError(ctx, Workflow, ...)`
-  — see [`.../12-continue-as-new/go`](../../examples/runnable/12-continue-as-new/go).
+  (see [`.../12-continue-as-new/go`](../../examples/runnable/12-continue-as-new/go)).
 
 For the required **test**, use each SDK's in-process test env:
 `WorkflowEnvironment` (Python, `temporalio.testing`) or
@@ -64,7 +64,7 @@ Your implementation **must** include:
    failure.
 2. **A Kafka trigger** via a Spring `@KafkaListener` (or the Day 3 bridge) that
    starts the saga from an event. (If your machine is tight on resources, a REST
-   trigger is an acceptable substitute — note the trade-off.)
+   trigger is an acceptable substitute; note the trade-off.)
 3. **At least one synchronous** interaction (caller blocks for the outcome) **and
    one asynchronous** interaction (fire-and-forget + Query/Signal for status).
 4. **Bounded retries** so permanent failures reach compensation.
@@ -87,7 +87,7 @@ mid-flight change.
 5. **Inject failures** at each step and verify compensation.
 6. **Write the test(s).**
 
-No starter files are provided — assembling the pieces from Labs 5.1 and 5.2 is
+No starter files are provided; assembling the pieces from Labs 5.1 and 5.2 is
 the exercise. Reuse those modules as templates.
 
 ## Definition of done

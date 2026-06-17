@@ -1,11 +1,11 @@
-# Lab 6.4 — Containerize the Worker
+# Lab 6.4: Containerize the Worker
 
 **Time:** ~45 min · **Difficulty:** ★★ · **Stack:** Docker + Temporal
 
 ## Scenario
 
 A Temporal Worker is a stateless, long-running process that polls a Task Queue
-and makes only **outbound** connections — no inbound ports, no Ingress. That
+and makes only **outbound** connections, no inbound ports, no Ingress. That
 makes it an ideal container workload. You'll write a multi-stage Dockerfile,
 tune the JVM for containers, wire graceful shutdown, and add a health signal so
 Kubernetes (Lab 6.5) can probe it.
@@ -28,7 +28,7 @@ Use a Worker entrypoint that is **env-driven** (so the same image serves any
 Task Queue):
 
 ```java
-// WorkerMain.java (shape — you likely already have this from Labs 6.1-6.3)
+// WorkerMain.java (shape: you likely already have this from Labs 6.1-6.3)
 public final class WorkerMain {
   public static void main(String[] args) {
     String target    = System.getenv().getOrDefault("TEMPORAL_ADDRESS", "127.0.0.1:7233");
@@ -42,7 +42,7 @@ public final class WorkerMain {
 }
 ```
 
-**Dockerfile — complete the stubs:**
+**Dockerfile, complete the stubs:**
 
 ```dockerfile
 # ---- build stage ----
@@ -66,13 +66,13 @@ WORKDIR /app
 
 <details><summary><b>Doing this lab in Python or Go?</b> Container scaffolds</summary>
 
-The Worker entrypoint is identical in spirit everywhere — env-driven config, a
-graceful shutdown on `SIGTERM` — but the **container build differs** (fat-JAR vs
+The Worker entrypoint is identical in spirit everywhere (env-driven config, a
+graceful shutdown on `SIGTERM`), but the **container build differs** (fat-JAR vs
 `pip install` vs `go build`). Reference Dockerfiles + workers:
 [`examples/runnable/08-aws-containers/python`](../../examples/runnable/08-aws-containers/python)
 and [`.../go`](../../examples/runnable/08-aws-containers/go).
 
-**Python** — uv provisions deps from `pyproject.toml`. `SIGTERM` drains the
+**Python**: uv provisions deps from `pyproject.toml`. `SIGTERM` drains the
 `async with Worker(...)` block on its own:
 
 ```dockerfile
@@ -86,7 +86,7 @@ ENTRYPOINT ["uv", "run", "--no-sync", "worker.py"]   # no inbound port to EXPOSE
 ```
 
 ```python
-# worker.py — env-driven, blocks until SIGTERM, drains gracefully
+# worker.py: env-driven, blocks until SIGTERM, drains gracefully
 import asyncio, os
 from temporalio.client import Client
 from temporalio.worker import Worker
@@ -99,7 +99,7 @@ async def main():
         await asyncio.Future()   # block; the worker drains on shutdown
 ```
 
-**Go** — multi-stage: build a static binary, ship it on a tiny base. Catch
+**Go**: multi-stage build a static binary, ship it on a tiny base. Catch
 `SIGTERM` and `w.Stop()` to drain:
 
 ```dockerfile
@@ -116,7 +116,7 @@ ENTRYPOINT ["/worker"]            # no inbound port to EXPOSE
 ```
 
 ```go
-// main.go — env-driven; block on SIGTERM, then w.Stop() drains in-flight work
+// main.go: env-driven; block on SIGTERM, then w.Stop() drains in-flight work
 w := worker.New(c, taskQueue, worker.Options{})
 // register workflow + activities ...
 _ = w.Start()
@@ -168,7 +168,7 @@ hook ran.
 
 ## Pitfalls
 
-- **No inbound port needed.** Don't `EXPOSE` a service port expecting traffic —
+- **No inbound port needed.** Don't `EXPOSE` a service port expecting traffic;
   the Worker dials *out* to the Frontend. (A `/health` port is optional and only
   for probes.)
 - **`host.docker.internal`** reaches the host on macOS/Windows; on Linux use
@@ -179,13 +179,13 @@ hook ran.
 
 ## Hints
 
-<details><summary>Hint 1 — runnable jar</summary>
+<details><summary>Hint 1: runnable jar</summary>
 
 Add the Shade plugin so `package` produces a fat jar with the right `Main-Class`,
 then `COPY --from=build /src/target/<artifact>.jar /app/worker.jar`.
 </details>
 
-<details><summary>Hint 2 — health endpoint (for Lab 6.5)</summary>
+<details><summary>Hint 2: health endpoint (for Lab 6.5)</summary>
 
 A plain `com.sun.net.httpserver.HttpServer` returning `200` on `/health` only
 **after** `factory.start()` succeeds is enough for a readiness probe. Spring

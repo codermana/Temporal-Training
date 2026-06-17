@@ -1,10 +1,10 @@
-# Async & parallel Activities — runnable lab (Java · Python · Go)
+# Async & parallel Activities: runnable lab (Java · Python · Go)
 
 The same order-pricing Workflow in three SDKs: price every SKU **in parallel**,
-then sum. The teaching point is identical everywhere — *start every Activity
+then sum. The teaching point is identical everywhere: *start every Activity
 before you wait on any of them.*
 
-The Worker and the client (starter) are **separate, standalone processes** — as
+The Worker and the client (starter) are **separate, standalone processes**, as
 they are in production. They never talk to each other directly; both only talk
 to the Temporal server, agreeing on a Task Queue name (`pricing`) and the
 Workflow definition. Run the Worker in one terminal and the starter in another.
@@ -66,4 +66,4 @@ Total price: 355      # book(30) + lamp(75) + desk(250)
 ```
 
 In the Web UI history all `ActivityTaskScheduled` events are emitted in the
-**same** Workflow Task — proof the fan-out ran concurrently.
+**same** Workflow Task: proof the fan-out ran concurrently.

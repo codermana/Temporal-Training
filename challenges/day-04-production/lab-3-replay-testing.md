@@ -1,4 +1,4 @@
-# Lab 4.3 — Replay testing
+# Lab 4.3: Replay testing
 
 **Time:** ~40 min · **Difficulty:** ★★★ · **Stack:** None (replay only)
 
@@ -6,7 +6,7 @@
 
 You're about to deploy a code change to a Workflow that has **executions already
 running in production**. If your change alters the sequence of commands the
-Workflow produces, replay against existing histories will fail — a non-deterministic
+Workflow produces, replay against existing histories will fail, a non-deterministic
 deployment that can wedge live Workflows. Replay testing catches this *before*
 deploy: feed a real recorded history through your new code and assert it still
 replays clean.
@@ -57,7 +57,7 @@ Reference solution: [`examples/runnable/11-determinism-replay/python`](../../exa
 and [`.../go`](../../examples/runnable/11-determinism-replay/go). Try the TODOs
 before peeking.
 
-**Python** (`temporalio.worker.Replayer`) — record a history, then replay it:
+**Python** (`temporalio.worker.Replayer`): record a history, then replay it:
 
 ```python
 from temporalio.testing import WorkflowEnvironment
@@ -74,7 +74,7 @@ async def record_history():
 
 async def test_replays_clean():
     history = await record_history()
-    # TODO 1: Replayer(workflows=[DataPipelineWorkflow]) — clean.
+    # TODO 1: Replayer(workflows=[DataPipelineWorkflow]) -> clean.
     # TODO 2 (break it): replay the reordered impl -> pytest.raises(Exception).
     await Replayer(workflows=[DataPipelineWorkflow]).replay_workflow(history)
 ```
@@ -82,7 +82,7 @@ async def test_replays_clean():
 The fix is `workflow.patched("change-id")` (the analogue of `Workflow.getVersion`):
 gate the new path so old histories return the original command stream.
 
-**Go** (`go.temporal.io/sdk/worker.WorkflowReplayer`) — record against an
+**Go** (`go.temporal.io/sdk/worker.WorkflowReplayer`): record against an
 in-process dev server, then replay:
 
 ```go
@@ -95,7 +95,7 @@ replayer.RegisterWorkflowWithOptions(DataPipelineWorkflow,
 ```
 
 Both impls must register under the **same** Workflow type name. The Go fix is
-`workflow.GetVersion(ctx, "change-id", workflow.DefaultVersion, 1)` — gate the new
+`workflow.GetVersion(ctx, "change-id", workflow.DefaultVersion, 1)`: gate the new
 branch so replayed histories keep their recorded order.
 
 </details>
@@ -103,15 +103,15 @@ branch so replayed histories keep their recorded order.
 ## Tasks
 
 1. Capture a history JSON from a real execution into `src/test/resources/`.
-2. Write `replaysCleanly` so it replays that history against the current impl —
+2. Write `replaysCleanly` so it replays that history against the current impl;
    it should pass.
 3. **Break it on purpose.** Add a structural change to the Workflow that alters
    the command sequence (e.g. insert an extra Activity call *before* the existing
-   one, or add a `Workflow.sleep`). Re-run — replay should now **fail** with a
+   one, or add a `Workflow.sleep`). Re-run; replay should now **fail** with a
    non-determinism error.
 4. **Fix it correctly.** Gate the new behavior behind `Workflow.getVersion(...)`
    so old histories take the original path and only new executions take the new
-   path. Re-run — replay passes again.
+   path. Re-run; replay passes again.
 
 ## Verification
 
@@ -119,11 +119,11 @@ branch so replayed histories keep their recorded order.
 mvn -q test -Dtest=ReplayTest
 ```
 
-<details><summary>Under the hood — what <code>make run-replay</code> runs</summary>
+<details><summary>Under the hood: what <code>make run-replay</code> runs</summary>
 
 ```bash
 cd examples/runnable/11-determinism-replay && mvn -q test
-# Pure replay test — no Temporal server needed.
+# Pure replay test, no Temporal server needed.
 ```
 
 </details>
@@ -143,7 +143,7 @@ cd examples/runnable/11-determinism-replay && mvn -q test
 ## Pitfalls
 
 - **What counts as a breaking change:** adding/removing/reordering Activity
-  calls, timers, signals waited on, or child Workflows — anything that changes
+  calls, timers, signals waited on, or child Workflows, anything that changes
   the *command* stream. Pure refactors that don't change commands are safe.
 - `getVersion` must be called **unconditionally on the same code path** for a
   given change id; don't wrap the `getVersion` call itself in your new branch.
@@ -152,14 +152,14 @@ cd examples/runnable/11-determinism-replay && mvn -q test
 
 ## Hints
 
-<details><summary>Hint 1 — loading the history</summary>
+<details><summary>Hint 1: loading the history</summary>
 
 `WorkflowHistory hist = WorkflowHistory.fromJson(Files.readString(path));` then
-`WorkflowReplayer.replayWorkflowExecution(hist, YourWorkflowImpl.class);` — or
+`WorkflowReplayer.replayWorkflowExecution(hist, YourWorkflowImpl.class);`, or
 pass the file/JSON directly via the matching overload.
 </details>
 
-<details><summary>Hint 2 — the getVersion fix</summary>
+<details><summary>Hint 2: the getVersion fix</summary>
 
 ```java
 int v = Workflow.getVersion("add-pre-step", Workflow.DEFAULT_VERSION, 1);
@@ -178,4 +178,4 @@ stream is unchanged.
   the old impl and `AutoUpgrade` on the new one; discuss when each fits
   (short-lived vs. long-running Workflows).
 - Add the replay test to a fixture of **several** captured histories and run them
-  all — this is the realistic CI gate.
+  all; this is the realistic CI gate.

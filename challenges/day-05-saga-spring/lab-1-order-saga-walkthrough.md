@@ -1,4 +1,4 @@
-# Lab 5.1 — Order saga walkthrough
+# Lab 5.1: Order saga walkthrough
 
 **Time:** ~60 min · **Difficulty:** ★★ · **Stack:** Temporal dev server
 
@@ -7,7 +7,7 @@
 An order goes through three steps that each touch a different system:
 **authorize payment → reserve inventory → ship**. Any step can fail. If shipping
 fails after payment and inventory succeeded, you must **undo** the earlier steps
-— refund the payment and restore the inventory — or you've charged a customer for
+(refund the payment and restore the inventory) or you've charged a customer for
 goods they'll never receive. You'll build this saga with a compensation stack.
 
 ## Learning goals
@@ -51,7 +51,7 @@ public interface OrderActivities {
 }
 ```
 
-**Activity impl** — provide simple implementations. Make `ship` **fail** when the
+**Activity impl**: provide simple implementations. Make `ship` **fail** when the
 orderId contains `"fail"` so you can trigger compensation on demand:
 
 ```java
@@ -63,7 +63,7 @@ public class OrderActivitiesImpl implements OrderActivities {
 }
 ```
 
-**Workflow impl** — the heart of the lab:
+**Workflow impl**: the heart of the lab:
 
 ```java
 // OrderSagaWorkflowImpl.java
@@ -102,17 +102,17 @@ public class OrderSagaWorkflowImpl implements OrderSagaWorkflow {
 }
 ```
 
-**Worker** — register impls on the `orders` Task Queue and stay alive so you can
+**Worker**: register impls on the `orders` Task Queue and stay alive so you can
 start Workflows from the CLI.
 
 <details><summary><b>Doing this lab in Python or Go?</b> Starter scaffolds</summary>
 
 Reference solution: [`examples/runnable/07-saga/python`](../../examples/runnable/07-saga/python)
 and [`.../go`](../../examples/runnable/07-saga/go). Try the TODOs yourself before
-peeking. Neither SDK has a built-in `Saga` helper — you keep the compensation
+peeking. Neither SDK has a built-in `Saga` helper, so you keep the compensation
 stack by hand (a list/slice) and unwind it in reverse on failure.
 
-**Python** (`temporalio`) — manual compensation stack with try/except:
+**Python** (`temporalio`): manual compensation stack with try/except:
 
 ```python
 from datetime import timedelta
@@ -148,7 +148,7 @@ class OrderSagaWorkflow:
             raise NotImplementedError
 ```
 
-**Go** (`go.temporal.io/sdk`) — compensation slice run in reverse on error:
+**Go** (`go.temporal.io/sdk`): compensation slice run in reverse on error:
 
 ```go
 func Ship(ctx context.Context, orderID string) error {
@@ -194,7 +194,7 @@ automates the stack; Python/Go do it by hand.
 make run-saga      # Worker on the "orders" queue
 ```
 
-<details><summary>Under the hood — what <code>make run-saga</code> runs</summary>
+<details><summary>Under the hood: what <code>make run-saga</code> runs</summary>
 
 ```bash
 cd examples/runnable/07-saga && mvn -q compile exec:java -Dexec.mainClass=training.temporal.saga.SagaWorker
@@ -229,26 +229,26 @@ after `ship` exhausts its retries.
 ## Pitfalls
 
 - **Unbounded retries.** Without `setMaximumAttempts`, the default policy retries
-  `ship` forever — the saga never reaches compensation. This is the #1 mistake.
+  `ship` forever, and the saga never reaches compensation. This is the #1 mistake.
 - **Pushing the compensation before the forward step succeeds.** Only push a
   compensation *after* its forward step returns, or you'll try to undo something
   that never happened.
-- Compensation Activities should be **idempotent** — they may themselves be
+- Compensation Activities should be **idempotent**; they may themselves be
   retried.
 
 ## Hints
 
-<details><summary>Hint 1 — the stack pattern</summary>
+<details><summary>Hint 1: the stack pattern</summary>
 
 ```java
 String paymentId = activities.authorizePayment(orderId);
 compensations.push(() -> activities.cancelPayment(paymentId));
 ```
-On failure: `while (!compensations.isEmpty()) compensations.pop().run();` — a
+On failure: `while (!compensations.isEmpty()) compensations.pop().run();`; a
 `Deque` used as a stack unwinds in reverse automatically.
 </details>
 
-<details><summary>Hint 2 — Temporal's Saga helper</summary>
+<details><summary>Hint 2: Temporal's Saga helper</summary>
 
 The SDK also ships `io.temporal.workflow.Saga`, which manages the compensation
 list for you (`saga.addCompensation(...)` / `saga.compensate()`). Build it by

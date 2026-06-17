@@ -1,4 +1,4 @@
-# Lab 1.1 — Local dev setup
+# Lab 1.1: Local dev setup
 
 **Time:** ~20 min · **Difficulty:** ★ · **Stack:** Temporal dev server
 
@@ -29,7 +29,7 @@ gives you the muscle memory for the three-terminal pattern you'll use every day.
    make check
    ```
 
-   <details><summary>Under the hood — what <code>make check</code> runs</summary>
+   <details><summary>Under the hood: what <code>make check</code> runs</summary>
 
    ```bash
    scripts/check-local.sh   # verifies Java, Maven, and the temporal CLI are on PATH
@@ -37,7 +37,7 @@ gives you the muscle memory for the three-terminal pattern you'll use every day.
 
    </details>
 
-   If anything is missing, fix it before continuing — later labs assume a green
+   If anything is missing, fix it before continuing; later labs assume a green
    `make check`.
 
 2. **Start the dev server** in its own terminal and leave it running:
@@ -46,7 +46,7 @@ gives you the muscle memory for the three-terminal pattern you'll use every day.
    make temporal
    ```
 
-   <details><summary>Under the hood — what <code>make temporal</code> runs</summary>
+   <details><summary>Under the hood: what <code>make temporal</code> runs</summary>
 
    ```bash
    temporal server start-dev \
@@ -60,7 +60,7 @@ gives you the muscle memory for the three-terminal pattern you'll use every day.
    Read the startup banner. Note the gRPC address and the Web UI URL it prints.
 
 3. **Open the Web UI** at <http://127.0.0.1:8233>. Find the **Namespaces**
-   selector and confirm `default` exists. There are zero Workflows so far —
+   selector and confirm `default` exists. There are zero Workflows so far;
    that's expected.
 
 4. **Talk to the server from the CLI.** In a third terminal:
@@ -94,7 +94,7 @@ temporal operator cluster health     # should report SERVING
 
 ## Hints
 
-<details><summary>Hint 1 — CLI can't connect</summary>
+<details><summary>Hint 1: CLI can't connect</summary>
 
 The CLI defaults to `127.0.0.1:7233`. If `make temporal` is running but the CLI
 times out, confirm nothing else is bound to that port and that the server
@@ -102,7 +102,7 @@ terminal didn't exit. Use `temporal --address 127.0.0.1:7233 workflow list` to
 be explicit.
 </details>
 
-<details><summary>Hint 2 — port already in use</summary>
+<details><summary>Hint 2: port already in use</summary>
 
 A previous dev server may still be running. Find and stop it, or start the new
 one on alternate ports. `make temporal` runs in the foreground, so closing that
@@ -113,6 +113,6 @@ terminal stops the server.
 
 - Start a **persistent** dev server (`make temporal-persistent`) and confirm
   Workflow history survives a server restart. Compare to the default in-memory
-  behavior — why does this matter for the rest of the week?
+  behavior. Why does this matter for the rest of the week?
 - Explore `temporal operator namespace describe default` and note the default
   retention period for closed Workflows.

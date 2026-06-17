@@ -1,4 +1,4 @@
-# Day 5 — Saga pattern, Spring Boot & capstone
+# Day 5: Saga pattern, Spring Boot & capstone
 
 Today ties everything together: a transactional order **saga** with
 compensation, wired into **Spring Boot**, and a **capstone** where you redesign a
@@ -21,7 +21,7 @@ make stack-kafka
 |---|-----|------|-----------|
 | 1 | [Order saga walkthrough](lab-1-order-saga-walkthrough.md) | 60 min | ★★ |
 | 2 | [Saga in Spring Boot](lab-2-saga-spring-boot.md) | 70 min | ★★★ |
-| 3 | [Capstone — design & build a saga](lab-3-capstone.md) | 90 min | ★★★ |
+| 3 | [Capstone: design & build a saga](lab-3-capstone.md) | 90 min | ★★★ |
 
 Lab 1 establishes the saga; Lab 2 productionizes it in Spring; Lab 3 is open-ended.
 
@@ -41,7 +41,7 @@ authorizePayment ─▶ reserveInventory ─▶ ship
 
 ## Coming from Airflow / Kafka?
 
-- **Orchestration vs choreography:** Temporal favors orchestration — one
+- **Orchestration vs choreography:** Temporal favors orchestration, where one
   Workflow owns the sequence and the rollback, instead of services reacting to
   each other's events and hoping the compensation fires.
 - **`on_failure_callback` cleanup → explicit compensation stack:** rollback is

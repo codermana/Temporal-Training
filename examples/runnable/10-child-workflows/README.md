@@ -1,12 +1,12 @@
-# Child Workflows — runnable lab (Java · Python · Go)
+# Child Workflows: runnable lab (Java · Python · Go)
 
 The same parent/child fan-out in three SDKs: a `BatchWorkflow` spawns one
 `ItemWorkflow` **per item**, in parallel, then waits for all of them. The
 teaching point is that each child gets its own **stable Workflow ID**
-(`item-A`, `item-B`, `item-C`) — so it has its own history and is separately
+(`item-A`, `item-B`, `item-C`), so it has its own history and is separately
 queryable, signalable, and cancelable, unlike an Activity.
 
-The Worker and the client (starter) are **separate, standalone processes** — as
+The Worker and the client (starter) are **separate, standalone processes**, as
 they are in production. They never talk to each other directly; both only talk
 to the Temporal server, agreeing on a Task Queue name (`child-workflows`) and the
 Workflow definitions. The Worker registers **both** the parent (`BatchWorkflow`)
@@ -71,4 +71,4 @@ processed[C] in child item-C
 In the Web UI you'll see one parent execution (`batch-parent-demo`) plus three
 child executions `item-A` / `item-B` / `item-C`, each with its own history. The
 `StartChildWorkflowExecutionInitiated` events are emitted in the same Workflow
-Task — proof the children were started concurrently.
+Task: proof the children were started concurrently.

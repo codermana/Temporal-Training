@@ -1,11 +1,11 @@
-# Lab 2.2 — Signals & Queries
+# Lab 2.2: Signals & Queries
 
 **Time:** ~45 min · **Difficulty:** ★★ · **Stack:** Temporal dev server
 
 ## Scenario
 
-A purchase order needs human approval. The Workflow starts, then **waits** —
-possibly for hours — until someone approves or rejects it. Meanwhile a dashboard
+A purchase order needs human approval. The Workflow starts, then **waits**,
+possibly for hours, until someone approves or rejects it. Meanwhile a dashboard
 needs to read its current state without disturbing it. Signals deliver the
 decision; Queries read the state. This is the canonical "durable wait for a
 human" pattern that Airflow sensors fake with polling.
@@ -25,7 +25,7 @@ human" pattern that Airflow sensors fake with polling.
 
 - Day 1 complete; `make temporal` running.
 
-<details><summary>Under the hood — what <code>make temporal</code> runs</summary>
+<details><summary>Under the hood: what <code>make temporal</code> runs</summary>
 
 ```bash
 temporal server start-dev \
@@ -43,7 +43,7 @@ Scaffold a module in `training.temporal.approval` (reuse the Lab 1.2 `pom.xml`;
 `artifactId` `approval`, exec `mainClass`
 `training.temporal.approval.ApprovalWorker`).
 
-**Given contract** — note it already includes Update methods you'll use in Lab
+**Given contract**: note it already includes Update methods you'll use in Lab
 2.3. For *this* lab implement `run`, `approve`, `reject`, and `currentState`;
 leave the update methods as stubs for now.
 
@@ -72,7 +72,7 @@ public interface ApprovalWorkflow {
   @QueryMethod
   String currentState();
 
-  // Used in Lab 2.3 — leave unimplemented (throw) until then.
+  // Used in Lab 2.3: leave unimplemented (throw) until then.
   @UpdateMethod
   String changeNote(String note);
 
@@ -81,7 +81,7 @@ public interface ApprovalWorkflow {
 }
 ```
 
-**Workflow impl** — complete the signal/query/await logic:
+**Workflow impl**: complete the signal/query/await logic:
 
 ```java
 // ApprovalWorkflowImpl.java
@@ -126,7 +126,7 @@ public class ApprovalWorkflowImpl implements ApprovalWorkflow {
 }
 ```
 
-**Worker** — start a Worker on a task queue (e.g. `approval`), start one
+**Worker**: start a Worker on a task queue (e.g. `approval`), start one
 Workflow with a fixed Workflow ID (e.g. `approval-demo`), then keep the process
 alive (`new CountDownLatch(1).await();`) so you can drive it from the CLI.
 Handle `WorkflowExecutionAlreadyStarted` so re-running the Worker reuses the
@@ -161,18 +161,18 @@ class ApprovalWorkflow:
         self._status = f"REJECTED: {reason}"
 
     @workflow.query
-    def current_state(self) -> str:        # read-only: never mutate here
+    def current_state(self) -> str:        # read-only, never mutate here
         return self._status
 ```
 
-**Go** (`go.temporal.io/sdk`) — signals arrive on a channel; queries are
+**Go** (`go.temporal.io/sdk`): signals arrive on a channel; queries are
 registered handlers:
 
 ```go
 func ApprovalWorkflow(ctx workflow.Context, requestID string) (string, error) {
     status, note := "WAITING", "initial request"
 
-    // Query handler — read-only.
+    // Query handler, read-only.
     _ = workflow.SetQueryHandler(ctx, "currentState", func() (string, error) {
         return status, nil
     })
@@ -216,7 +216,7 @@ temporal workflow query  --workflow-id approval-demo --type currentState
 temporal workflow signal --workflow-id approval-demo --name approve \
   --input '"manager@example.com"'
 
-# Query again — status changed; the Workflow then completes
+# Query again: status changed; the Workflow then completes
 temporal workflow query  --workflow-id approval-demo --type currentState
 temporal workflow show   --workflow-id approval-demo --output json | jq -r '.events[].eventType'
 ```
@@ -235,13 +235,13 @@ completes and the history contains `WorkflowExecutionSignaled`.
 
 - **Queries must be side-effect free.** No field writes, no Activity calls, no
   `Workflow.await`. A query that mutates state corrupts replay.
-- **Don't busy-wait.** `while(!done){}` is wrong and non-deterministic — use
+- **Don't busy-wait.** `while(!done){}` is wrong and non-deterministic; use
   `Workflow.await(condition)`, which yields until a signal changes the condition.
-- A Query against a not-yet-started Workflow ID fails — start it first.
+- A Query against a not-yet-started Workflow ID fails; start it first.
 
 ## Hints
 
-<details><summary>Hint 1 — the await condition</summary>
+<details><summary>Hint 1: the await condition</summary>
 
 ```java
 Workflow.await(() -> status.startsWith("APPROVED") || status.startsWith("REJECTED"));
@@ -249,7 +249,7 @@ Workflow.await(() -> status.startsWith("APPROVED") || status.startsWith("REJECTE
 A Signal handler mutating `status` is what makes the predicate flip.
 </details>
 
-<details><summary>Hint 2 — keeping the Worker alive to receive signals</summary>
+<details><summary>Hint 2: keeping the Worker alive to receive signals</summary>
 
 After `factory.start()` and starting the Workflow, block the main thread with
 `new CountDownLatch(1).await();`. Add a shutdown hook calling

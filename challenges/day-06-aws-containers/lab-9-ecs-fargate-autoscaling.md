@@ -1,36 +1,36 @@
-# Lab 6.9 — ECS Fargate + autoscale on Task Queue backlog
+# Lab 6.9: ECS Fargate + autoscale on Task Queue backlog
 
-**Time:** ~45 min · **Difficulty:** ★★★ · **Stack:** real AWS (ECS Fargate) — optional
+**Time:** ~45 min · **Difficulty:** ★★★ · **Stack:** real AWS (ECS Fargate), optional
 
 > **Optional · real AWS account required.** This lab provisions real ECS Fargate
 > resources (small cost, ~cents/hr). It is **not** runnable on the free LocalStack
-> tier — there are **no `make` targets**. Walk the manifests; apply them only if
+> tier: there are **no `make` targets**. Walk the manifests; apply them only if
 > you have an account and want the full experience.
 
 ## Scenario
 
 Lab 6.5 ran the Worker on Kubernetes and let **KEDA** autoscale it on Task Queue
-backlog. This lab does the same thing on **ECS Fargate** — but ECS has **no native
+backlog. This lab does the same thing on **ECS Fargate**, but ECS has **no native
 Temporal scaler**. KEDA polls `DescribeTaskQueue` for you and feeds the result into
 an HPA; on ECS you have to publish that signal yourself and let **Application Auto
-Scaling** consume it. Same idea — *scale on queue depth, not CPU* — just more
+Scaling** consume it. Same idea, *scale on queue depth, not CPU*, just more
 wiring. You'll run the Worker as a Fargate **Service** (stateless, outbound-only,
 no load balancer), publish the backlog as a **custom CloudWatch metric**, and
 target-track the service's desired count on that metric.
 
 > "Amazon ECS leverages the Application Auto Scaling service to provide this functionality."
 >
-> — *Amazon ECS Developer Guide*, docs.aws.amazon.com
+> *Amazon ECS Developer Guide*, docs.aws.amazon.com
 
 <!-- source: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-auto-scaling.html -->
 
 ## Learning goals
 
-- Run the Worker as an ECS Fargate **Service** with **no load balancer** — Workers
+- Run the Worker as an ECS Fargate **Service** with **no load balancer**: Workers
   take no inbound traffic, they dial *out* to the Frontend.
 - Understand why ECS needs a **backlog publisher** where Kubernetes had KEDA, and
   wire **Application Auto Scaling** to target-track a custom CloudWatch metric.
-- Split **execution role** (pull image, fetch SSM secrets, write logs — used by the
+- Split **execution role** (pull image, fetch SSM secrets, write logs, used by the
   ECS agent) from **task role** (what your code calls AWS with at runtime).
 - Use `stopTimeout` as the ECS analog of `terminationGracePeriodSeconds`: drain
   in-flight Activities on `SIGTERM` instead of killing them.
@@ -40,14 +40,14 @@ target-track the service's desired count on that metric.
 This lab has **no `make` targets**. To actually apply it you need:
 
 - An AWS account and the `aws` CLI configured (a region, e.g. `us-east-1`).
-- A reachable Temporal Frontend — **Temporal Cloud** is easiest (an API key in
+- A reachable Temporal Frontend: **Temporal Cloud** is easiest (an API key in
   SSM); a self-hosted Frontend works if your Fargate subnets can route to it.
 - An ECS cluster (`aws ecs create-cluster --cluster-name temporal-training`), a VPC
   with **private** subnets + a NAT (or VPC endpoints) so tasks reach ECR/SSM/
   CloudWatch and your Frontend, and an ECR repo for the Worker image.
 - The Worker image from **Lab 6.4** (the same `Dockerfile`) pushed to that ECR repo.
 
-If you don't have an account, **read the manifests and the "Coming from" mapping** —
+If you don't have an account, **read the manifests and the "Coming from" mapping**:
 the concepts transfer directly from Lab 6.5.
 
 ## The manifests
@@ -57,42 +57,42 @@ All four live under
 no comments, so the explanation lives here.
 
 **[`ecs_task_definition.json`](../../examples/07-aws-containers/aws/ecs_task_definition.json)**
-— the Fargate task: the Worker container from the Lab 6.4 `Dockerfile`, `awsvpc`
+the Fargate task: the Worker container from the Lab 6.4 `Dockerfile`, `awsvpc`
 networking, and the two roles kept distinct:
 
-- `executionRoleArn` — the **ECS agent's** identity: pull the image from ECR,
+- `executionRoleArn`: the **ECS agent's** identity: pull the image from ECR,
   resolve the `secrets` from SSM, push logs to CloudWatch. Needs
   `AmazonECSTaskExecutionRolePolicy` + `ssm:GetParameters` on your parameter ARNs.
-- `taskRoleArn` — **your code's** identity at runtime (S3, the backlog publisher's
-  `cloudwatch:PutMetricData`). This is the role your Activities assume — the
+- `taskRoleArn`: **your code's** identity at runtime (S3, the backlog publisher's
+  `cloudwatch:PutMetricData`). This is the role your Activities assume, the
   ECS/IRSA analog of Lab 6.5's `serviceAccountName`.
 
 `TEMPORAL_ADDRESS` / `TEMPORAL_NAMESPACE` / `TASK_QUEUE` are plain `environment`;
 the API key and DB password come from `secrets` with `valueFrom` SSM ARNs (forward
 ref: **Lab 6.8** covers SSM/Secrets Manager config in depth). `stopTimeout: 120`
-gives in-flight Activities time to drain on `SIGTERM` — set it ≥ your longest
+gives in-flight Activities time to drain on `SIGTERM`: set it ≥ your longest
 `startToCloseTimeout`, exactly like `terminationGracePeriodSeconds` in Lab 6.5.
 
-**[`ecs_service.json`](../../examples/07-aws-containers/aws/ecs_service.json)** —
+**[`ecs_service.json`](../../examples/07-aws-containers/aws/ecs_service.json)**:
 the Service that keeps `desiredCount` tasks running. Note **`loadBalancers: []`**:
 Workers are outbound-only, so there is no load balancer, no target group, no health
-check on an inbound port — the direct mirror of "Workers are just Deployments
+check on an inbound port, the direct mirror of "Workers are just Deployments
 (never Services)" from Lab 6.5. `networkConfiguration` places tasks on **private**
 subnets with `assignPublicIp: DISABLED`; egress to ECR/SSM/CloudWatch/Frontend goes
 via NAT or VPC endpoints.
 
-**[`ecs_autoscaling.json`](../../examples/07-aws-containers/aws/ecs_autoscaling.json)**
-— two calls. `registerScalableTarget` registers
+**[`ecs_autoscaling.json`](../../examples/07-aws-containers/aws/ecs_autoscaling.json)**:
+two calls. `registerScalableTarget` registers
 `ecs:service:DesiredCount` with `MinCapacity: 1` / `MaxCapacity: 10` (same envelope
 as KEDA's `minReplicaCount` / `maxReplicaCount`). `putScalingPolicy` is a
 **TargetTrackingScaling** policy whose `CustomizedMetricSpecification` points at the
 custom metric `Temporal/Worker` / `TaskQueueBacklog` (dimension
-`TaskQueue=transform`) with `TargetValue: 20` — Application Auto Scaling adds/removes
+`TaskQueue=transform`) with `TargetValue: 20`: Application Auto Scaling adds/removes
 tasks to hold ~20 backlog items per task, the exact role of KEDA's
 `targetQueueSize: "20"`.
 
-**[`backlog_publisher.md`](../../examples/07-aws-containers/aws/backlog_publisher.md)**
-— the piece KEDA gave you for free. A ~30-line loop: call `DescribeTaskQueue`, sum
+**[`backlog_publisher.md`](../../examples/07-aws-containers/aws/backlog_publisher.md)**:
+the piece KEDA gave you for free. A ~30-line loop: call `DescribeTaskQueue`, sum
 the backlog, `PutMetricData` into `Temporal/Worker` / `TaskQueueBacklog`. Run it as
 a sidecar in the task or as one scheduled task for the whole queue. **Without this
 publisher there is no metric, and the scaling policy never fires.**
@@ -114,7 +114,7 @@ publisher there is no metric, and the scaling policy never fires.**
 > KEDA bundles the poller, the metric, and the scaler into one `ScaledObject`. On
 > ECS those are three separate things you assemble: the publisher (poller +
 > metric), CloudWatch (storage), and Application Auto Scaling (the scaler). The
-> *decision* — scale on queue depth — is identical; ECS just makes you build the
+> *decision*, scale on queue depth, is identical; ECS just makes you build the
 > pipe that carries the signal.
 
 ## Tasks
@@ -161,7 +161,7 @@ done
 
 Expected: as backlog passes ~20 items/task, `runningCount` rises toward
 `MaxCapacity: 10`; once drained it settles back to `MinCapacity: 1`. This is the
-ECS counterpart of `kubectl get scaledobject` + `kubectl get hpa -w` from Lab 6.5 —
+ECS counterpart of `kubectl get scaledobject` + `kubectl get hpa -w` from Lab 6.5:
 the difference is that *you* can see the raw metric in CloudWatch because you
 published it, whereas KEDA hid it inside the `ScaledObject`.
 
@@ -172,8 +172,8 @@ published it, whereas KEDA hid it inside the `ScaledObject`.
       **task role** (runtime AWS calls), and `stopTimeout` ≥ your longest
       `startToCloseTimeout`.
 - [ ] A backlog publisher writes `Temporal/Worker`/`TaskQueueBacklog` to CloudWatch.
-- [ ] Application Auto Scaling target-tracks that metric (`TargetValue: 20`) —
-      **not** CPU — between Min 1 and Max 10.
+- [ ] Application Auto Scaling target-tracks that metric (`TargetValue: 20`),
+      **not** CPU, between Min 1 and Max 10.
 - [ ] Backlog growth raises `runningCount`; drain returns it to `MinCapacity`.
 
 ## Pitfalls
@@ -189,7 +189,7 @@ published it, whereas KEDA hid it inside the `ScaledObject`.
   on CPU while a deep backlog waits. Target-track the backlog metric, not
   `ECSServiceAverageCPUUtilization`.
 - **No publisher, no scaling.** Application Auto Scaling treats a missing metric as
-  "no breach" — it just sits there. Confirm the metric exists in CloudWatch before
+  "no breach": it just sits there. Confirm the metric exists in CloudWatch before
   blaming the policy.
 - **Remember to scale down / delete.** Fargate bills per running task. A service
   stuck at `MaxCapacity` because the publisher died keeps charging.
@@ -210,12 +210,12 @@ aws ecs delete-service --cluster temporal-training \
 ```
 
 Also delete the CloudWatch log group and any standalone publisher task. NAT
-gateways bill hourly even when idle — tear down the VPC scaffolding if you created
+gateways bill hourly even when idle: tear down the VPC scaffolding if you created
 it just for this lab.
 
 ## Hints
 
-<details><summary>Hint 1 — tasks stuck in PENDING / failing to start</summary>
+<details><summary>Hint 1: tasks stuck in PENDING / failing to start</summary>
 
 Almost always the **execution role** or networking. Check `aws ecs
 describe-tasks --tasks <id>` `stoppedReason`: `CannotPullContainerError` → ECR pull
@@ -224,7 +224,7 @@ perms / no route to ECR; `ResourceInitializationError` fetching SSM → missing
 subnets need a NAT or VPC endpoints for ECR, SSM, CloudWatch Logs.
 </details>
 
-<details><summary>Hint 2 — metric written but nothing scales</summary>
+<details><summary>Hint 2: metric written but nothing scales</summary>
 
 Confirm the namespace, metric name, and **dimensions** in your publisher match
 `ecs_autoscaling.json` *exactly* (`Temporal/Worker` / `TaskQueueBacklog` /
@@ -237,7 +237,7 @@ Confirm the namespace, metric name, and **dimensions** in your publisher match
 
 - **Scale to zero with a scheduled wake.** Set `MinCapacity: 0` for a pure Activity
   pool and add a scheduled-action (or an `activationTargetQueueSize`-style floor in
-  the publisher) that bumps capacity to 1 when backlog first appears — Application
+  the publisher) that bumps capacity to 1 when backlog first appears: Application
   Auto Scaling won't scale *up from* 0 on a target-tracking metric alone. (Keep
   Workflow workers ≥ 1, same caveat as Lab 6.5.)
 - **Publish schedule-to-start latency instead of raw backlog.** Emit the queue's

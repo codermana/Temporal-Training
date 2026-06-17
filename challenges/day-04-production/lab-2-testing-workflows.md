@@ -1,11 +1,11 @@
-# Lab 4.2 — Testing Workflows
+# Lab 4.2: Testing Workflows
 
 **Time:** ~45 min · **Difficulty:** ★★ · **Stack:** None (in-process)
 
 ## Scenario
 
 A reminder Workflow sleeps for a day, then returns a message. You can't wait a
-day in a unit test — and you shouldn't need a running server either. Temporal's
+day in a unit test, and you shouldn't need a running server either. Temporal's
 `TestWorkflowEnvironment` runs Workflows in-process and **skips time**, so a
 one-day sleep completes in milliseconds. You'll write a JUnit 5 test that proves
 the Workflow's behavior, then mock an Activity.
@@ -19,7 +19,7 @@ the Workflow's behavior, then mock an Activity.
 
 > **Coming from Airflow `[airflow]`:** there's no DAG-bag parse test or
 > `airflow tasks test` against a live metastore. This is a real unit test of
-> orchestration logic — fast, hermetic, deterministic.
+> orchestration logic: fast, hermetic, deterministic.
 
 ## Prerequisites
 
@@ -50,7 +50,7 @@ Module `training.temporal.testing`. Add the test dep to `pom.xml`:
 </dependency>
 ```
 
-**Given — the Workflow under test** (`src/main/java/...`):
+**Given, the Workflow under test** (`src/main/java/...`):
 
 ```java
 // ReminderWorkflow.java
@@ -72,7 +72,7 @@ public class ReminderWorkflowImpl implements ReminderWorkflow {
 }
 ```
 
-**Your job — the test** (`src/test/java/...`):
+**Your job, the test** (`src/test/java/...`):
 
 ```java
 // ReminderWorkflowTest.java
@@ -98,7 +98,7 @@ class ReminderWorkflowTest {
 Reference solution: [`examples/runnable/06-testing/python`](../../examples/runnable/06-testing/python)
 and [`.../go`](../../examples/runnable/06-testing/go). Try the TODOs before peeking.
 
-**Python** (`temporalio.testing`) — `start_time_skipping()` skips the sleep; mock
+**Python** (`temporalio.testing`): `start_time_skipping()` skips the sleep; mock
 an Activity by registering a same-named fake `@activity.defn`:
 
 ```python
@@ -110,14 +110,14 @@ async def test_skips_workflow_time():
     async with await WorkflowEnvironment.start_time_skipping() as env:
         async with Worker(env.client, task_queue="test-reminder",
                           workflows=[ReminderWorkflow]):
-            # TODO: execute_workflow(...) — the one-day sleep returns instantly
+            # TODO: execute_workflow(...), the one-day sleep returns instantly
             result = await env.client.execute_workflow(
                 ReminderWorkflow.remind_after_one_day, "ship report",
                 id=f"r-{uuid.uuid4()}", task_queue="test-reminder")
     assert result == "Reminder: ship report"
 ```
 
-**Go** (`go.temporal.io/sdk/testsuite`) — `TestWorkflowEnvironment` skips time;
+**Go** (`go.temporal.io/sdk/testsuite`): `TestWorkflowEnvironment` skips time;
 `env.OnActivity(...).Return(...)` is the testify-mock stand-in for Mockito:
 
 ```go
@@ -134,7 +134,7 @@ func TestSkipsWorkflowTime(t *testing.T) {
 ```
 
 To mock an Activity: `env.OnActivity(LookupEmail, mock.Anything, "u1").Return("u1@example.com", nil)`
-before `ExecuteWorkflow`. The principle is identical to Java's Mockito test —
+before `ExecuteWorkflow`. The principle is identical to Java's Mockito test:
 stub the Activity, keep the test hermetic.
 
 </details>
@@ -155,16 +155,16 @@ stub the Activity, keep the test hermetic.
 mvn -q test
 ```
 
-<details><summary>Under the hood — what <code>make run-testing</code> runs</summary>
+<details><summary>Under the hood: what <code>make run-testing</code> runs</summary>
 
 ```bash
 cd examples/runnable/06-testing && mvn -q test
-# Pure in-process test — no Temporal server needed.
+# Pure in-process test, no Temporal server needed.
 ```
 
 </details>
 
-Expected: green tests, total runtime dominated by JVM/Maven startup — the
+Expected: green tests, total runtime dominated by JVM/Maven startup; the
 one-day sleep adds no wall-clock time.
 
 ## Definition of done
@@ -186,7 +186,7 @@ one-day sleep adds no wall-clock time.
 
 ## Hints
 
-<details><summary>Hint 1 — fetching the result after time-skip</summary>
+<details><summary>Hint 1: fetching the result after time-skip</summary>
 
 Start async, skip time, then read:
 ```java
@@ -196,7 +196,7 @@ String result = client.newUntypedWorkflowStub(exec.getWorkflowId()).getResult(St
 ```
 </details>
 
-<details><summary>Hint 2 — TestWorkflowExtension alternative</summary>
+<details><summary>Hint 2: TestWorkflowExtension alternative</summary>
 
 For less boilerplate, use
 `@RegisterExtension static final TestWorkflowExtension EXT = TestWorkflowExtension

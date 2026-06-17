@@ -1,4 +1,4 @@
-# Signals, Queries & Updates — runnable lab (Java · Python · Go)
+# Signals, Queries & Updates: runnable lab (Java · Python · Go)
 
 The same approval Workflow in three SDKs. The Workflow blocks waiting for a
 decision, so while it is alive you can:
@@ -7,7 +7,7 @@ decision, so while it is alive you can:
 - **Update** the attached note (synchronous, *validated*, returns a result),
 - **Signal** an approve/reject decision (fire-and-forget, unblocks the Workflow).
 
-The Worker and the client (starter) are **separate, standalone processes** — as
+The Worker and the client (starter) are **separate, standalone processes**, as
 they are in production. They never talk to each other directly; both only talk
 to the Temporal server, agreeing on a Task Queue name (`approval`) and the
 Workflow definition. Run the Worker in one terminal and the starter in another.
@@ -60,18 +60,18 @@ in `go/approval.go` (package `approval`) so both commands import it.
 
 ## Drive it from another terminal
 
-Names differ per SDK — handlers are named after the method (Java/Go: `currentState`,
+Names differ per SDK; handlers are named after the method (Java/Go: `currentState`,
 `changeNote`; Python: `current_state`, `change_note`).
 
 ```bash
 # Query (Java / Go handler names shown; Python uses snake_case)
 temporal workflow query  --workflow-id approval-demo --type currentState
 
-# Update — runs the validator first; an empty note is rejected
+# Update: runs the validator first; an empty note is rejected
 temporal workflow update execute --workflow-id approval-demo --name changeNote \
     --input '"expedite before close of business"'
 
-# Signal — unblocks the Workflow, which then completes
+# Signal: unblocks the Workflow, which then completes
 temporal workflow signal --workflow-id approval-demo --name approve \
     --input '"manager@example.com"'
 ```

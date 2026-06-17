@@ -101,5 +101,5 @@ GitHub Pages, single site, sub-paths per deck.
 
 - The shared Marp theme lives at `slides/themes/base.css`. Treat that as the source of truth for slide styling.
 - Marp CLI requires Node 18+. `npm install` is per-deck.
-- `slides/CNAME` is the single source of truth for the deployed domain. Per-deck `CNAME` files are intentionally absent — they would be ignored anyway in a sub-path deployment.
+- `slides/CNAME` is the single source of truth for the deployed domain. Per-deck `CNAME` files are intentionally absent; they would be ignored anyway in a sub-path deployment.
 - Image alignment with `![bg right:38% w:88%](assets/images/example.jpg)` is the documented Marp pattern for visual split slides.

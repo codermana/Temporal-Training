@@ -13,7 +13,7 @@ to run every lab on a laptop.
 | `outline/detailed.md` | Long-form outline with extra context.                             |
 | `lecture_notes/`    | Per-day instructor notes (talking points, demos, discussion prompts). |
 | `challenges/`       | Hands-on lab instructions (no solutions), day by day. `make challenges` to list. |
-| `examples/`         | Teaching snippets, organized by day — each in `java/`, `python/`, `go/` subfolders. |
+| `examples/`         | Teaching snippets, organized by day, each in `java/`, `python/`, `go/` subfolders. |
 | `examples/runnable/`| Mini-project reference solutions per lab, in Java (`temporal-sdk`), Python (`temporalio`), and Go (`go.temporal.io/sdk`). |
 | `docker/`           | Compose stacks for Kafka, Prometheus + Grafana, LocalStack.         |
 | `scripts/`          | Bash + PowerShell entry points (the recommended way to drive labs). |
@@ -113,7 +113,7 @@ make kind-down        # delete the kind cluster
 
 [`challenges/`](challenges/) holds the participant-facing lab instructions: a
 scenario, the starter code (interfaces + `// TODO` stubs), tasks, verification
-steps, and progressive hints for each `[lab]` in the outline — **without the
+steps, and progressive hints for each `[lab]` in the outline, **without the
 finished solution** (those live in `examples/runnable/` for instructors).
 
 ```bash

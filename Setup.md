@@ -2,8 +2,8 @@
 
 This repository contains two kinds of examples:
 
-- `examples/<topic>/` — short snippets for explanation during training.
-- `examples/runnable/<name>/` — Maven projects that can be compiled or run locally.
+- `examples/<topic>/`: short snippets for explanation during training.
+- `examples/runnable/<name>/`: Maven projects that can be compiled or run locally.
 
 Most labs run on a single laptop. Days 3, 4, and 6 use additional Docker Compose
 stacks (Kafka, Prometheus + Grafana, LocalStack) and a local Kubernetes cluster
@@ -158,7 +158,7 @@ scripts/start-stack.sh kafka down  # tear down (also: status, logs)
 | Kafka (KRaft, 1 broker) | 9092      | Auto-create topics enabled                  |
 | Prometheus              | 9091      | Scrapes Temporal server + Worker (:9464)    |
 | Grafana                 | 3000      | admin / admin; anonymous viewer allowed     |
-| LocalStack              | 4566      | S3, SQS, SNS, SSM, KMS, IAM, STS, Logs (Glue is Pro-only — lab 1 mocks it) |
+| LocalStack              | 4566      | S3, SQS, SNS, SSM, KMS, IAM, STS, Logs (Glue is Pro-only, lab 1 mocks it) |
 
 ## Start the Local Kubernetes Cluster (Day 6 PM)
 
@@ -238,12 +238,12 @@ scripts/run-example.sh hello go starter    # terminal 2: starts one Workflow
 
 Toolchains (only needed for the language you use):
 
-- **Python** — [uv](https://docs.astral.sh/uv/) drives the Python labs. It reads
-  each lab's `pyproject.toml`, provisions an isolated environment, and runs — no
+- **Python**: [uv](https://docs.astral.sh/uv/) drives the Python labs. It reads
+  each lab's `pyproject.toml`, provisions an isolated environment, and runs, with no
   manual `venv`/`pip`. Install: `brew install uv` (macOS) or
   `curl -LsSf https://astral.sh/uv/install.sh | sh`. Then, in any lab:
   `cd python && uv run worker.py` (or `uv run pytest` for the testing labs).
-- **Go** — install Go 1.23+ (`brew install go`). Then `cd go && go run ./worker`
+- **Go**: install Go 1.23+ (`brew install go`). Then `cd go && go run ./worker`
   (or `go run .` for the few single-binary labs); the first run resolves the SDK
   from the committed `go.mod`/`go.sum`.
 

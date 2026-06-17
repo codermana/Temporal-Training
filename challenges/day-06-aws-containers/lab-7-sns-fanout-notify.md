@@ -1,4 +1,4 @@
-# Lab 6.7 — SNS fan-out notify Activity
+# Lab 6.7: SNS fan-out notify Activity
 
 **Time:** ~40 min · **Difficulty:** ★★ · **Stack:** Temporal + LocalStack
 
@@ -14,7 +14,7 @@ still works. SNS (and SNS→SQS) are supported on the LocalStack free tier.
 
 > "The Fanout scenario is when a message published to an SNS topic is replicated and pushed to multiple endpoints, such as Firehose delivery streams, Amazon SQS queues, HTTP(S) endpoints, and Lambda functions."
 >
-> — *Amazon SNS Developer Guide*, docs.aws.amazon.com
+> *Amazon SNS Developer Guide*, docs.aws.amazon.com
 
 <!-- source: https://docs.aws.amazon.com/sns/latest/dg/welcome.html -->
 
@@ -23,12 +23,12 @@ still works. SNS (and SNS→SQS) are supported on the LocalStack free tier.
 > | AWS | Here |
 > |---|---|
 > | Lambda's last action: `sns.publish(...)` | an Activity publishes; the Workflow sequences it |
-> | EventBridge / SNS fan-out to subscribers | **unchanged** — SNS still fans out to every subscription |
+> | EventBridge / SNS fan-out to subscribers | **unchanged**, SNS still fans out to every subscription |
 > | Lambda retried → maybe double-publish | Activity retried → maybe double-publish (same hazard) |
 > | each subscriber dedups on its own | each subscriber dedups on `workflowId` in the message |
 >
 > Only the publisher moved into Temporal. The topic, the subscriptions, and the
-> at-least-once contract are all the same — subscribers don't know or care that
+> at-least-once contract are all the same; subscribers don't know or care that
 > the publish now comes from an Activity instead of a Lambda.
 
 ## Learning goals
@@ -36,7 +36,7 @@ still works. SNS (and SNS→SQS) are supported on the LocalStack free tier.
 - Notifications are I/O, so publishing one is an **Activity**, never Workflow code.
 - SNS delivery is **at-least-once**: a retried Activity may double-publish, so the
   message carries `workflowId` (+ `runId`) and subscribers dedup on it.
-- SNS→SQS fan-out is unchanged by the migration — only the publisher moved.
+- SNS→SQS fan-out is unchanged by the migration; only the publisher moved.
 - Keep the message small: a notification carries a *reference* (the output URI),
   not the imported data.
 
@@ -47,7 +47,7 @@ make temporal      # terminal 1
 make stack-aws     # terminal 2: LocalStack on :4566
 ```
 
-<details><summary>Under the hood — what <code>make temporal</code> runs</summary>
+<details><summary>Under the hood: what <code>make temporal</code> runs</summary>
 
 ```bash
 temporal server start-dev \
@@ -58,7 +58,7 @@ temporal server start-dev \
 
 </details>
 
-<details><summary>Under the hood — what <code>make stack-aws</code> runs</summary>
+<details><summary>Under the hood: what <code>make stack-aws</code> runs</summary>
 
 ```bash
 docker compose -f docker/compose.localstack.yml up -d
@@ -100,7 +100,7 @@ Extend the `training.temporal.aws` module. `pom.xml` adds AWS SDK v2 SNS:
 </dependency>
 ```
 
-**Given contract** — the notify step as an Activity that returns the SNS message id:
+**Given contract**: the notify step as an Activity that returns the SNS message id:
 
 ```java
 // SnsPublishActivities.java
@@ -111,7 +111,7 @@ public interface SnsPublishActivities {
 }
 ```
 
-**Activity impl — complete the publish:**
+**Activity impl, complete the publish:**
 
 ```java
 public class SnsPublishActivitiesImpl implements SnsPublishActivities {
@@ -122,7 +122,7 @@ public class SnsPublishActivitiesImpl implements SnsPublishActivities {
   public String publishNotification(String workflowId, long rowCount, String outputS3Uri) {
     // TODO 1: build a SMALL JSON message: workflowId, the runId
     //   (Activity.getExecutionContext().getInfo().getRunId()), rowCount, outputS3Uri.
-    //   The workflowId is what subscribers dedup on — at-least-once delivery.
+    //   The workflowId is what subscribers dedup on: at-least-once delivery.
     // TODO 2: sns.publish(PublishRequest ... topicArn(topicArn).message(json)
     //   .messageDeduplicationId(workflowId)).  On a FIFO topic that dedup id makes
     //   SNS collapse a retried publish; harmless on a standard topic.
@@ -141,10 +141,10 @@ Point the `SnsClient` at LocalStack: override the endpoint to
 Reference ports: [`examples/07-aws-containers/python/sns_publish_activity.py`](../../examples/07-aws-containers/python/sns_publish_activity.py)
 and [`.../go/sns_publish_activity.go`](../../examples/07-aws-containers/go/sns_publish_activity.go).
 Try the TODOs yourself before peeking. (`boto3` / `aws-sdk-go-v2` may be absent
-offline — the Temporal-side "publish-as-an-Activity, include workflowId for
+offline; the Temporal-side "publish-as-an-Activity, include workflowId for
 dedup" pattern is the deliverable.)
 
-**Python** (`temporalio`) — module-level Activity, lazy `boto3`, client pointed at
+**Python** (`temporalio`), module-level Activity, lazy `boto3`, client pointed at
 LocalStack:
 
 ```python
@@ -174,7 +174,7 @@ async def publish_notification(topic_arn: str, workflow_id: str, row_count: int,
     return resp["MessageId"]
 ```
 
-**Go** (`go.temporal.io/sdk`, `aws-sdk-go-v2`) — publish behind a small `SnsAPI`,
+**Go** (`go.temporal.io/sdk`, `aws-sdk-go-v2`), publish behind a small `SnsAPI`,
 return the message id:
 
 ```go
@@ -211,7 +211,7 @@ Web UI.
 ## Verification
 
 ```bash
-# Drain the subscribed queue — the notification fanned out from SNS to SQS:
+# Drain the subscribed queue: the notification fanned out from SNS to SQS:
 awslocal sqs receive-message --queue-url "$QURL" --wait-time-seconds 5
 ```
 
@@ -223,10 +223,10 @@ the import.
 ## Definition of done
 
 - [ ] `publishNotification` is an **Activity**, called as the last step of the
-      Workflow — no SNS publish happens in Workflow code.
+      Workflow; no SNS publish happens in Workflow code.
 - [ ] The published message includes the `workflowId` (and `runId`) so an
       at-least-once redelivery is safe to dedup.
-- [ ] The subscribed SQS queue receives the notification — SNS→SQS fan-out works
+- [ ] The subscribed SQS queue receives the notification: SNS→SQS fan-out works
       unchanged.
 - [ ] The Activity returns the SNS `messageId`, visible in the Web UI.
 
@@ -238,14 +238,14 @@ the import.
   same notification twice, so SNS may deliver duplicates. The `workflowId` in the
   body is the dedup key for subscribers (or use a FIFO topic with the `workflowId`
   as the message-deduplication id). Never assume exactly-once delivery.
-- **Keep the message small — it's a notification, not a data bus.** Send the
+- **Keep the message small, it's a notification, not a data bus.** Send the
   output **URI**, never the imported rows. Workflow history (and the SNS message)
-  has a payload-size limit — keep individual payloads well under ~2 MB (see Lab
+  has a payload-size limit; keep individual payloads well under ~2 MB (see Lab
   6.2). Put the data in S3; send a reference.
 
 ## Hints
 
-<details><summary>Hint 1 — LocalStack SnsClient</summary>
+<details><summary>Hint 1: LocalStack SnsClient</summary>
 
 ```java
 SnsClient.builder()
@@ -257,13 +257,13 @@ SnsClient.builder()
 ```
 </details>
 
-<details><summary>Hint 2 — why the workflowId makes it safe to retry</summary>
+<details><summary>Hint 2: why the workflowId makes it safe to retry</summary>
 
 The Activity is at-least-once, so the same notification can be published twice.
 Putting `workflowId` (a stable, deterministic id) in every message lets each
 subscriber keep a "seen" set keyed on it and drop the duplicate. On a **FIFO**
 topic you go one better: pass `workflowId` as `MessageDeduplicationId` and SNS
-itself collapses the retried publish within its dedup window — no subscriber-side
+itself collapses the retried publish within its dedup window; no subscriber-side
 table needed.
 </details>
 
@@ -273,5 +273,5 @@ table needed.
   subscriber; pass the `workflowId` as the `MessageDeduplicationId` and confirm a
   forced double-publish (retry the Activity) lands **once** on the queue.
 - Make the SQS subscriber a **chain**: have it `signalWithStart` *another*
-  Workflow (e.g. a downstream "reconcile" import) — reusing the SQS→signal bridge
+  Workflow (e.g. a downstream "reconcile" import), reusing the SQS→signal bridge
   from Lab 6.6, so SNS fan-out triggers the next Workflow with no Lambda glue.

@@ -1,4 +1,4 @@
-# Lab 6.3 — Migrate a Step Functions pipeline
+# Lab 6.3: Migrate a Step Functions pipeline
 
 **Time:** ~60 min · **Difficulty:** ★★★ · **Stack:** Temporal + LocalStack
 
@@ -65,7 +65,7 @@ public interface ImportWorkflow {
 Reuse `ImportActivities` from Lab 6.2 and add a `notify(...)` Activity (it can log
 or write to an SNS/SQS mock in LocalStack).
 
-**Workflow impl — translate the state machine:**
+**Workflow impl, translate the state machine:**
 
 ```java
 public class ImportWorkflowImpl implements ImportWorkflow {
@@ -150,7 +150,7 @@ func ImportWorkflow(ctx workflow.Context, inputS3URI string) (err error) {
 ```
 
 The rule is identical in all three SDKs: **don't recreate the state-machine
-shape** — `Retry`/`Catch` JSON collapses into a retry policy plus a try/catch, and
+shape**: `Retry`/`Catch` JSON collapses into a retry policy plus a try/catch, and
 straight-line branching is just an `if`.
 
 </details>
@@ -175,7 +175,7 @@ make start-workflow QUEUE=transform ID=1 TYPE=ImportWorkflow \
   INPUT="s3://imports-incoming/incoming/orders.csv"
 ```
 
-<details><summary>Under the hood — what <code>make run-aws</code> runs</summary>
+<details><summary>Under the hood: what <code>make run-aws</code> runs</summary>
 
 ```bash
 cd examples/runnable/08-aws-containers && mvn -q compile exec:java \
@@ -184,7 +184,7 @@ cd examples/runnable/08-aws-containers && mvn -q compile exec:java \
 
 </details>
 
-<details><summary>Under the hood — what <code>make start-workflow</code> runs</summary>
+<details><summary>Under the hood: what <code>make start-workflow</code> runs</summary>
 
 ```bash
 temporal workflow start \
@@ -199,7 +199,7 @@ temporal workflow start \
 </details>
 
 Expected: the Workflow runs all four steps; a failing input routes through your
-NotifyFailure path. Everything — inputs, retries, the failure, the notify — is in
+NotifyFailure path. Everything (inputs, retries, the failure, the notify) is in
 **one** Event History.
 
 ## Definition of done
@@ -214,7 +214,7 @@ NotifyFailure path. Everything — inputs, retries, the failure, the notify — 
 
 - **Don't over-translate.** Step Functions needs explicit `Pass`/`Choice` states
   for branching; in a Workflow that's just an `if`. Resist recreating the state
-  machine shape — write straight-line Java.
+  machine shape; write straight-line Java.
 - `BackoffRate` → `setBackoffCoefficient`; `IntervalSeconds` →
   `setInitialInterval`; `MaxAttempts` → `setMaximumAttempts`.
 

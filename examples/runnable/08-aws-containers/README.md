@@ -1,8 +1,8 @@
-# AWS import pipeline + container Worker — runnable lab (Java · Python · Go)
+# AWS import pipeline + container Worker: runnable lab (Java · Python · Go)
 
 The same `ImportWorkflow` (validate → transform → load) in three SDKs, plus the
 container/Kubernetes assets that take that Worker to production. The teaching
-point is identical everywhere — *a Worker is a stateless, outbound-only process,
+point is identical everywhere: *a Worker is a stateless, outbound-only process,
 so it containerizes cleanly and scales on Task Queue backlog, not CPU.*
 
 All three connect to a local dev server. Start one first:
@@ -58,7 +58,7 @@ Expected result: `s3://imports-incoming/transformed/orders.csv?rows=<n>`.
 ## Containers
 
 Each language has its own `Dockerfile` (Java fat-JAR vs `uv sync` vs
-`go build`) because the build differs — but they all produce the *same* kind of
+`go build`) because the build differs, but they all produce the *same* kind of
 artifact: a Worker that dials **out** to the Frontend, with no inbound port.
 
 ```bash
@@ -77,11 +77,11 @@ docker run --rm \
 
 ## Kubernetes + KEDA
 
-`k8s-worker-deployment.yaml` and `keda-scaledobject.yaml` are **language-neutral**
-— the same Deployment and KEDA `ScaledObject` work regardless of which image you
+`k8s-worker-deployment.yaml` and `keda-scaledobject.yaml` are **language-neutral**:
+the same Deployment and KEDA `ScaledObject` work regardless of which image you
 built above (just set `image:` to your tag). KEDA's native Temporal scaler scales
 replicas on Task Queue backlog (`DescribeTaskQueue`), the correct signal for
-Workers — a poller can be idle on CPU while a deep backlog waits.
+Workers, since a poller can be idle on CPU while a deep backlog waits.
 
 ```bash
 kubectl apply -f k8s-worker-deployment.yaml

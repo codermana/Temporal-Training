@@ -1,14 +1,14 @@
 # 16 · Basic Temporal Spring Boot (the starter)
 
-A minimal, runnable Spring Boot service that uses **`temporal-spring-boot-starter`**
-— the production-preferred way to wire Temporal into Spring. Day 5's slides walk
+A minimal, runnable Spring Boot service that uses **`temporal-spring-boot-starter`**,
+the production-preferred way to wire Temporal into Spring. Day 5's slides walk
 the *manual* `@Configuration` (three beans: stubs → client → factory) so the
 plumbing is visible; **this project is what that plumbing automates.**
 
-> Java only — the starter is a Java/Spring artifact. The saga and other labs ship
+> Java only: the starter is a Java/Spring artifact. The saga and other labs ship
 > in three SDKs; this one does not.
 
-> **Optional lab.** This basic app is the *Spring Boot + Temporal* on-ramp — an
+> **Optional lab.** This basic app is the *Spring Boot + Temporal* on-ramp, an
 > optional, self-contained hands-on (or a quick live demo). The required Spring
 > exercise is wiring the saga in: [`challenges/day-05-saga-spring/lab-2-saga-spring-boot`](../../../challenges/day-05-saga-spring/lab-2-saga-spring-boot.md).
 
@@ -26,8 +26,8 @@ You write three things and inject one:
 
 | Piece | File | Note |
 | --- | --- | --- |
-| Workflow impl | `GreetingWorkflowImpl` | `@WorkflowImpl(taskQueues = "greetings")` — auto-registered |
-| Activity impl | `GreetingActivitiesImpl` | `@Component` **and** `@ActivityImpl` — a Spring bean with DI |
+| Workflow impl | `GreetingWorkflowImpl` | `@WorkflowImpl(taskQueues = "greetings")`, auto-registered |
+| Activity impl | `GreetingActivitiesImpl` | `@Component` **and** `@ActivityImpl`, a Spring bean with DI |
 | REST front door | `GreetingController` | injects the auto-configured `WorkflowClient` |
 | App | `SpringBootApp` | plain `@SpringBootApplication`, no Temporal config |
 
@@ -41,7 +41,7 @@ make run-spring
 # or: scripts/run-example.sh spring
 ```
 
-This is a single process (the Spring app *is* both the Worker and the client) —
+This is a single process (the Spring app *is* both the Worker and the client),
 not the Worker/starter split the other labs use. It listens on `:8080`.
 
 ### Drive it over HTTP
@@ -59,10 +59,10 @@ curl -s localhost:8080/greetings/Ada
 ```
 
 In the Web UI (`localhost:8233`) the execution is `greeting-Ada` on the
-`greetings` task queue — started by an HTTP handler, executed by the Worker the
+`greetings` task queue, started by an HTTP handler, executed by the Worker the
 starter stood up.
 
-> **JDK note for this repo's machine.** Spring Boot 3.3 targets Java 17–21. Build
+> **JDK note for this repo's machine.** Spring Boot 3.3 targets Java 17-21. Build
 > and run with JDK 17 if your default `java` is newer:
 > `JAVA_HOME=$(/usr/libexec/java_home -v 17) mvn spring-boot:run`.
 

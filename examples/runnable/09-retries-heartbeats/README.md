@@ -1,16 +1,16 @@
-# Retries & heartbeats — runnable lab (Java · Python · Go)
+# Retries & heartbeats: runnable lab (Java · Python · Go)
 
 The same processing Workflow in three SDKs, built to make two reliability
 mechanisms *visible* in history:
 
-- **Retries** — `chargeCard` fails its first two attempts and succeeds on the
+- **Retries**: `chargeCard` fails its first two attempts and succeeds on the
   third, so you see two `ActivityTaskFailed` events and the backoff between them.
-- **Heartbeats** — `exportLargeReport` heartbeats once per page. The page number
+- **Heartbeats**: `exportLargeReport` heartbeats once per page. The page number
   is the resume point: on a Worker restart the Activity continues from the last
   recorded page instead of starting over, and the heartbeat timeout is how a
   dead Worker is detected between pages.
 
-The Worker and the client (starter) are **separate, standalone processes** — as
+The Worker and the client (starter) are **separate, standalone processes**, as
 they are in production. They never talk to each other directly; both only talk
 to the Temporal server, agreeing on a Task Queue name (`retries-heartbeats`) and
 the Workflow definition. Run the Worker in one terminal and the starter in

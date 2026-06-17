@@ -1,16 +1,16 @@
-# Continue-as-new — runnable lab (Java · Python · Go)
+# Continue-as-new: runnable lab (Java · Python · Go)
 
 The same long-running counter in three SDKs. Each Workflow run processes a small
 **batch** of work and then **continue-as-news**: it ends the current run and
 starts a fresh one with the same Workflow ID, carrying forward only the state the
 next run needs (`processedSoFar`). This keeps Event History small no matter how
-long the job runs — the standard pattern for indefinitely-running or
+long the job runs: the standard pattern for indefinitely-running or
 high-iteration Workflows.
 
 The teaching point is identical everywhere: **continue-as-new replaces the run; it
 does not return.** Carry forward only what the next run needs.
 
-The Worker and the client (starter) are **separate, standalone processes** — as
+The Worker and the client (starter) are **separate, standalone processes**, as
 they are in production. They never talk to each other directly; both only talk
 to the Temporal server, agreeing on a Task Queue name (`continue-as-new`) and the
 Workflow definition. Run the Worker in one terminal and the starter in another.
@@ -73,5 +73,5 @@ Result: completed after 9 iterations
 
 The client's `getResult` / `run.Get` transparently follows the chain to the final
 result. In the Web UI the single Workflow ID `continue-as-new-demo` shows multiple
-**Runs** linked by `WorkflowExecutionContinuedAsNew` — each run's history stays
+**Runs** linked by `WorkflowExecutionContinuedAsNew`: each run's history stays
 small.

@@ -1,4 +1,4 @@
-# Lab 5.2 — Saga in Spring Boot
+# Lab 5.2: Saga in Spring Boot
 
 **Time:** ~70 min · **Difficulty:** ★★★ · **Stack:** Temporal dev server
 
@@ -20,7 +20,7 @@ and verify compensation still fires.
 
 ## Prerequisites
 
-- **Lab 5.1 complete** — you'll reuse `OrderSagaWorkflow` / `OrderActivities`.
+- **Lab 5.1 complete**: you'll reuse `OrderSagaWorkflow` / `OrderActivities`.
 - `make temporal` running.
 
 ## Starter code
@@ -40,7 +40,7 @@ Kafka if you wire the Kafka trigger):
 </dependency>
 ```
 
-**`application.yml`** — point the starter at the dev server and declare a Worker:
+**`application.yml`**: point the starter at the dev server and declare a Worker:
 
 ```yaml
 spring:
@@ -56,7 +56,7 @@ spring:
         - training.temporal.saga.spring
 ```
 
-> The exact property names can drift between starter versions — confirm against
+> The exact property names can drift between starter versions; confirm against
 > the starter you pulled (`mvn dependency:tree`) and its docs. The shape above is
 > the intent: one Worker on the `orders` queue, beans auto-discovered.
 
@@ -65,7 +65,7 @@ spring:
 > `temporal-spring-boot-starter:1.32.1` + Spring Boot 3.3. Copy its `application.yml`
 > and `@WorkflowImpl` / `@Component @ActivityImpl` annotations if the property
 > names give you trouble. With auto-discovery you don't need the `workers:` list
-> at all — the annotations declare the task queue.
+> at all; the annotations declare the task queue.
 
 **Structure to build (stubs):**
 
@@ -77,7 +77,7 @@ spring:
 @Component
 public class OrderActivitiesImpl implements OrderActivities {
   // TODO: same logic as Lab 5.1, but now a managed bean (can @Autowired other
-  //       services — a real PaymentClient, InventoryRepository, etc.)
+  //       services, e.g. a real PaymentClient, InventoryRepository, etc.)
 }
 
 // REST trigger:
@@ -103,7 +103,7 @@ public class OrderController {
 
 <details><summary><b>Doing this lab in Python or Go?</b> Starter scaffolds</summary>
 
-Spring Boot autoconfig is **Java-only** — there is no direct equivalent in the
+Spring Boot autoconfig is **Java-only**; there is no direct equivalent in the
 other SDKs. The idiomatic analogue is:
 
 - **Python:** a FastAPI/Flask **lifespan** that owns the client + worker (no DI
@@ -117,7 +117,7 @@ Reuse the saga itself from Lab 5.1
 [`.../go`](../../examples/runnable/07-saga/go)); this lab only changes the
 *trigger* and *lifecycle*.
 
-**Python** — start the worker in a FastAPI lifespan; trigger via a route:
+**Python**: start the worker in a FastAPI lifespan; trigger via a route:
 
 ```python
 from contextlib import asynccontextmanager
@@ -152,7 +152,7 @@ async def submit_async(order_id: str):
     return {"workflow_id": h.id}
 ```
 
-**Go** — a plain `main` with an HTTP handler that calls the client:
+**Go**: a plain `main` with an HTTP handler that calls the client:
 
 ```go
 func main() {
@@ -178,7 +178,7 @@ func main() {
 ```
 
 **Inject failures** the same way in every SDK: an `orderId` containing `"fail"`
-makes `ship` throw, so compensation fires — no per-language failure flag needed.
+makes `ship` throw, so compensation fires; no per-language failure flag needed.
 
 </details>
 
@@ -193,7 +193,7 @@ makes `ship` throw, so compensation fires — no per-language failure flag neede
 4. **Inject a failure at each step** (param or header that makes payment /
    inventory / ship throw) and verify the right compensations run each time.
 5. Confirm **graceful shutdown**: stopping the app drains in-flight Activities
-   (`Worker.shutdown()` on context close — the starter wires this for you;
+   (`Worker.shutdown()` on context close, which the starter wires for you;
    verify it).
 
 ## Verification
@@ -212,7 +212,7 @@ curl -s -X POST 'localhost:8080/orders/order-async?async=true'
 curl -s localhost:8080/orders/order-async
 ```
 
-Cross-check each run in the Web UI — compensations should appear for every
+Cross-check each run in the Web UI; compensations should appear for every
 injected failure.
 
 ## Definition of done
@@ -233,29 +233,29 @@ injected failure.
   (so they can use other Spring beans); Workflow *implementations* are registered
   as types and must stay free of injected mutable state used inside Workflow code
   (determinism). Inject services into **Activities**, not Workflow impls.
-- Spring Kafka `@KafkaListener` is just another trigger — it should call the
+- Spring Kafka `@KafkaListener` is just another trigger; it should call the
   `WorkflowClient`, not contain saga logic.
 
 ## Hints
 
-<details><summary>Hint 1 — sync vs async at the client</summary>
+<details><summary>Hint 1: sync vs async at the client</summary>
 
-Sync: call the typed method directly (`workflow.process(id)`) — it blocks. Async:
+Sync: call the typed method directly (`workflow.process(id)`); it blocks. Async:
 `WorkflowClient.start(workflow::process, id)` returns immediately; read later via
 a Query or `WorkflowStub.getResult`.
 </details>
 
-<details><summary>Hint 2 — verifying graceful shutdown</summary>
+<details><summary>Hint 2: verifying graceful shutdown</summary>
 
 Start a slow saga (add a `Workflow.sleep`/slow Activity), then stop the app
 mid-flight. With graceful shutdown the in-flight Activity completes or the
-Workflow resumes on next start — it is **not** lost.
+Workflow resumes on next start; it is **not** lost.
 </details>
 
 ## Stretch goals
 
 - Add a Spring Kafka `@KafkaListener` on an `orders` topic that triggers the saga
-  — the bridge from Day 3, now idiomatic Spring.
+  (the bridge from Day 3, now idiomatic Spring).
 - Expose Actuator health and a custom metric (ties to Day 4) so the saga app is
   production-observable.
 - Add `Workflow.continueAsNew` for a subscription-style saga that runs

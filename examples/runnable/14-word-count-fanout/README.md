@@ -1,4 +1,4 @@
-# Word count fan-out — runnable lab (Java · Python · Go)
+# Word count fan-out: runnable lab (Java · Python · Go)
 
 Count words across document chunks in parallel, then sum the chunk totals. The
 teaching point is the same as the async pricing lab: *start every Activity before

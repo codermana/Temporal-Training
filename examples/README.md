@@ -15,8 +15,8 @@ examples/02-reliability/
   go/      go.temporal.io/sdk
 ```
 
-Runnable labs follow the same shape — `examples/runnable/<lab>/{java,python,go}/`
-— each with its own build file (`pom.xml`, `pyproject.toml`, `go.mod`). The
+Runnable labs follow the same shape, `examples/runnable/<lab>/{java,python,go}/`,
+each with its own build file (`pom.xml`, `pyproject.toml`, `go.mod`). The
 snippets teach one concept and are intentionally incomplete (see **Format**);
 the runnable labs are complete, build, and run against a local dev server.
 
@@ -37,7 +37,7 @@ scripts/show-example.sh 02-reliability/java/heartbeat_long_activity.java
 scripts/show-example.sh 02-reliability/go/heartbeat_long_activity.go
 ```
 
-Run a runnable example — Java by default, or pass a language:
+Run a runnable example, Java by default, or pass a language:
 
 ```bash
 scripts/start-temporal.sh

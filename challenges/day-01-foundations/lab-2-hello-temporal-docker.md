@@ -1,11 +1,11 @@
-# Lab 1.2b — Hello Temporal on a Dockerized cluster
+# Lab 1.2b: Hello Temporal on a Dockerized cluster
 
 **Time:** ~30 min · **Difficulty:** ★ · **Stack:** Temporal Server in Docker (auto-setup + PostgreSQL + UI)
 
 ## Scenario
 
 Another variant of [Lab 1.2](lab-2-hello-temporal.md). So far you've run against
-`temporal server start-dev` — one binary, in-memory state. Here you run the
+`temporal server start-dev`: one binary, in-memory state. Here you run the
 **same Workflow** against a real multi-service cluster brought up with Docker
 Compose: Frontend/History/Matching (the `temporalio/auto-setup` image) backed by
 **PostgreSQL**, plus the standalone **Web UI** container.
@@ -13,10 +13,10 @@ Compose: Frontend/History/Matching (the `temporalio/auto-setup` image) backed by
 The punchline: only the **environment** changes. Both this lab and the
 [Cloud variant](lab-2-hello-temporal-cloud.md) build on one env-driven worker
 that calls `Connections.fromEnv()`. For Docker there are no credentials and the
-default address (`127.0.0.1:7233`) already points at the cluster — so you set
+default address (`127.0.0.1:7233`) already points at the cluster, so you set
 *nothing* and the plaintext branch just connects. What changes is the
-*infrastructure* — separate processes, durable Postgres persistence, a
-standalone UI — which is much closer to how Temporal looks in production.
+*infrastructure* (separate processes, durable Postgres persistence, a
+standalone UI), which is much closer to how Temporal looks in production.
 
 > **Shared base with Lab 1.2c.** `Connections.fromEnv()` is the same helper the
 > Cloud lab uses; Docker exercises its trivial **plaintext** branch, Cloud its
@@ -25,8 +25,8 @@ standalone UI — which is much closer to how Temporal looks in production.
 ## Learning goals
 
 - Stand up a real Temporal cluster (4 services + a database) with Docker Compose.
-- See that the dev server and a Dockerized cluster are the **same gRPC contract**
-  — the same env-driven worker connects to both with no new config.
+- See that the dev server and a Dockerized cluster are the **same gRPC contract**:
+  the same env-driven worker connects to both with no new config.
 - Understand what the single-binary dev server collapses: persistence and the UI
   are now their own containers.
 
@@ -38,7 +38,7 @@ standalone UI — which is much closer to how Temporal looks in production.
 
 - Lab 1.2 complete (you have a working Workflow/Activity/Worker).
 - Docker + Docker Compose v2 (`docker compose version`). See [`Setup.md`](../../Setup.md).
-- **Stop `make temporal` if it's running** — the Docker cluster binds the same
+- **Stop `make temporal` if it's running**: the Docker cluster binds the same
   host port `:7233`, so the dev server and this stack are mutually exclusive.
 
 ## Bring up the cluster
@@ -49,7 +49,7 @@ From the repo root:
 make stack-temporal          # auto-setup + PostgreSQL + UI; waits for health
 ```
 
-<details><summary>Under the hood — what <code>make stack-temporal</code> runs</summary>
+<details><summary>Under the hood: what <code>make stack-temporal</code> runs</summary>
 
 ```bash
 docker compose -f docker/compose.temporal.yml up -d
@@ -68,7 +68,7 @@ scripts/start-stack.sh temporal status   # all three services Up / healthy
 temporal operator namespace list          # 'default' exists (auto-setup created it)
 ```
 
-<details><summary>Under the hood — what <code>scripts/start-stack.sh temporal status</code> runs</summary>
+<details><summary>Under the hood: what <code>scripts/start-stack.sh temporal status</code> runs</summary>
 
 ```bash
 docker compose -f docker/compose.temporal.yml ps
@@ -84,7 +84,7 @@ the dev server).
 1. Bring the stack up and confirm all three containers are healthy.
 2. Run the shared env-driven worker, then start a Workflow from a second
    terminal. With no `TEMPORAL_*` variables set, `Connections.fromEnv()`'s
-   plaintext branch defaults to `127.0.0.1:7233` / namespace `default` — exactly
+   plaintext branch defaults to `127.0.0.1:7233` / namespace `default`, exactly
    the Docker cluster. The Worker and starter are separate processes; both read
    the same env:
 
@@ -93,7 +93,7 @@ the dev server).
    make run-connect-starter   # terminal B: starts one Workflow, prints the greeting
    ```
 
-   <details><summary>Under the hood — what these run</summary>
+   <details><summary>Under the hood: what these run</summary>
 
    ```bash
    cd examples/runnable/01b-hello-temporal-anywhere
@@ -106,12 +106,12 @@ the dev server).
 
    </details>
 
-   (Your original Lab 1.2 worker, `make run-hello`, also works against Docker —
+   (Your original Lab 1.2 worker, `make run-hello`, also works against Docker;
    it's the same gRPC contract. The point of `run-connect` is one worker that
    *also* reaches Cloud in Lab 1.2c.)
 3. Find the execution in the Docker-backed Web UI under the `default` namespace.
 4. **Prove persistence is real:** restart the cluster *without* wiping volumes
-   and confirm the completed Workflow is still there — something the in-memory
+   and confirm the completed Workflow is still there, something the in-memory
    dev server can't promise.
 
    ```bash
@@ -135,7 +135,7 @@ temporal workflow list            # hello-anywhere-demo, Status Completed
 
 In the Web UI you'll see the usual `WorkflowExecutionStarted`, the
 `ActivityTaskScheduled`/`Started`/`Completed` trio, and
-`WorkflowExecutionCompleted` — identical to the dev-server run, because it's the
+`WorkflowExecutionCompleted`, identical to the dev-server run, because it's the
 same server code, just deployed differently.
 
 ## Definition of done
@@ -153,7 +153,7 @@ same server code, just deployed differently.
 scripts/start-stack.sh temporal down   # stops containers AND removes the volume
 ```
 
-<details><summary>Under the hood — what <code>scripts/start-stack.sh temporal down</code> runs</summary>
+<details><summary>Under the hood: what <code>scripts/start-stack.sh temporal down</code> runs</summary>
 
 ```bash
 docker compose -f docker/compose.temporal.yml down -v   # -v also deletes the Postgres volume
@@ -166,24 +166,24 @@ docker compose -f docker/compose.temporal.yml down -v   # -v also deletes the Po
 
 ## Hints
 
-<details><summary>Hint 1 — "connection refused" on :7233</summary>
+<details><summary>Hint 1: "connection refused" on :7233</summary>
 
-Either the stack isn't healthy yet (first boot seeds the schema — watch
+Either the stack isn't healthy yet (first boot seeds the schema, watch
 `scripts/start-stack.sh temporal logs`), or `make temporal` is still running and
 owns the port. Only one server can bind `:7233`.
 </details>
 
-<details><summary>Hint 2 — the UI is empty / won't load</summary>
+<details><summary>Hint 2: the UI is empty / won't load</summary>
 
 The UI container talks to `temporal:7233` over the compose network and serves on
 container `:8080`, mapped to host `:8233`. Give `temporal` a few seconds to pass
-its healthcheck — the UI `depends_on` it as `service_healthy`.
+its healthcheck; the UI `depends_on` it as `service_healthy`.
 </details>
 
-<details><summary>Hint 3 — do I need to set any env vars or change code?</summary>
+<details><summary>Hint 3: do I need to set any env vars or change code?</summary>
 
 No. The Docker cluster speaks the same gRPC API on the same port,
-unauthenticated, namespace `default` — so `Connections.fromEnv()` takes its
+unauthenticated, namespace `default`, so `Connections.fromEnv()` takes its
 plaintext branch with the default `127.0.0.1:7233` and connects. No `TEMPORAL_*`
 variables, no code edit. (Contrast with
 [Lab 1.2c](lab-2-hello-temporal-cloud.md), where you set credentials and the
@@ -196,7 +196,7 @@ helper takes its TLS + auth branch instead.)
   the same Task Queue and watch them share polling. The cluster doesn't care how
   many Workers connect.
 - Open a `psql` shell into the `postgresql` container and find the `executions`
-  table — see the event history you read in Lab 1.3 sitting in real rows.
+  table, see the event history you read in Lab 1.3 sitting in real rows.
 - Compare startup: time `make temporal` vs `make stack-temporal`. The dev server
   wins on speed; the Docker cluster wins on fidelity to production. Know when to
   reach for each.
