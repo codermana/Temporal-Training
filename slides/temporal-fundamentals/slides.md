@@ -734,6 +734,55 @@ is a breaking change for any open Workflow whose history holds the old name.
 
 ---
 
+<!-- _class: dense -->
+
+## Options at a glance — wiring the client & Worker
+
+Every layer of the bootstrap path has its own `*Options` builder. From the outside in:
+
+| Builder | Configures | Applied when |
+|---|---|---|
+| [`WorkflowServiceStubsOptions`](https://javadoc.io/doc/io.temporal/temporal-serviceclient/latest/io/temporal/serviceclient/WorkflowServiceStubsOptions.html) | Connection: target host, TLS, API key, metrics scope | building the service stubs |
+| [`WorkflowClientOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/WorkflowClientOptions.html) | Namespace, data converter, client interceptors | building the `WorkflowClient` |
+| [`WorkerFactoryOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/worker/WorkerFactoryOptions.html) | Cross-Worker: sticky cache, virtual workflow threads, Worker interceptors | `WorkerFactory.newInstance` |
+| [`WorkerOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/worker/WorkerOptions.html) | Per-queue slots, tuner, virtual threads | `factory.newWorker` |
+| [`WorkflowImplementationOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/worker/WorkflowImplementationOptions.html) | Per-type: fail-on exception types, per-Activity defaults | registering a Workflow impl |
+
+> Each builder is `newBuilder() … .build()` — same shape everywhere, so they read the same.
+
+<!--
+This is the reference slide people screenshot. Walk it outside-in: stubs are the
+socket, client is the namespace-scoped entry point, factory owns the JVM-wide
+cache + threads, worker is per-Task-Queue, impl options are per-Workflow-type.
+-->
+
+---
+
+<!-- _class: dense -->
+
+## Options at a glance — starting & retrying work
+
+These travel with each execution rather than the Worker:
+
+| Builder | Configures | Applied when |
+|---|---|---|
+| [`WorkflowOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/WorkflowOptions.html) | ID, Task Queue, run/execution timeouts, retry, ID-reuse policy | starting a Workflow |
+| [`ChildWorkflowOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/workflow/ChildWorkflowOptions.html) | Same set + parent-close policy | starting a Child Workflow |
+| [`ScheduleOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/schedules/ScheduleOptions.html) | Memo & search attributes for the Schedule | `createSchedule` |
+| [`ActivityOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/activity/ActivityOptions.html) | Timeouts, heartbeat, Task Queue, retry | building an Activity stub |
+| [`LocalActivityOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/activity/LocalActivityOptions.html) | Timeouts + retry for short, local Activities | building a local Activity stub |
+| [`RetryOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/common/RetryOptions.html) | Backoff, max attempts, non-retryable types | nested inside the four above |
+
+> `RetryOptions` is never set alone — it's the retry block *inside* a Workflow/Activity options builder.
+
+<!--
+Contrast with the previous slide: those configure the Worker once at boot; these
+are per-execution and can change call to call. RetryOptions is the common nested
+piece — point back to the "Setting them deliberately" slide.
+-->
+
+---
+
 <!-- _class: section -->
 <!-- _transition: slide 0.5s -->
 
@@ -1221,6 +1270,51 @@ explains why. JSON is from the Event History "JSON" toggle / `workflow show -o j
 
 ---
 
+<!-- _class: code -->
+
+## Split brain — two Workers, one run
+
+```text
+  Worker A ── runs Workflow Task ──╳   (network drops; cache still warm)
+                                    │   server waits…
+                WorkflowTaskTimeout ▼   (~10s) → task re-scheduled
+  Worker B ── polls, replays from event 1, completes ──► history advances ✓
+  Worker A ── reconnects, submits its result ─────────► REJECTED (stale)  ✗
+```
+
+- The server accepts a completion only if it matches the run's **current history version** — a **compare-and-swap**. First writer wins.
+- Worker B's result is committed; A's is a stale write against an old version, so it's discarded. No coordination between the Workers required.
+- Exactly-once on **Workflow state**; **at-least-once** on Activity *execution* → Activities must be idempotent.
+
+> There is never a "merge two histories" step. Persistence serialises the writes; the loser is simply rejected.
+
+<!--
+This is the question students ask: "what if a disconnected Worker comes back?"
+The answer is the CAS on history version - not locking, not leader election at
+the Worker level. Workers are interchangeable; the DB is the arbiter. Tie the
+activity-idempotency point back to the retries lab.
+-->
+
+---
+
+<!-- _class: dense -->
+
+## Stateful for speed, stateless for truth
+
+- **Sticky cache** — a Worker keeps the run's in-memory state to skip replay. Pure **speed**.
+- **Replay** — any other Worker rebuilds that *exact* state from the event history. Pure **correctness**.
+- **Determinism** — the contract that makes replay reproduce the same state, on a different Worker, byte-for-byte.
+
+> Three views of one mechanism: the cache is disposable, the history is the truth, determinism is the bridge. Kill any Worker at any instant and the run is fine — its state was only ever a cached replay of events.
+
+<!--
+The synthesis slide. Students meet sticky cache, replay, and determinism as
+three separate topics; this is where they click into one. Cache = derived view;
+history = source of truth; determinism = why the view is reproducible elsewhere.
+-->
+
+---
+
 <!-- _class: dense -->
 
 ## Workflow ID vs Run ID
@@ -1425,6 +1519,7 @@ The Worker YOU write and deploy is a separate process polling Matching via Front
 
 - Workflow state is partitioned into **shards** (e.g. 512 / 4096); each shard owns a slice of executions by hashed Workflow ID.
 - A shard is owned by exactly **one** History host at a time. That means a single writer and no per-workflow contention.
+- Ownership is a **rangeID lease** in persistence. If a partition makes two hosts both claim a shard, the first write bumps the lease; the other gets **shard ownership lost** and drops it — split brain resolved by the DB, not by merging.
 - Each shard drives its executions and processes internal **task queues**:
 
 | Internal queue | Drives |
@@ -1627,6 +1722,29 @@ the shape of the whole execution. Worth naming the distinction now: Canceled is
 cooperative (the code gets a chance to clean up), Terminated is forceful (the
 server kills it, no cleanup). Continue-As-New seeds Day 2's long-running
 patterns — same Workflow ID, brand-new Run ID and empty history.
+-->
+
+---
+
+<!-- _class: dense -->
+
+## Cancel vs Terminate vs Reset — the scary buttons
+
+The detail page's **More Actions** menu has three ways to intervene — *not* interchangeable:
+
+| | **Cancel** | **Terminate** | **Reset** |
+|---|---|---|---|
+| Workflow gets a say? | **yes** — a request it can catch | **no** — killed at once | replays instead |
+| Cleanup / compensation? | yes, if you coded it | no | n/a |
+| Effect | graceful stop | hard stop | **rewind to an earlier event**, re-run from there |
+| Use when | "stop, but tidy up" | "it's wedged, stop now" | "bad deploy/bug — replay with fixed code" |
+
+> Cancel is cooperative. Terminate is `kill -9`. Reset is a time machine — a new Run from a past point.
+
+<!--
+The most dangerous menu for newcomers. Terminate forfeits compensation - prefer
+Cancel. Reset recovers from a bad code deploy: pick an event, reset, the Worker
+replays forward with current code. All three are in the per-Workflow More Actions.
 -->
 
 ---
@@ -3881,16 +3999,19 @@ Open in VSCode: examples/05-production/worker_options_manual.java, worker_tuner.
 
 # The levers
 
-| Setting | Controls |
-| --- | --- |
-| `maxConcurrentWorkflowTaskExecutionSize` | In-flight workflow decisions on this Worker |
-| `maxConcurrentActivityExecutionSize` | In-flight Activity attempts |
-| `ResourceBasedTuner` | Auto-scale Worker slots vs CPU / memory targets |
-| `CompositeTuner` | Mix strategies: fixed workflow slots + resource-based activity slots |
-| Sticky execution | Worker caches workflows; skips full replay each task |
-| `setUsingVirtualWorkflowThreads(true)` | Cheaper SDK Workflow threads inside the Worker Factory |
-| `setUsingVirtualThreads(true)` (JDK 21+) | Cheaper Activity execution threads inside one Worker |
-| Number of Task Queues | One pool per resource profile |
+| Setting | Controls | Default |
+| --- | --- | --- |
+| `maxConcurrentWorkflowTaskExecutionSize` | In-flight workflow decisions on this Worker | `200` |
+| `maxConcurrentActivityExecutionSize` | In-flight Activity attempts | `200` |
+| `maxConcurrentLocalActivityExecutionSize` | In-flight local Activities | `200` |
+| `ResourceBasedTuner` | Auto-scale Worker slots vs CPU / memory targets | off (fixed slots) |
+| `CompositeTuner` | Mix strategies: fixed workflow slots + resource-based activity slots | off |
+| Sticky execution | Worker caches workflows; skips full replay each task | on · cache `600` |
+| `setUsingVirtualWorkflowThreads(true)` | Cheaper SDK Workflow threads inside the Worker Factory | `false` |
+| `setUsingVirtualThreads(true)` (JDK 21+) | Cheaper Activity execution threads inside one Worker | `false` |
+| Number of Task Queues | One pool per resource profile | `1` |
+
+> Pollers default to **5** workflow-task + **5** activity-task per Worker; rate limits (`maxActivitiesPerSecond`) default to **0 = unlimited**.
 
 ---
 
@@ -3985,12 +4106,12 @@ how many tasks this process runs at once.
 Worker worker = factory.newWorker(
     "io-heavy",
     WorkerOptions.newBuilder()
-        .setMaxConcurrentActivityExecutionSize(200)
-        .setMaxConcurrentWorkflowTaskExecutionSize(20)
+        .setMaxConcurrentActivityExecutionSize(200)   // default 200
+        .setMaxConcurrentWorkflowTaskExecutionSize(20) // default 200 — capped down
         .build());
 ```
 
-> I/O-heavy workload: many concurrent Activities, few workflow tasks.
+> I/O-heavy workload: many concurrent Activities, few workflow tasks. Both default to **200**; here we leave Activities at the default and cap workflow tasks down to 20.
 
 ---
 
@@ -4077,16 +4198,19 @@ Worker worker = factory.newWorker(
 
 ## Mix strategies per slot type
 
-Workflow tasks and Activities have different profiles — so tune them **differently inside one Worker**:
+A `WorkerTuner` decides **how many slots** each task type gets. `CompositeTuner` takes **one `SlotSupplier` per slot type**, so each can use the strategy that fits it:
 
-- **Fixed** slots where load is predictable (e.g. workflow-task decisions).
-- **Resource-based** slots where it isn't (e.g. I/O-heavy Activities).
+- **`CompositeTuner(workflowTaskSupplier, activitySupplier, localActivitySupplier)`** — three independent suppliers, one per slot type.
+- **`FixedSizeSlotSupplier<>(N)`** — hands out exactly **N** slots, never more (same effect as `setMaxConcurrent…Size(N)`). Use where load is predictable — e.g. workflow-task decisions.
+- **`ResourceBasedSlotSupplier`** — grows / shrinks slots against CPU & memory targets. Use where load isn't — e.g. I/O-heavy Activities.
 
-> A `CompositeTuner` lets each slot type use the strategy that fits it — not one knob for everything.
+> Pin the cheap, predictable slots with `FixedSizeSlotSupplier`; auto-size the expensive ones with `ResourceBasedSlotSupplier`. `CompositeTuner` is just the holder that lets them coexist.
 
 <!--
 Lead-in before the CompositeTuner code. The realistic answer is "both": pin the
-cheap deterministic workflow slots, auto-size the expensive activity slots.
+cheap deterministic workflow slots with a FixedSizeSlotSupplier, auto-size the
+expensive activity slots with a ResourceBasedSlotSupplier. CompositeTuner doesn't
+size anything itself — it just wires one supplier per slot type.
 -->
 
 ---
@@ -4149,78 +4273,6 @@ Worker worker = factory.newWorker(
 ```
 
 > Scale to 20 replicas and the vendor still sees ≤ 100 QPS — the task-queue cap is enforced server-side.
-
----
-
-<!-- _class: dense -->
-
-## Options at a glance — wiring the client & Worker
-
-Every layer of the bootstrap path has its own `*Options` builder. From the outside in:
-
-| Builder | Configures | Applied when |
-|---|---|---|
-| [`WorkflowServiceStubsOptions`](https://javadoc.io/doc/io.temporal/temporal-serviceclient/latest/io/temporal/serviceclient/WorkflowServiceStubsOptions.html) | Connection: target host, TLS, API key, metrics scope | building the service stubs |
-| [`WorkflowClientOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/WorkflowClientOptions.html) | Namespace, data converter, client interceptors | building the `WorkflowClient` |
-| [`WorkerFactoryOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/worker/WorkerFactoryOptions.html) | Cross-Worker: sticky cache, virtual workflow threads, Worker interceptors | `WorkerFactory.newInstance` |
-| [`WorkerOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/worker/WorkerOptions.html) | Per-queue slots, tuner, virtual threads | `factory.newWorker` |
-| [`WorkflowImplementationOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/worker/WorkflowImplementationOptions.html) | Per-type: fail-on exception types, per-Activity defaults | registering a Workflow impl |
-
-> Each builder is `newBuilder() … .build()` — same shape everywhere, so they read the same.
-
-<!--
-This is the reference slide people screenshot. Walk it outside-in: stubs are the
-socket, client is the namespace-scoped entry point, factory owns the JVM-wide
-cache + threads, worker is per-Task-Queue, impl options are per-Workflow-type.
--->
-
----
-
-<!-- _class: dense -->
-
-## Options at a glance — starting & retrying work
-
-These travel with each execution rather than the Worker:
-
-| Builder | Configures | Applied when |
-|---|---|---|
-| [`WorkflowOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/WorkflowOptions.html) | ID, Task Queue, run/execution timeouts, retry, ID-reuse policy | starting a Workflow |
-| [`ChildWorkflowOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/workflow/ChildWorkflowOptions.html) | Same set + parent-close policy | starting a Child Workflow |
-| [`ScheduleOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/schedules/ScheduleOptions.html) | Memo & search attributes for the Schedule | `createSchedule` |
-| [`ActivityOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/activity/ActivityOptions.html) | Timeouts, heartbeat, Task Queue, retry | building an Activity stub |
-| [`LocalActivityOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/activity/LocalActivityOptions.html) | Timeouts + retry for short, local Activities | building a local Activity stub |
-| [`RetryOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/common/RetryOptions.html) | Backoff, max attempts, non-retryable types | nested inside the four above |
-
-> `RetryOptions` is never set alone — it's the retry block *inside* a Workflow/Activity options builder.
-
-<!--
-Contrast with the previous slide: those configure the Worker once at boot; these
-are per-execution and can change call to call. RetryOptions is the common nested
-piece — point back to the "Setting them deliberately" slide.
--->
-
----
-
-<!-- _class: dense -->
-
-## Cancel vs Terminate vs Reset — the scary buttons
-
-The detail page's **More Actions** menu has three ways to intervene — *not* interchangeable:
-
-| | **Cancel** | **Terminate** | **Reset** |
-|---|---|---|---|
-| Workflow gets a say? | **yes** — a request it can catch | **no** — killed at once | replays instead |
-| Cleanup / compensation? | yes, if you coded it | no | n/a |
-| Effect | graceful stop | hard stop | **rewind to an earlier event**, re-run from there |
-| Use when | "stop, but tidy up" | "it's wedged, stop now" | "bad deploy/bug — replay with fixed code" |
-
-> Cancel is cooperative. Terminate is `kill -9`. Reset is a time machine — a new Run from a past point.
-
-<!--
-The most dangerous menu for newcomers. Terminate forfeits compensation - prefer
-Cancel. Reset recovers from a bad code deploy: pick an event, reset, the Worker
-replays forward with current code. All three are in the per-Workflow More Actions.
--->
 
 ---
 

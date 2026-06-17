@@ -27,8 +27,12 @@ public class RetriesStarter {
     String result = workflow.process("order-42");
     System.out.println("Result: " + result);
     System.out.println(
-        "Open the Web UI and look for two ActivityTaskFailed events before chargeCard succeeds,");
-    System.out.println("and the ActivityTaskStarted heartbeats on exportLargeReport.");
+        "Note: automatic retries are NOT separate history events. A completed run collapses");
+    System.out.println(
+        "chargeCard's failed attempts into one ActivityTaskStarted carrying attempt=3 +");
+    System.out.println(
+        "lastFailure. To watch the live attempt counter, open the Web UI's Pending Activities");
+    System.out.println("tab while the run is mid-retry, and watch the heartbeats on exportLargeReport.");
     System.exit(0);
   }
 }
