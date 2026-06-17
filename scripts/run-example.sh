@@ -36,6 +36,7 @@ Examples:
   scripts/run-example.sh choreography
   scripts/run-example.sh wordcount
   scripts/run-example.sh routing      # one Workflow, Activities on separate pools
+  scripts/run-example.sh spring       # Temporal Spring Boot starter, REST on :8080 (Java only)
 
 Use scripts/list-examples.sh to see all examples.
 EOF
@@ -125,6 +126,12 @@ case "$EXAMPLE" in
   routing|task-queue-routing|taskqueue|15|15-task-queue-routing)
     DIR="examples/runnable/15-task-queue-routing"
     ;;
+  spring|springboot|spring-boot|16|16-spring-boot)
+    # Single Spring Boot process: the starter stands up the Worker and the app
+    # serves REST on :8080. Not Worker/starter split — role is ignored. Java only.
+    DIR="examples/runnable/16-spring-boot"
+    MODE="spring"
+    ;;
   *)
     echo "Unknown runnable example: $EXAMPLE" >&2
     usage >&2
@@ -177,6 +184,21 @@ case "$LANG_CHOICE" in
         else
           mvn -q compile exec:java
         fi
+        ;;
+      spring)
+        # Spring Boot 3.3 targets Java 17-21. If the default `java` is newer,
+        # transparently pin JDK 17 for this run so it works out of the box.
+        JAVA_MAJOR="$(java -version 2>&1 | sed -n 's/.*version "\([0-9][0-9]*\).*/\1/p' | head -1)"
+        if [[ -n "$JAVA_MAJOR" && "$JAVA_MAJOR" -gt 21 ]]; then
+          if J17="$(/usr/libexec/java_home -v 17 2>/dev/null)"; then
+            echo "Default Java is $JAVA_MAJOR; pinning JDK 17 for Spring Boot." >&2
+            export JAVA_HOME="$J17"
+          else
+            echo "Warning: default Java is $JAVA_MAJOR and no JDK 17 found." >&2
+            echo "Spring Boot 3.3 may not run on Java $JAVA_MAJOR. Install JDK 17." >&2
+          fi
+        fi
+        mvn -q -DskipTests spring-boot:run
         ;;
       test)
         mvn -q test

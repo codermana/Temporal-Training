@@ -1,0 +1,27 @@
+# Everything Temporal needs lives here — no @Configuration class.
+#
+# The starter reads this block, connects the client, scans the package for
+# @WorkflowImpl / @ActivityImpl, and starts a Worker for each task queue they
+# declare. Swap `target` for a Temporal Cloud endpoint (and add the auth/tls
+# block) to point the same app at Cloud.
+spring:
+  application:
+    name: temporal-spring-boot-demo
+  temporal:
+    connection:
+      target: 127.0.0.1:7233   # local dev server; "local" is also accepted
+    namespace: default
+    workers-auto-discovery:
+      packages:
+        - training.temporal.springboot
+
+# Read by GreetingActivitiesImpl via @Value — proves DI reaches Activities.
+demo:
+  greeting-prefix: Hello
+
+server:
+  port: 8080
+
+logging:
+  level:
+    io.temporal: INFO

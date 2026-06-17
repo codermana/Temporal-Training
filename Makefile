@@ -217,7 +217,7 @@ show: ## Print an example file (FILE=02-reliability/heartbeat_long_activity.java
 .PHONY: run-retries run-child run-replay run-continue run-choreography
 .PHONY: run-hello-starter run-connect-starter run-async-starter run-approval-starter
 .PHONY: run-retries-starter run-child-starter run-continue-starter run-choreography-starter
-.PHONY: run-routing run-routing-starter
+.PHONY: run-routing run-routing-starter run-spring
 
 # Split labs ship a standalone Worker and a standalone starter (client). The
 # run-* target launches the long-lived Worker; the run-*-starter target starts
@@ -285,6 +285,9 @@ run-routing:   ## Day 1: task-queue routing — one Workflow, Activities on sepa
 	scripts/run-example.sh routing
 run-routing-starter:  ## Day 1: task-queue routing (starter)
 	scripts/run-example.sh routing java starter
+
+run-spring:    ## Day 5: Temporal Spring Boot starter — REST app on :8080 (Java only)
+	scripts/run-example.sh spring
 
 # ---------------------------------------------------------------------------
 # Per-day bundles - bring everything required for that day up / down

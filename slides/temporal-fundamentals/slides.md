@@ -5270,6 +5270,71 @@ In production, prefer the temporal-spring-boot-starter and let it do this.
 
 ---
 
+<!-- _class: code -->
+
+## The starter does all of that — config, not beans
+
+`temporal-spring-boot-starter`: delete the `@Configuration`, describe it in `application.yml`.
+
+```yaml
+spring.temporal:
+  connection: { target: 127.0.0.1:7233 }
+  namespace: default
+  workers-auto-discovery: { packages: [com.example.orders] }
+```
+
+```java
+@WorkflowImpl(taskQueues = "orders")          // auto-registered Workflow
+class OrderSagaWorkflowImpl implements OrderSagaWorkflow { ... }
+
+@Component @ActivityImpl(taskQueues = "orders") // Activity = Spring bean (DI works)
+class OrderActivitiesImpl implements OrderActivities { ... }
+
+@RestController class Orders {
+  Orders(WorkflowClient client) { ... }         // client bean injected for you
+}
+```
+
+> The starter builds the client, scans for `@WorkflowImpl`/`@ActivityImpl`, starts a Worker per task queue, and binds start/graceful-shutdown to Spring. **What you'd ship.**
+
+<!--
+The payoff after the manual @Configuration slide. Same three responsibilities -
+client, Worker registration, lifecycle - now declared, not coded. Activities stay
+Spring beans so DI/testing are unchanged. Runnable: examples/runnable/16-spring-boot
+(Java only), `make run-spring`, then POST /greetings. Note the auto-discovery log
+lines naming the task queue - that IS the Worker the starter stood up.
+-->
+
+---
+
+<!-- _class: lab -->
+
+###### Demo · Day 5
+
+# Basic Temporal Spring Boot — the starter, end to end
+
+`examples/runnable/16-spring-boot` · Java only · `make run-spring` (serves `:8080`)
+
+```bash
+curl -s -X POST localhost:8080/greetings \
+  -H 'content-type: application/json' -d '{"name":"Ada"}'
+# {"message":"Hello, Ada! (from a Temporal Activity that is a Spring bean)"}
+
+curl -s localhost:8080/greetings/Ada      # Query the Workflow's status
+# {"message":"DONE"}
+```
+
+> No `@Configuration`, no `registerWorkflowImplementationTypes` — the REST handler started a durable Workflow, the auto-stood-up Worker ran it.
+
+<!--
+Run this live. One Spring process is both the client and the Worker. Show the
+startup log auto-discovering GreetingWorkflowImpl onto the 'greetings' queue,
+POST to start+block for the result, GET to Query, then open greeting-Ada in the
+Web UI. Lands the "client + Worker you wire in" framing with zero Temporal config.
+-->
+
+---
+
 ## Driving the saga synchronously (HTTP)
 
 A `@RestController` POST that needs the **result** uses an Update-with-start:

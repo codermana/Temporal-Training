@@ -60,6 +60,13 @@ spring:
 > the starter you pulled (`mvn dependency:tree`) and its docs. The shape above is
 > the intent: one Worker on the `orders` queue, beans auto-discovered.
 
+> **Known-good minimal reference:** [`examples/runnable/16-spring-boot`](../../examples/runnable/16-spring-boot)
+> is a complete, runnable starter app (`make run-spring`) verified against
+> `temporal-spring-boot-starter:1.32.1` + Spring Boot 3.3. Copy its `application.yml`
+> and `@WorkflowImpl` / `@Component @ActivityImpl` annotations if the property
+> names give you trouble. With auto-discovery you don't need the `workers:` list
+> at all — the annotations declare the task queue.
+
 **Structure to build (stubs):**
 
 ```java

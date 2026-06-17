@@ -29,7 +29,9 @@ in a package at the module root); Python `worker.py` / `starter.py`; Java a
 `*Worker` class / a `*Starter` class. A few labs aren't split: `04-schedules`
 and `05-kafka-bridge` are driven differently, `07-saga` and `08-aws-containers`
 run the Worker and are started from the Temporal CLI, and `06-testing` /
-`11-determinism-replay` run a test suite instead.
+`11-determinism-replay` run a test suite instead. `16-spring-boot` is a single
+Spring Boot process (Java only) — the starter hosts the Worker and the app serves
+REST on `:8080`.
 
 | Lab | Day | Topic |
 | --- | --- | --- |
@@ -48,3 +50,5 @@ run the Worker and are started from the Temporal CLI, and `06-testing` /
 | `12-continue-as-new` | 5 | Continue-as-new (deep dive) |
 | `13-choreography` | 5 | Event choreography with a durable Temporal participant |
 | `14-word-count-fanout` | 2 | Word-count fan-out / fan-in |
+| `15-task-queue-routing` | 5 | One Workflow, Activities on separate pools |
+| `16-spring-boot` | 5 | Temporal Spring Boot starter (auto-config, REST-driven) |
