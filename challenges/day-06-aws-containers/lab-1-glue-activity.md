@@ -40,15 +40,18 @@ temporal server start-dev \
 
 ```bash
 docker compose -f docker/compose.localstack.yml up -d
-# LocalStack S3/SQS/Glue on :4566
+# LocalStack S3/SQS/SNS/SSM on :4566
 ```
 
 </details>
 
-Create a Glue job in LocalStack to target (a stub script is fine; LocalStack
-will report run states). Use `awslocal glue create-job ...`. If your LocalStack
-build doesn't fully simulate Glue run transitions, treat the polling loop as the
-deliverable and simulate states as needed.
+> **Note — Glue is Pro-only on LocalStack Community.** `awslocal glue create-job`
+> returns `InternalFailure: ... not yet implemented or pro feature`, so the
+> runnable **mocks `GlueClient`** and the job-run states are simulated. The
+> deliverable is the supervise-via-Activity pattern (start → poll + heartbeat →
+> settle), not a live Glue call. S3 (`awslocal s3 ...`) is real on Community and
+> drives the demo. Everything below applies unchanged to a real `GlueClient`
+> pointed at AWS.
 
 ## Starter code
 
@@ -169,9 +172,10 @@ typed `ApplicationFailure`/`ApplicationError`.
 
 ## Verification
 
-```bash
-awslocal glue get-job-runs --job-name <your-job>     # see the runs Temporal started
-```
+Since Glue is mocked (Pro-only on LocalStack Community), verify from the
+Temporal side rather than `awslocal glue get-job-runs` (which errors on
+Community). The mocked `GlueClient` logs each `startJobRun`/`getJobRun` to the
+Worker console — watch the poll loop there.
 
 In the Temporal Web UI: the successful run's Activity completes with the
 `jobRunId`; the failed run shows an `ActivityTaskFailed` carrying the

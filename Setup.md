@@ -148,7 +148,7 @@ live under `docker/`.
 ```bash
 scripts/start-stack.sh kafka       # Day 3:  Kafka on :9092
 scripts/start-stack.sh obs         # Day 4:  Prometheus :9091 + Grafana :3000
-scripts/start-stack.sh aws         # Day 6:  LocalStack on :4566 (S3, SQS, Glue)
+scripts/start-stack.sh aws         # Day 6:  LocalStack on :4566 (S3, SQS, SNS, SSM)
 scripts/start-stack.sh all         # bring up all three
 scripts/start-stack.sh kafka down  # tear down (also: status, logs)
 ```
@@ -158,7 +158,7 @@ scripts/start-stack.sh kafka down  # tear down (also: status, logs)
 | Kafka (KRaft, 1 broker) | 9092      | Auto-create topics enabled                  |
 | Prometheus              | 9091      | Scrapes Temporal server + Worker (:9464)    |
 | Grafana                 | 3000      | admin / admin; anonymous viewer allowed     |
-| LocalStack              | 4566      | S3, SQS, Glue, IAM, STS, CloudWatch Logs    |
+| LocalStack              | 4566      | S3, SQS, SNS, SSM, KMS, IAM, STS, Logs (Glue is Pro-only — lab 1 mocks it) |
 
 ## Start the Local Kubernetes Cluster (Day 6 PM)
 

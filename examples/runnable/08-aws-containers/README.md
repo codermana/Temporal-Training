@@ -13,7 +13,7 @@ scripts/start-temporal.sh      # or: make temporal
 
 Activities pass S3 **URIs** forward, never file bytes, so Workflow history stays
 small. The bodies fake the work (sleep + URI rewriting); in the Day 6 labs they
-call LocalStack S3/Glue.
+call LocalStack S3 (Glue is Pro-only on Community, so its client is mocked).
 
 ## Java (`io.temporal:temporal-sdk`)
 
