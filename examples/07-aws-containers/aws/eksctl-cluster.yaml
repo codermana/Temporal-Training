@@ -1,0 +1,52 @@
+# eksctl ClusterConfig — a minimal, IRSA-ready EKS cluster for the Worker.
+#
+# Apply with:   eksctl create cluster -f eksctl-cluster.yaml
+# Delete with:  eksctl delete cluster -f eksctl-cluster.yaml   # STOP PAYING
+#
+# This is the real-cloud graduation of the `kind` cluster from Lab 6.5. The
+# Worker Deployment + KEDA ScaledObject that ran on kind run here UNCHANGED —
+# the only genuinely new pieces are (1) a real cluster and (2) IRSA so the
+# Activities reach AWS with no static access keys.
+#
+# Terraform alternative: the terraform-aws-modules/eks module expresses the
+# same shape (managed nodegroup + `enable_irsa = true`). eksctl is shown here
+# because it is the shortest path to a correctly-configured OIDC provider.
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: temporal-training
+  region: us-east-1            # keep in one region; match your ECR repo region
+  version: "1.30"
+
+# iam.withOIDC is the load-bearing line for IRSA. It provisions an IAM OIDC
+# identity provider for the cluster so a Kubernetes ServiceAccount can be
+# mapped to an IAM role (see aws/irsa-serviceaccount.yaml). Without this,
+# the eks.amazonaws.com/role-arn annotation is silently ignored and the
+# Worker falls back to node-role creds (or nothing).
+iam:
+  withOIDC: true
+
+# One managed nodegroup. Managed nodegroups handle AMI updates and graceful
+# drain for you. The Cluster Autoscaler / Karpenter (Stretch goal) adds nodes
+# from this group when KEDA-created Worker pods go Pending for lack of room.
+managedNodeGroups:
+  - name: workers
+    instanceType: m5.large
+    desiredCapacity: 2
+    minSize: 2
+    maxSize: 10               # headroom for KEDA-driven scale-up under backlog
+    volumeSize: 30
+    # Private subnets only: nodes have no public IP. Egress to the Temporal
+    # frontend and to AWS APIs goes through a NAT gateway or, preferably,
+    # VPC endpoints (see the lab's "VPC endpoints" pitfall).
+    privateNetworking: true
+    labels:
+      workload: temporal-worker
+
+# Let eksctl create a VPC with private subnets. In production you would point
+# this at an existing VPC and attach interface VPC endpoints for s3, glue,
+# sns, ssm, sts, ecr.api and ecr.dkr so AWS API calls never traverse a NAT.
+vpc:
+  nat:
+    gateway: Single           # Single is fine for training; HighlyAvailable in prod

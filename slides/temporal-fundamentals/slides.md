@@ -333,6 +333,67 @@ Workers connect outbound.
 
 ---
 
+# One Worker hosts many types
+
+- A single Worker registers **n Workflow** types **+ m Activity** types.
+- That one process can run any of the **n × m** combinations.
+- Registration is just a lookup table: type name → your code.
+
+> One Worker, one Task Queue, the whole catalogue of work it knows how to do.
+
+<!--
+The mental trap is "one Worker = one Workflow". It isn't.
+
+A Worker is a process that holds a registry. Whatever shows up on its Task Queue,
+if the type is registered, it runs it.
+
+Start here: the simplest topology is a single Worker that knows everything.
+-->
+
+---
+
+# Many Workers split the work
+
+- Scale out to **l Workers** across the fleet.
+- Each Worker registers **some(n)** Workflows **; some(m)** Activities — not all of it.
+- Partition by Task Queue: route each subset to the pool that registers it.
+
+> Same model, more processes. You choose how to slice the catalogue.
+
+<!--
+Why slice it instead of running l identical Workers?
+
+Different work has different needs: a GPU box registers only the inference
+Activity; a lightweight pool registers the orchestration Workflows.
+
+A Worker only pulls work it has registered. Mismatched Task Queue = task sits
+unhandled. This is a config bug people hit on day one.
+-->
+
+---
+
+# Why split: Compute & I/O
+
+- **Workflows** — orchestration. Cheap, deterministic, mostly waiting.
+- **Activities** — the real work: **compute**-heavy or **I/O**-bound.
+- Isolate them: CPU-bound and I/O-bound Activities starve each other on one pool.
+- Separate Workers → tune slots, scale, and hardware per workload.
+
+> Splitting the fleet isn't bureaucracy — it's matching processes to the shape of the work.
+
+<!--
+This is the "so what" behind the l-Workers slide.
+
+A workflow task is microseconds of decision-making. An Activity might pin a core
+for a minute or block on a slow API.
+
+Put them on the same Worker and the slow ones eat all the slots. Separate Task
+Queues let you size each pool independently — more activity slots here, a bigger
+box there. Tie back to WorkerOptions on the previous slide.
+-->
+
+---
+
 <!-- _class: dense -->
 
 # Airflow → Temporal map
@@ -449,7 +510,7 @@ replay contract. The four bullets map 1:1 to the packages on the next slide.
 | `io.temporal.common` | Shared config | `RetryOptions`, converters, interceptors |
 | `io.temporal.serviceclient` | The gRPC connection | `WorkflowServiceStubs`, `WorkflowServiceStubsOptions` (TLS / API-key) |
 
-> Javadoc: [`WorkflowClient`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/WorkflowClient.html) · [`Worker`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/worker/Worker.html) · [`Workflow`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/workflow/Workflow.html) · [`Activity`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/activity/Activity.html) · [`WorkflowServiceStubs`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/serviceclient/WorkflowServiceStubs.html) · [full index](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
+> Javadoc: [`WorkflowClient`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/WorkflowClient.html) · [`Worker`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/worker/Worker.html) · [`Workflow`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/workflow/Workflow.html) · [`Activity`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/activity/Activity.html) · [`WorkflowServiceStubs`](https://javadoc.io/doc/io.temporal/temporal-serviceclient/latest/io/temporal/serviceclient/WorkflowServiceStubs.html) · [full index](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/index.html)
 
 <!--
 Don't read every cell - point at the split: client+serviceclient are the OUTSIDE
@@ -505,7 +566,7 @@ String result = wf.greet("Ada");   // start & block; .start(...) is async
 
 > The same `client` signals, queries, updates, and describes running Workflows.
 
-> Javadoc: [`WorkflowClient`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/WorkflowClient.html) · [`WorkflowServiceStubs`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/serviceclient/WorkflowServiceStubs.html) · [`WorkflowOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/WorkflowOptions.html)
+> Javadoc: [`WorkflowClient`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/WorkflowClient.html) · [`WorkflowServiceStubs`](https://javadoc.io/doc/io.temporal/temporal-serviceclient/latest/io/temporal/serviceclient/WorkflowServiceStubs.html) · [`WorkflowOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/WorkflowOptions.html)
 
 <!--
 This is the starter side from the Hello lab. Three steps: connect, make a stub,
@@ -1324,22 +1385,176 @@ The Worker YOU write and deploy is a separate process polling Matching via Front
 ## Lifecycle: one Workflow start
 
 ```
-1. Client ──StartWorkflowExecution──▶ Frontend ──▶ History (owning shard)
-2. History  appends WorkflowExecutionStarted + WorkflowTaskScheduled
-            └─ transfer task ──▶ Matching   (enqueue on Task Queue)
-3. Worker   long-polls Task Queue via Frontend ──▶ gets Workflow Task
-4. Worker   runs code, returns command: ScheduleActivityTask ──▶ History
-5. History  ──transfer task──▶ Matching ──▶ Worker gets Activity Task
-6. Worker   runs Activity, reports result ──▶ History (appends events)
-7. History  schedules next Workflow Task … repeat until completion
+1  Client  StartWorkflowExecution → Frontend → History (owning shard)
+2  History  persist [WorkflowExecutionStarted, WorkflowTaskScheduled]
+            + transfer task → Matching enqueues on the Task Queue
+3  Worker   PollWorkflowTask (Frontend→Matching); Matching pings History
+            → persist WorkflowTaskStarted, hand the events to the Worker
+4  Worker   run code until it blocks → RespondWorkflowTaskCompleted
+            command: ScheduleActivityTask
+            → persist [WorkflowTaskCompleted, ActivityTaskScheduled] → Matching
+5  Worker   PollActivityTask → persist ActivityTaskStarted → run Activity
+6  Worker   RespondActivityTaskCompleted
+            → persist [ActivityTaskCompleted, WorkflowTaskScheduled] → Matching
+7  Worker   final Workflow Task → command: CompleteWorkflowExecution
+            → persist [WorkflowTaskCompleted, WorkflowExecutionCompleted]  ✓
 ```
 
-Everything durable is an **event appended by History** before any Worker sees it.
+Nothing the Worker does is durable until **History persists the resulting Event** — every arrow above is a write before any Worker sees it.
 
 <!--
-Walk this slowly on the whiteboard. The key insight: nothing the Worker does is
-trusted until History has written the resulting event. Crash anywhere and replay
-rebuilds from the persisted history.
+Walk this slowly on the whiteboard. Two services the Worker never talks to
+directly: it polls through Frontend, Matching dispatches, History owns the
+record. Matching → History RecordWorkflowTaskStarted is the easily-missed hop:
+the Worker pulling a task is itself an event (WorkflowTaskStarted) before code
+runs.
+
+The key insight: nothing the Worker does is trusted until History has written
+the resulting event. Crash anywhere and replay rebuilds from the persisted
+history. Next slide turns this trace sideways into the ledger it produces.
+-->
+
+---
+
+<!-- _class: code -->
+
+## …and the Event History it leaves
+
+```
+ 1  WorkflowExecutionStarted     ← the client's StartWorkflowExecution
+ 2  WorkflowTaskScheduled
+ 3  WorkflowTaskStarted       ┐ Workflow Task #1
+ 4  WorkflowTaskCompleted     ┘ → command: ScheduleActivityTask
+ 5  ActivityTaskScheduled
+ 6  ActivityTaskStarted
+ 7  ActivityTaskCompleted
+ 8  WorkflowTaskScheduled
+ 9  WorkflowTaskStarted       ┐ Workflow Task #2
+10  WorkflowTaskCompleted     ┘ → command: CompleteWorkflowExecution
+11  WorkflowExecutionCompleted
+```
+
+- The Worker issues **Commands**; the Service records each as an **Event**.
+- This append-only history **is** the Workflow's state — not the Worker's memory.
+- Replay feeds these Events back; the code's regenerated Commands must match, in order.
+
+<!--
+This is the "not just an interaction diagram" payoff: same run, turned 90° into
+the durable record. Eleven events, eleven state transitions.
+
+Point out the rhythm: every Workflow Task is a Scheduled→Started→Completed
+triple, and a Command (ScheduleActivityTask, CompleteWorkflowExecution) only
+ever lands as an Event. The Worker proposes; History decides and records.
+
+Tie forward to determinism: on replay the SDK re-runs the code and checks the
+Commands it regenerates against events 4 and 10. Reorder your Activities and
+event 4 won't match — that's the non-determinism error they'll meet on Day 3.
+-->
+
+---
+
+<!-- _class: code -->
+
+## Lifecycle: who acts, and when
+
+```
+Client   Frontend History  Matching Worker
+│───────▶│───────▶│        │        │  StartWorkflowExecution
+│        │        │───────▶│        │  persist WFExecStarted,WFTScheduled → Matching
+│        │        │        │◀───────│  PollWorkflowTask
+│        │        │◀───────│        │  RecordWorkflowTaskStarted
+│        │        │────────────────▶│  persist WFTStarted; deliver task + events
+│        │        │        │        │  Worker runs code → blocks
+│        │        │◀────────────────│  RespondWFTCompleted [ScheduleActivity]
+│        │        │───────▶│        │  persist WFTCompleted,ActivityTaskScheduled → Matching
+│        │        │        │        │  … Activity task, then final WFT → Completed
+```
+
+The Worker addresses **neither History nor Matching directly** — it polls through Frontend, Matching dispatches, History owns the record.
+
+<!--
+Same seven steps as the trace, turned into lanes so the asymmetry is visible:
+all the persistence and decisioning happens in the middle (History), the Worker
+only ever talks to the edge (Frontend). The two left-pointing arrows into
+History — RecordWorkflowTaskStarted and RespondWFTCompleted — are the moments a
+poll/response turns into a persisted event.
+-->
+
+---
+
+<!-- _class: dense -->
+
+## Lifecycle: every Command becomes an Event
+
+| Worker issues a Command | Service records Event(s) |
+| --- | --- |
+| `ScheduleActivityTask` | `ActivityTaskScheduled` |
+| `StartTimer` | `TimerStarted` |
+| `SignalExternalWorkflowExecution` | `SignalExternalWorkflowExecutionInitiated` |
+| `StartChildWorkflowExecution` | `StartChildWorkflowExecutionInitiated` |
+| `CompleteWorkflowExecution` | `WorkflowExecutionCompleted` |
+| `ContinueAsNewWorkflowExecution` | `WorkflowExecutionContinuedAsNew` |
+
+> The Worker only ever **proposes** Commands. History decides, records the matching Event, and dispatches the resulting task. On replay the code re-derives the same Commands from these Events — that's the determinism contract.
+
+<!--
+The single rule behind every lifecycle diagram: a Command is intent, an Event is
+fact. The names even rhyme — Schedule→Scheduled, Start→Started/Initiated. This is
+why "do I/O in Activities, not Workflow code": only Commands round-trip through
+History, so only Command-shaped effects are durable and replayable.
+-->
+
+---
+
+<!-- _class: code -->
+
+## Lifecycle: the Worker's inner loop
+
+```
+   ┌─▶ ① poll Task Queue → Workflow Task + history
+   │   ② replay history → rebuild SDK state
+   │   ③ run code from the cursor until it blocks
+   │   ④ collect the Commands the code produced
+   └── ⑤ RespondWorkflowTaskCompleted → History appends events
+          (the next Workflow Task is scheduled; loop repeats)
+```
+
+- Every Workflow Task **replays the whole history so far**, then runs only the new tail.
+- That loop is why a crash is a non-event: a fresh Worker re-enters at ① and rebuilds state at ②.
+
+<!--
+The mechanism under the trace. Step ② is the one that surprises people — the
+Worker doesn't resume a paused thread, it re-runs the code from the top against
+the recorded history every single Workflow Task. The Worker is stateless between
+tasks; the history is the state. Sticky cache (mention WorkerOptions) is just an
+optimization that skips ② when the same Worker holds the run in memory.
+-->
+
+---
+
+<!-- _class: code -->
+
+## Lifecycle: the states a run moves through
+
+```
+                      ┌─▶ Completed
+                      ├─▶ Failed
+   start ─▶ Running ──┼─▶ Timed Out
+                      ├─▶ Canceled
+                      ├─▶ Terminated
+                      └─▶ Continued-As-New → new run, fresh history
+```
+
+- The whole event trace lives **inside** `Running`; every other box is terminal.
+- **Failed / Timed Out** may be retried per the Workflow's Retry Policy — a new run.
+- **Continue-As-New** ends this run and starts a fresh one: the trick for long-running Workflows that would otherwise grow history without bound.
+
+<!--
+Zoom all the way out. The previous slides were one trip through Running; this is
+the shape of the whole execution. Worth naming the distinction now: Canceled is
+cooperative (the code gets a chance to clean up), Terminated is forceful (the
+server kills it, no cleanup). Continue-As-New seeds Day 2's long-running
+patterns — same Workflow ID, brand-new Run ID and empty history.
 -->
 
 ---
@@ -1946,7 +2161,7 @@ Open in VSCode: examples/02-reliability/retry_and_timeouts.java, heartbeat_long_
 | `startToCloseTimeout` | One attempt's wall-clock budget |
 | `scheduleToCloseTimeout` | Total budget across **all** retry attempts |
 | `scheduleToStartTimeout` | How long an Activity sits in the queue before pickup |
-| `heartbeatTimeout` | Max gap between heartbeats; Worker death detect |
+| `heartbeatTimeout` | Max gap between heartbeats; detects Worker death |
 
 > If you can't say *why* a timeout is 5 minutes, it's wrong.
 
@@ -3725,7 +3940,7 @@ Every layer of the bootstrap path has its own `*Options` builder. From the outsi
 
 | Builder | Configures | Applied when |
 |---|---|---|
-| [`WorkflowServiceStubsOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/serviceclient/WorkflowServiceStubsOptions.html) | Connection: target host, TLS, API key, metrics scope | building the service stubs |
+| [`WorkflowServiceStubsOptions`](https://javadoc.io/doc/io.temporal/temporal-serviceclient/latest/io/temporal/serviceclient/WorkflowServiceStubsOptions.html) | Connection: target host, TLS, API key, metrics scope | building the service stubs |
 | [`WorkflowClientOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/WorkflowClientOptions.html) | Namespace, data converter, client interceptors | building the `WorkflowClient` |
 | [`WorkerFactoryOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/worker/WorkerFactoryOptions.html) | Cross-Worker: sticky cache, virtual workflow threads, Worker interceptors | `WorkerFactory.newInstance` |
 | [`WorkerOptions`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/worker/WorkerOptions.html) | Per-queue slots, tuner, virtual threads | `factory.newWorker` |
@@ -4093,7 +4308,7 @@ Workflow logic is deterministic, so you can test it **in-process** — no Docker
 
 > Unit-test orchestration like ordinary code — fast and hermetic.
 
-> Javadoc: [`TestWorkflowEnvironment`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/testing/TestWorkflowEnvironment.html)
+> Javadoc: [`TestWorkflowEnvironment`](https://javadoc.io/doc/io.temporal/temporal-testing/latest/io/temporal/testing/TestWorkflowEnvironment.html)
 
 <!--
 Lead-in before the TestWorkflowEnvironment code. Time-skipping is the "wow":
@@ -4282,7 +4497,7 @@ For a Workflow you wrote on Day 1-2:
 4. Add a `WorkflowReplayer` test per file.
 5. Modify the Workflow to reorder Activities; watch the test fail.
 
-> Javadoc: [`WorkflowReplayer`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/testing/WorkflowReplayer.html)
+> Javadoc: [`WorkflowReplayer`](https://javadoc.io/doc/io.temporal/temporal-testing/latest/io/temporal/testing/WorkflowReplayer.html)
 
 <!--
 This is the safety net for the rest of the year.
@@ -4455,7 +4670,7 @@ public String process(String orderId) {
 # Orchestration vs choreography
 
 * **Orchestration** - one central Workflow coordinates all steps & compensations. Single audit trail. **Temporal's natural shape.**
-* **Choreography** - each service reacts to events, emits its own. No central state.
+* **Choreography** - each service reacts to events and emits its own. No central state.
 * Temporal supports both: a Workflow can be the orchestrator, or one service's durable participant in a larger event choreography.
 
 > For cross-team flows from Airflow + Kafka, orchestration wins.
@@ -4709,7 +4924,7 @@ class TemporalConfig {
 }
 ```
 
-> Javadoc: [`WorkflowServiceStubs`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/serviceclient/WorkflowServiceStubs.html) · [`WorkflowClient`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/WorkflowClient.html) · [`WorkerFactory`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/worker/WorkerFactory.html)
+> Javadoc: [`WorkflowServiceStubs`](https://javadoc.io/doc/io.temporal/temporal-serviceclient/latest/io/temporal/serviceclient/WorkflowServiceStubs.html) · [`WorkflowClient`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/WorkflowClient.html) · [`WorkerFactory`](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/worker/WorkerFactory.html)
 
 <!--
 This is the underlying wiring.
@@ -5353,6 +5568,219 @@ Take a four-state ASL state machine (validate → transform → load → notify)
 
 ###### Day 6
 
+# Events in, events out, config
+
+SQS triggers a Workflow · SNS notifies the world · SSM holds the config.
+
+<!--
+Open in VSCode: examples/07-aws-containers/{java,python,go}/sqs_signal_bridge.*,
+sns_publish_activity.*, ssm_parameter_config.*
+The morning's missing third: what *drives* a Workflow, how it talks back out,
+and where its config/secrets live. All three run on free LocalStack.
+-->
+
+---
+
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 6 · on-ramp
+
+# Events in, events out, config
+
+- **Where this fits** — You've migrated the *orchestration*; now wire the *edges*: an inbound trigger, an outbound notification, and externalized config.
+- **Why it matters** — These are the seams where AWS at-least-once delivery meets Temporal at-least-once execution — idempotency is the whole game.
+- **By the end** — You'll trigger a Workflow from SQS, fan out a result via SNS, and boot a Worker from SSM Parameter Store.
+
+---
+
+# SQS as the trigger
+
+An `EventBridge → Lambda → StartExecution` chain collapses into a **long-poll SQS consumer** that `signalWithStart`s a Workflow. The consumer is plain glue — outside any Workflow, so no determinism rules.
+
+> "Standard queues ensure at-least-once message delivery, but due to the highly distributed architecture, more than one copy of a message might be delivered, and messages may occasionally arrive out of order."
+>
+> — *Amazon SQS Developer Guide* · docs.aws.amazon.com
+
+The duplicate is **fine**: `signalWithStart` is idempotent on the Workflow Id.
+
+<!--
+Source: https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/standard-queues.html
+The point: SQS gives you at-least-once. Don't fight it - make the consumer
+idempotent by keying the Workflow Id off the event, so a redelivery re-signals
+the same run instead of starting a duplicate.
+-->
+
+---
+
+# Why signalWithStart absorbs duplicates
+
+> "When you send this operation, if there is a running Workflow Execution with the given Workflow Id, it will be Signaled. Otherwise, a new Workflow Execution starts and is immediately sent the Signal."
+>
+> — *Temporal Documentation* · docs.temporal.io
+
+- Derive the Workflow Id from the event (e.g. `import-<bucket>-<key>`).
+- First delivery **starts**; any redelivery **signals** the same run. No duplicate Workflow.
+- **Delete the SQS message only after the signal is durable** in Temporal — at-least-once, never at-most-once.
+
+<!--
+Source: https://docs.temporal.io/sending-messages
+Deleting before the signal is durable = a lost event on crash. Order matters:
+signal first, delete second.
+-->
+
+---
+
+<!-- _class: code dense -->
+
+## SQS → signalWithStart bridge
+
+<!-- Open in VSCode: examples/07-aws-containers/java/sqs_signal_bridge.java -->
+
+```java
+for (Message m : resp.messages()) {
+  FileEvent event = parse(m.body());
+  ImportWorkflow stub = client.newWorkflowStub(ImportWorkflow.class,
+      WorkflowOptions.newBuilder()
+          .setWorkflowId("import-" + event.bucket() + "-" + event.key())  // idempotency key
+          .setTaskQueue("transform").build());
+
+  BatchRequest batch = client.newSignalWithStartRequest();
+  batch.add(stub::run, event.s3Uri());
+  client.signalWithStart(batch);          // start-or-signal: dedupes redeliveries
+
+  sqs.deleteMessage(DeleteMessageRequest.builder()        // only AFTER it's durable
+      .queueUrl(queueUrl).receiptHandle(m.receiptHandle()).build());
+}
+```
+
+> Long poll (`waitTimeSeconds(20)`), not a hot spin — fewer empty receives, lower cost.
+
+---
+
+<!-- _class: lab -->
+
+###### Lab · Day 6
+
+# SQS event trigger
+
+Challenge → [`day-06-aws-containers/lab-6-sqs-event-trigger`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-06-aws-containers/lab-6-sqs-event-trigger.md)
+
+```bash
+make stack-aws && make aws-init     # LocalStack + queue/topic/params
+awslocal sqs send-message --queue-url \
+  http://localhost:4566/000000000000/imports-events \
+  --message-body '{"bucket":"imports-incoming","key":"orders.csv","s3Uri":"s3://imports-incoming/incoming/orders.csv"}'
+# send the SAME message again — confirm NO second Workflow run
+```
+
+> One Workflow starts; the redelivery just re-signals it. Idempotency, observed.
+
+---
+
+# SNS to notify outward
+
+The final `notify` step moves *into* Temporal as an Activity that publishes to SNS — subscribers stay decoupled.
+
+> "The *Fanout* scenario is when a message published to an SNS topic is replicated and pushed to multiple endpoints, such as Firehose delivery streams, Amazon SQS queues, HTTP(S) endpoints, and Lambda functions."
+>
+> — *Amazon SNS Developer Guide* · docs.aws.amazon.com
+
+- Publishing is **I/O → it's an Activity**, never Workflow code.
+- Activities are at-least-once, so a retry may **double-publish** — put `workflowId`+`runId` in the message and let subscribers dedup.
+
+<!--
+Source: https://docs.aws.amazon.com/sns/latest/dg/welcome.html
+The publisher moved into Temporal; the fan-out topology (SNS -> SQS/Lambda/HTTP)
+is unchanged. Only "who calls Publish" changed.
+-->
+
+---
+
+# Idempotent by design — both sides
+
+> "Activities follow an at-least-once execution model." … "Because Activities may be retried due to failures, it's strongly recommended to make them idempotent."
+>
+> — *Temporal Documentation* · docs.temporal.io
+
+| Edge | AWS guarantee | Make it safe |
+| --- | --- | --- |
+| SQS in | at-least-once delivery | Workflow Id from the event → `signalWithStart` dedupes |
+| SNS out | at-least-once publish | carry `workflowId`+`runId`; subscribers dedup (or FIFO topic) |
+
+> The pattern is the same on every edge: an idempotency key the *receiver* can dedup on.
+
+<!--
+Source: https://docs.temporal.io/develop/python/best-practices/error-handling
+This slide is the thesis of the whole "edges" sub-section: at-least-once meets
+at-least-once; idempotency keys reconcile them.
+-->
+
+---
+
+<!-- _class: lab -->
+
+###### Lab · Day 6
+
+# SNS fan-out notify
+
+Challenge → [`day-06-aws-containers/lab-7-sns-fanout-notify`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-06-aws-containers/lab-7-sns-fanout-notify.md)
+
+```bash
+make stack-aws && make aws-init       # creates imports-complete topic + subscriber queue
+# wire publishNotification as the last ImportWorkflow step, then:
+awslocal sqs receive-message --queue-url \
+  http://localhost:4566/000000000000/imports-complete-sub
+```
+
+> The subscribed SQS queue receives the completion event — the publisher just moved into an Activity.
+
+---
+
+# SSM Parameter Store for config & secrets
+
+Stop baking config into the image or passing secrets as plaintext env. Read them from **SSM Parameter Store** at Worker startup.
+
+> "`SecureString` parameters encrypt values using AWS Key Management Service, making them a practical choice for lightweight encrypted configuration values…"
+>
+> — *AWS Systems Manager User Guide* · docs.aws.amazon.com
+
+- **Config loads in process-startup code**, not Workflow code (reading SSM in a Workflow is non-deterministic).
+- A value a *step* needs at runtime is read **inside an Activity** — e.g. a `fetchApiKey` Activity decrypting a `SecureString`.
+
+<!--
+Source: https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html
+The determinism trap: SSM values can change between replays. Bootstrap config at
+startup; per-run secrets via an Activity. This is also the on-ramp to IRSA/task
+roles (next sub-section) - no static keys.
+-->
+
+---
+
+<!-- _class: lab -->
+
+###### Lab · Day 6
+
+# Config & secrets from SSM
+
+Challenge → [`day-06-aws-containers/lab-8-ssm-parameter-store`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-06-aws-containers/lab-8-ssm-parameter-store.md)
+
+```bash
+make stack-aws && make aws-init       # seeds /temporal-training/worker/* (+ a SecureString)
+awslocal ssm get-parameters-by-path \
+  --path /temporal-training/worker/ --with-decryption
+# build the Worker from this tree at startup; read the api-key inside an Activity
+```
+
+> Boot the Worker from Parameter Store; the SecureString is decrypted via KMS, never logged.
+
+---
+
+<!-- _class: section -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 6
+
 # Workers as containers
 
 No HTTP server. Process-level probes. Graceful shutdown.
@@ -5638,13 +6066,204 @@ Verify:
 
 ---
 
+<!-- _class: section -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 6 · optional
+
+# Running it on real AWS
+
+ECS · EKS · Aurora · Route 53 — the production shapes (real account required).
+
+<!--
+These four are NOT on free LocalStack (Pro-only), so the labs are conceptual +
+reference manifests under examples/07-aws-containers/aws/ - no make targets.
+Walk them as lecture; apply only with an account. Each costs real money - tear
+down after. Labs 9-12.
+-->
+
+---
+
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 6 · on-ramp
+
+# Running it on real AWS
+
+- **Where this fits** — The same Worker you containerized, now on the AWS primitives a real deployment uses.
+- **Why it matters** — The Worker barely changes; what changes is *identity* (IRSA/task roles), *scaling* (CloudWatch vs KEDA), and *state* (Aurora, Route 53).
+- **By the end** — You'll read the manifests for ECS autoscaling, EKS+IRSA, an idempotent Aurora sink, and Route 53 failover — and know the traps.
+
+---
+
+# ECS Fargate — autoscale without KEDA
+
+ECS has **no native Temporal scaler**. So you assemble what KEDA bundles: publish Task Queue backlog as a **custom CloudWatch metric**, then target-track it.
+
+> "Amazon ECS leverages the Application Auto Scaling service to provide this functionality." … target tracking: "Increase or decrease the number of tasks that your service runs based on a target value for a specific metric."
+>
+> — *Amazon ECS Developer Guide* · docs.aws.amazon.com
+
+- A tiny **backlog publisher** calls `DescribeTaskQueue` → `PutMetricData` (`Temporal/Worker` / `TaskQueueBacklog`).
+- Application Auto Scaling target-tracks it — the CloudWatch analog of KEDA's `targetQueueSize`.
+- The Service has **no load balancer** — Workers are outbound-only (same as the Deployment).
+
+<!--
+Source: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-auto-scaling.html
+Contrast with lab 5: KEDA polls DescribeTaskQueue FOR you. On ECS you wire the
+poller -> metric -> scaler yourself. Same idea (scale on queue depth), more glue.
+Manifests: examples/07-aws-containers/aws/ecs_*.json + backlog_publisher.md
+-->
+
+---
+
+<!-- _class: lab -->
+
+###### Lab · Day 6 · optional
+
+# ECS Fargate autoscaling
+
+Challenge → [`day-06-aws-containers/lab-9-ecs-fargate-autoscaling`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-06-aws-containers/lab-9-ecs-fargate-autoscaling.md)
+
+> **Optional · real AWS account required.** No `make` targets — walk the manifests under `examples/07-aws-containers/aws/`, apply only with an account, and **tear down after** (Fargate + CloudWatch cost real money).
+
+- `ecs_task_definition.json` — secrets from SSM, `stopTimeout: 120` (graceful drain).
+- `ecs_autoscaling.json` — target-track the backlog metric, min 1 / max 10.
+
+---
+
+# EKS — the kind lab, for real
+
+The Deployment and the **same** KEDA `ScaledObject` run unchanged on EKS. The only real additions: a real cluster, and **IRSA** instead of LocalStack's dummy keys.
+
+> "Instead of creating and distributing your AWS credentials to the containers or using the Amazon EC2 instance's role, you associate an IAM role with a Kubernetes service account and configure your Pods to use the service account."
+>
+> — *Amazon EKS User Guide* · docs.aws.amazon.com
+
+- Annotate the Worker's ServiceAccount with `eks.amazonaws.com/role-arn` → Activities call S3/Glue/SNS/SSM with **no static keys**.
+- Backlog grows → KEDA adds pods → Cluster Autoscaler / Karpenter adds **nodes**.
+
+<!--
+Source: https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html
+The portability story: kind -> EKS is a no-op for the Worker. IRSA is the
+production answer to the dummy creds used all morning. Requires the cluster's
+OIDC provider enabled, or IRSA silently fails.
+Manifests: examples/07-aws-containers/aws/eksctl-cluster.yaml, irsa-serviceaccount.yaml, eks-worker-deployment.yaml
+-->
+
+---
+
+<!-- _class: lab -->
+
+###### Lab · Day 6 · optional
+
+# EKS + IRSA
+
+Challenge → [`day-06-aws-containers/lab-10-eks-irsa-deployment`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-06-aws-containers/lab-10-eks-irsa-deployment.md)
+
+> **Optional · real AWS account required.** The kind cluster from Lab 6.5 is the local stand-in; this is the production graduation. `eksctl delete cluster` when done.
+
+```text
+# proof there are no static keys — run from inside the pod:
+$ aws sts get-caller-identity
+Arn: arn:aws:sts::<acct>:assumed-role/temporal-worker-irsa/...
+```
+
+> Same manifests as kind — only `serviceAccountName` + the ECR image change.
+
+---
+
+# Aurora — effectively-once over at-least-once
+
+The `load` step persists to **Aurora** (Postgres-compatible). Activities are at-least-once, so a retried `load` must not double-insert.
+
+> "Amazon Aurora (Aurora) is a fully managed relational database engine that's compatible with MySQL and PostgreSQL."
+>
+> — *Amazon Aurora User Guide* · docs.aws.amazon.com
+
+- Make the write **idempotent**: `INSERT … ON CONFLICT (idempotency_key) DO NOTHING`, one transaction per batch.
+- The key must be **stable across attempts** — derive it from `workflowId`, never wall-clock/random.
+- Bounded **connection pool** (HikariCP) sized to Activity concurrency; creds via SSM / IAM DB auth — the relational sibling of the DynamoDB conditional-write.
+
+<!--
+Source: https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/CHAP_AuroraOverview.html
+This is the at-least-once thesis again, in SQL. The DynamoDB example
+(dynamodb_idempotency.*) is the NoSQL sibling. Aurora can also be Temporal's own
+persistence store when self-hosting - but that's an aside; the lab's focus is
+Aurora-as-application-sink.
+Files: examples/07-aws-containers/aws/aurora_schema.sql, aurora_load_activity.java, aurora_terraform.tf
+-->
+
+---
+
+<!-- _class: lab -->
+
+###### Lab · Day 6 · optional
+
+# Aurora transactional sink
+
+Challenge → [`day-06-aws-containers/lab-11-aurora-transactional-sink`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-06-aws-containers/lab-11-aurora-transactional-sink.md)
+
+> **Optional · real AWS account required** for Aurora — but the idempotency logic is drillable against **any local Postgres**, which is the real lesson.
+
+```sql
+INSERT INTO loaded_rows (idempotency_key, ...)
+VALUES (:wf_id || ':' || :batch, ...)
+ON CONFLICT (idempotency_key) DO NOTHING;   -- a forced retry inserts zero rows
+```
+
+> Kill the Worker mid-load; the row count is identical after retry.
+
+---
+
+# Route 53 — reachability ≠ replication
+
+For a **self-hosted** frontend, Route 53 gives Workers a stable DNS name and health-checked failover. (On Temporal Cloud you get a managed global endpoint — skip this.)
+
+> "Failover routing lets you route traffic to a resource when the resource is healthy or to a different resource when the first resource is unhealthy."
+>
+> — *Amazon Route 53 Developer Guide* · docs.aws.amazon.com
+
+- **The trap:** DNS failover makes a *frontend* reachable — it does **not** replicate Workflow state. Cross-region durability needs Temporal **multi-cluster replication**, not DNS.
+- Long-lived **gRPC** connections don't re-resolve per call — failover helps *reconnects*, so set sane TTLs.
+
+<!--
+Source: https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/routing-policy-failover.html
+The big honesty point: students must not mistake DNS failover for DR. It's
+frontend HA only. Pair with Temporal multi-cluster replication for true
+cross-region. Files: examples/07-aws-containers/aws/route53_failover.tf, route53_records.md
+-->
+
+---
+
+<!-- _class: lab -->
+
+###### Lab · Day 6 · optional
+
+# Route 53 failover endpoint
+
+Challenge → [`day-06-aws-containers/lab-12-route53-failover`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-06-aws-containers/lab-12-route53-failover.md)
+
+> **Optional · real AWS account required** (hosted zone + health checks). For self-hosters only.
+
+- PRIMARY/SECONDARY alias records → regional frontend NLBs, gated by health checks.
+- `TEMPORAL_ADDRESS` points at the stable name, never a raw LB hostname.
+
+> Remember: this is frontend *reachability*, not data *durability*.
+
+---
+
 <!-- _class: takeaway -->
 
 # Day 6 takeaways
 
 * Temporal replaces orchestration **state**, not all compute. Keep Glue Spark; replace Step Functions JSON.
+* Every AWS edge is **at-least-once** — SQS in, SNS out. An idempotency key the receiver dedups on reconciles it with Temporal's at-least-once Activities (`signalWithStart`, `ON CONFLICT`).
+* Externalize config/secrets to **SSM**; read bootstrap at startup, per-run secrets in an Activity.
 * Workers have no inbound traffic. Use `exec` probes or add Actuator deliberately.
-* KEDA's native Temporal scaler is the right one.
+* Scale on **queue backlog**: KEDA's native scaler on EKS; a published CloudWatch metric on ECS. Identity via **IRSA / task roles**, never static keys.
+* Route 53 failover is frontend **reachability, not data replication** — cross-region DR needs Temporal multi-cluster replication.
 * Cloud is the default for new deployments. Self-host only with a clear reason.
 
 ---

@@ -1,0 +1,30 @@
+{
+  "registerScalableTarget": {
+    "ServiceNamespace": "ecs",
+    "ResourceId": "service/temporal-training/temporal-transform-worker",
+    "ScalableDimension": "ecs:service:DesiredCount",
+    "MinCapacity": 1,
+    "MaxCapacity": 10
+  },
+  "putScalingPolicy": {
+    "PolicyName": "temporal-backlog-target-tracking",
+    "ServiceNamespace": "ecs",
+    "ResourceId": "service/temporal-training/temporal-transform-worker",
+    "ScalableDimension": "ecs:service:DesiredCount",
+    "PolicyType": "TargetTrackingScaling",
+    "TargetTrackingScalingPolicyConfiguration": {
+      "TargetValue": 20.0,
+      "CustomizedMetricSpecification": {
+        "Namespace": "Temporal/Worker",
+        "MetricName": "TaskQueueBacklog",
+        "Statistic": "Average",
+        "Unit": "Count",
+        "Dimensions": [
+          { "Name": "TaskQueue", "Value": "transform" }
+        ]
+      },
+      "ScaleInCooldown": 120,
+      "ScaleOutCooldown": 30
+    }
+  }
+}

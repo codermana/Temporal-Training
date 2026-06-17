@@ -7,7 +7,12 @@ services:
     ports:
       - "4566:4566"
     environment:
-      SERVICES: "s3,sqs,glue,iam,sts,logs"
+      # s3/sqs/sns/ssm/kms/glue are all in the LocalStack Community image.
+      # Day-6 morning labs: s3 (blobs), sqs (event trigger, lab 6), sns
+      # (fan-out notify, lab 7), ssm+kms (Parameter Store + SecureString, lab 8),
+      # glue (supervised compute, lab 1). ECS/EKS/RDS/Route53 are Pro-only and
+      # are covered as conceptual labs (8–12) instead.
+      SERVICES: "s3,sqs,sns,ssm,kms,glue,iam,sts,logs"
       DEFAULT_REGION: "us-east-1"
       AWS_DEFAULT_REGION: "us-east-1"
       LS_LOG: "warn"

@@ -1,0 +1,25 @@
+{
+  "serviceName": "temporal-transform-worker",
+  "cluster": "temporal-training",
+  "taskDefinition": "temporal-transform-worker",
+  "desiredCount": 2,
+  "launchType": "FARGATE",
+  "loadBalancers": [],
+  "networkConfiguration": {
+    "awsvpcConfiguration": {
+      "subnets": [
+        "subnet-<private-a>",
+        "subnet-<private-b>"
+      ],
+      "securityGroups": [
+        "sg-<worker-egress>"
+      ],
+      "assignPublicIp": "DISABLED"
+    }
+  },
+  "deploymentConfiguration": {
+    "minimumHealthyPercent": 100,
+    "maximumPercent": 200
+  },
+  "propagateTags": "SERVICE"
+}

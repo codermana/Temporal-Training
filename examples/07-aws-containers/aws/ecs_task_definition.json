@@ -1,0 +1,40 @@
+{
+  "family": "temporal-transform-worker",
+  "requiresCompatibilities": ["FARGATE"],
+  "networkMode": "awsvpc",
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::<account-id>:role/temporal-worker-execution-role",
+  "taskRoleArn": "arn:aws:iam::<account-id>:role/temporal-worker-task-role",
+  "containerDefinitions": [
+    {
+      "name": "worker",
+      "image": "<account-id>.dkr.ecr.us-east-1.amazonaws.com/temporal-transform-worker:latest",
+      "essential": true,
+      "stopTimeout": 120,
+      "environment": [
+        { "name": "TEMPORAL_ADDRESS", "value": "my-namespace.acct.tmprl.cloud:7233" },
+        { "name": "TEMPORAL_NAMESPACE", "value": "my-namespace.acct" },
+        { "name": "TASK_QUEUE", "value": "transform" }
+      ],
+      "secrets": [
+        {
+          "name": "TEMPORAL_API_KEY",
+          "valueFrom": "arn:aws:ssm:us-east-1:<account-id>:parameter/temporal/worker/api-key"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "valueFrom": "arn:aws:ssm:us-east-1:<account-id>:parameter/temporal/worker/db-password"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/temporal-transform-worker",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "worker"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+# Worker Deployment for EKS — the SAME Deployment as Lab 6.5's kind version,
+# with exactly TWO diffs (both flagged with "# EKS DIFF" below):
+#   1. serviceAccountName: temporal-worker   -> binds the pod to the IRSA role
+#   2. image: <ecr>/...                       -> pulled from ECR, not kind-loaded
+#
+# Everything else — replicas, maxUnavailable: 0, the exec readiness/liveness
+# probes, resources, terminationGracePeriodSeconds: 120 — is byte-for-byte the
+# kind manifest. That sameness IS the lesson: a Temporal Worker is portable;
+# moving from a laptop kind cluster to a real EKS cluster changes the identity
+# and the image registry, nothing about how the Worker runs.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: temporal-transform-worker
+spec:
+  replicas: 2
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0       # preserve poller capacity during deploys (same as kind)
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: temporal-transform-worker
+  template:
+    metadata:
+      labels:
+        app: temporal-transform-worker
+    spec:
+      # EKS DIFF 1: bind the pod to the IRSA ServiceAccount so Activities get
+      # temporary AWS credentials via web identity. No static keys, no Secret.
+      serviceAccountName: temporal-worker
+      # Long enough to let in-flight Activities finish or heartbeat-cancel.
+      # Align with the longest Activity StartToCloseTimeout in this Worker.
+      terminationGracePeriodSeconds: 120
+      containers:
+        - name: worker
+          # EKS DIFF 2: image pulled from your ECR repo (kind used a locally
+          # loaded tag). Replace 111122223333 / region to match your account.
+          image: 111122223333.dkr.ecr.us-east-1.amazonaws.com/temporal-transform-worker:latest
+          env:
+            - name: TEMPORAL_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: temporal-worker-config
+                  key: temporal-address
+            - name: TEMPORAL_NAMESPACE
+              value: production
+            - name: TASK_QUEUE
+              value: transform
+          # Worker is not an HTTP server -> process-level exec probe (identical
+          # to kind). "Process alive and polling" is the real health signal.
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pgrep -f worker.jar > /dev/null"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "pgrep -f worker.jar > /dev/null"]
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2"
+              memory: "2Gi"

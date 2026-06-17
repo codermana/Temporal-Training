@@ -12,7 +12,7 @@ Stacks:
   temporal Temporal cluster + PostgreSQL + Web UI on :7233/:8233 (Day 1 variant)
   kafka    Kafka KRaft single-broker on localhost:9092          (Day 3 labs)
   obs      Prometheus on :9091 + Grafana on :3000               (Day 4 lab)
-  aws      LocalStack (S3, SQS, Glue, IAM, STS) on :4566        (Day 6 AM)
+  aws      LocalStack (S3, SQS, SNS, SSM, Glue) on :4566        (Day 6 AM)
   all      All of the above
 
 Actions:

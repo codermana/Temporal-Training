@@ -19,7 +19,8 @@ challenges/
   day-03-kafka/           Kafka↔Temporal pipeline, partition fan-out
   day-04-production/      Observability, unit testing, replay testing
   day-05-saga-spring/     Order saga, Spring Boot saga, capstone
-  day-06-aws-containers/  Glue/S3/Step Functions migration, Docker, K8s, KEDA
+  day-06-aws-containers/  Glue/S3/Step Functions migration, SQS/SNS/SSM,
+                          Docker, K8s, KEDA; + optional ECS/EKS/Aurora/Route53
 ```
 
 Each `day-XX/` folder has a `README.md` (the day's lab list + required stack)
@@ -105,4 +106,4 @@ already been delivered.
 | [3](day-03-kafka/) | Kafka integration | 2 | `make stack-kafka` |
 | [4](day-04-production/) | Production engineering | 3 | `make stack-obs` (lab 1 only) |
 | [5](day-05-saga-spring/) | Saga + Spring Boot + capstone | 3 | Temporal only |
-| [6](day-06-aws-containers/) | AWS migration + containers | 5 | `make stack-aws` + `make kind-up` |
+| [6](day-06-aws-containers/) | AWS migration + containers | 12 | `make stack-aws` + `make kind-up` (labs 9–12 optional, real AWS) |

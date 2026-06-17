@@ -131,7 +131,7 @@ stack-kafka: ## Day 3: Kafka KRaft broker on :9092
 stack-obs: ## Day 4: Prometheus :9091 + Grafana :3000
 	scripts/start-stack.sh obs up
 
-stack-aws: ## Day 6 AM: LocalStack (S3/SQS/Glue) on :4566
+stack-aws: ## Day 6 AM: LocalStack (S3/SQS/SNS/SSM/Glue) on :4566
 	scripts/start-stack.sh aws up
 
 stack-all: ## Bring up every docker stack
@@ -347,15 +347,32 @@ kafka-consume: ## Tail a topic (TOPIC=order-outcomes)
 # LocalStack helpers (Day 6)
 # ---------------------------------------------------------------------------
 
-.PHONY: aws-init aws-buckets
+.PHONY: aws-init aws-buckets aws-resources
 
-aws-init: ## Create the import buckets used by Day 6 labs
+aws-init: ## Create all LocalStack resources used by Day 6 AM labs (S3/SQS/SNS/SSM)
+	# Lab 1-3: import buckets
 	awslocal s3 mb s3://imports-incoming  || true
 	awslocal s3 mb s3://imports-validated || true
 	awslocal s3 mb s3://imports-output    || true
+	# Lab 6: SQS event-trigger queue (the EventBridge->Lambda->StartExecution stand-in)
+	awslocal sqs create-queue --queue-name imports-events || true
+	# Lab 7: SNS completion topic + an SQS subscriber to verify fan-out
+	awslocal sns create-topic --name imports-complete || true
+	awslocal sqs create-queue --queue-name imports-complete-sub || true
+	# Lab 8: Worker config tree in SSM Parameter Store (+ one SecureString secret)
+	awslocal ssm put-parameter --name /temporal-training/worker/temporal-address --value 127.0.0.1:7233 --type String --overwrite || true
+	awslocal ssm put-parameter --name /temporal-training/worker/namespace        --value default        --type String --overwrite || true
+	awslocal ssm put-parameter --name /temporal-training/worker/task-queue        --value transform      --type String --overwrite || true
+	awslocal ssm put-parameter --name /temporal-training/worker/api-key           --value local-dev-secret --type SecureString --overwrite || true
 
 aws-buckets: ## List LocalStack S3 buckets
 	awslocal s3 ls
+
+aws-resources: ## List the Day 6 LocalStack resources (buckets, queues, topics, params)
+	@echo "== S3 buckets =="       && awslocal s3 ls
+	@echo "== SQS queues =="       && awslocal sqs list-queues
+	@echo "== SNS topics =="       && awslocal sns list-topics
+	@echo "== SSM parameters ==" && awslocal ssm get-parameters-by-path --path /temporal-training/worker/ --with-decryption
 
 # ---------------------------------------------------------------------------
 # Slides (Marp)
