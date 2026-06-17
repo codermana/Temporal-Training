@@ -338,6 +338,7 @@ Workers connect outbound.
 - A single Worker registers **n Workflow** types **+ m Activity** types.
 - That one process can run any of the **n × m** combinations.
 - Registration is just a lookup table: type name → your code.
+- The two calls build it: `registerWorkflowImplementationTypes` → the **n**, `registerActivitiesImplementations` → the **m**.
 
 > One Worker, one Task Queue, the whole catalogue of work it knows how to do.
 
@@ -355,7 +356,7 @@ Start here: the simplest topology is a single Worker that knows everything.
 # Many Workers split the work
 
 - Scale out to **l Workers** across the fleet.
-- Each Worker registers **some(n)** Workflows **; some(m)** Activities — not all of it.
+- Each Worker registers **some(n)** Workflows **; some(m)** Activities — same two `register…` calls, a subset each.
 - Partition by Task Queue: route each subset to the pool that registers it.
 
 > Same model, more processes. You choose how to slice the catalogue.
@@ -2064,6 +2065,46 @@ Example: examples/02-reliability/partial_failure.java
 
 ---
 
+## Bounding a fan-out
+
+Unbounded `Async.function` over 10k items schedules **all 10k at once** — fine for the Workflow loop, but it can flatten a fragile downstream that only tolerates ~20 in-flight calls.
+
+- Gate the loop with an in-Workflow counter and `Workflow.await(() -> inFlight < max)` — the **deterministic** equivalent of a bounded thread pool.
+- Don't reach for `java.util.concurrent.Semaphore`: blocking a real thread isn't replay-safe. `Workflow.await` is the durable wait.
+
+> Keep the pipeline full without overwhelming the dependency — cap concurrency, not total work.
+
+<!--
+Lead-in before the bounded-fanout code. The naive fan-out is "all at once"; the
+real-world constraint is a downstream QPS/connection cap. The counter + await is
+the replay-safe way to throttle inside Workflow code - never a JDK Semaphore.
+-->
+
+---
+
+<!-- _class: code -->
+
+## Bounded fan-out
+
+<!-- Open in VSCode: examples/02-reliability/bounded_fanout.java -->
+
+```java
+int[] inFlight = {0};
+List<Promise<Void>> sends = new ArrayList<>();
+
+for (String id : userIds) {
+  Workflow.await(() -> inFlight[0] < maxInFlight);   // park until a slot frees
+  inFlight[0]++;
+  sends.add(Async.procedure(notify::send, id)
+      .thenApply(ignored -> { inFlight[0]--; return null; }));  // release on done
+}
+Promise.allOf(sends).get();
+```
+
+> `thenApply` decrements as each branch finishes; `await` releases the next only when there's room.
+
+---
+
 <!-- _class: lab -->
 
 ###### Lab · Day 2
@@ -2297,6 +2338,37 @@ public String exportLargeTable(String tableName) {
 ```
 
 > On retry, read the last heartbeat detail and *resume from page N*.
+
+---
+
+<!-- _class: code -->
+
+## Resume from the last heartbeat
+
+<!-- Open in VSCode: examples/02-reliability/heartbeat_resume_from_checkpoint.java -->
+
+```java
+public String backfill(String dataset) {
+  ActivityExecutionContext ctx = Activity.getExecutionContext();
+
+  // On a retry, read the detail from the previous attempt's last heartbeat.
+  int startPage = ctx.getHeartbeatDetails(Integer.class).orElse(0);
+
+  for (int page = startPage; page < 100_000; page++) {
+    copyPage(dataset, page);
+    ctx.heartbeat(page);            // checkpoint: this page is done
+  }
+  return "backfilled " + dataset;
+}
+```
+
+> `getHeartbeatDetails(...).orElse(0)` is the resume API — empty on attempt 1, the last checkpoint on every retry.
+
+<!--
+The previous slide promised "resume from page N"; this is the call that delivers
+it. heartbeat(page) writes the checkpoint; getHeartbeatDetails reads it back on
+the next attempt. Without this read a retry silently restarts at page 0.
+-->
 
 ---
 
@@ -3084,6 +3156,47 @@ The parent's **Relationships** tab shows the tree it spawned:
 Click into the parent → Relationships. The tree + table make "each child is its
 own Workflow" concrete. Click any child row to jump to its own page/history.
 -->
+
+---
+
+## Fanning out children — ParentClosePolicy
+
+A nightly billing run spawns **one child Workflow per tenant** — each independently queryable and retryable by its own ID.
+
+- By default a child terminates when its parent closes. `ParentClosePolicy.PARENT_CLOSE_POLICY_ABANDON` lets long tenant jobs **outlive the coordinator**.
+- Start every child *before* joining (collect the `Promise`s first) so all tenants bill in parallel.
+
+> ABANDON decouples child lifetime from the parent — the coordinator's job is to launch, not to babysit.
+
+<!--
+Lead-in before the tenant-fanout code. Two ideas: per-tenant child identity, and
+ParentClosePolicy.ABANDON so a finished (or continued-as-new) parent doesn't kill
+in-flight children. Contrast the default: children terminate with the parent.
+-->
+
+---
+
+<!-- _class: code -->
+
+## Per-tenant child fan-out
+
+<!-- Open in VSCode: examples/03-interactions/tenant_fanout.java -->
+
+```java
+for (String tenantId : tenantIds) {
+  TenantBillingWorkflow child = Workflow.newChildWorkflowStub(
+      TenantBillingWorkflow.class,
+      ChildWorkflowOptions.newBuilder()
+          .setWorkflowId("billing-" + tenantId)
+          .setParentClosePolicy(ParentClosePolicy.PARENT_CLOSE_POLICY_ABANDON)
+          .setWorkflowExecutionTimeout(Duration.ofHours(1))
+          .build());
+  futures.put(tenantId, Async.function(child::run, tenantId));   // start, don't block
+}
+futures.forEach((id, p) -> results.put(id, p.get()));            // then join
+```
+
+> Each tenant gets its own Workflow ID and history; ABANDON lets it finish even if the parent doesn't.
 
 ---
 
@@ -3932,6 +4045,42 @@ Example: examples/05-production/composite_tuner.java
 
 ---
 
+## Protecting a fragile downstream — rate limits
+
+Slot tuners size for *your* throughput; sometimes the constraint is **theirs** — a legacy API or vendor with a hard QPS cap.
+
+- `setMaxActivitiesPerSecond` caps **this Worker's** Activity starts/sec.
+- `setMaxTaskQueueActivitiesPerSecond` caps the **whole Task Queue** — server-enforced across every replica, so the dependency never sees more than N QPS no matter how far you scale.
+
+> Tuners throttle for capacity; these two knobs throttle to respect a downstream limit.
+
+<!--
+Lead-in before the rate-limit code. Distinguish the two knobs: per-Worker (local,
+multiplies with replicas) vs task-queue-wide (global, server-enforced). The second
+is the one that actually protects a shared dependency under horizontal scaling.
+-->
+
+---
+
+<!-- _class: code -->
+
+## Rate-limiting an Activity pool
+
+<!-- Open in VSCode: examples/05-production/rate_limited_activity_pool.java -->
+
+```java
+Worker worker = factory.newWorker(
+    "legacy-api-calls",
+    WorkerOptions.newBuilder()
+        .setMaxActivitiesPerSecond(50)             // this Worker: 50/sec
+        .setMaxTaskQueueActivitiesPerSecond(100)   // whole queue: 100/sec, all replicas
+        .build());
+```
+
+> Scale to 20 replicas and the vendor still sees ≤ 100 QPS — the task-queue cap is enforced server-side.
+
+---
+
 <!-- _class: dense -->
 
 ## Options at a glance — wiring the client & Worker
@@ -4265,6 +4414,45 @@ temporal workflow delete --namespace default \
 - Reduce future storage: lower Namespace retention.
 - Remove one closed execution now: `temporal workflow delete`.
 - Preserve old histories externally: enable History Archival.
+
+---
+
+## Finding live Workflows — Search Attributes
+
+Metrics give you aggregates; **Search Attributes** let ops filter and group *individual* executions — "all orders in `REFUNDING` for tenant `acme`."
+
+- Register custom keys **once per namespace**: `temporal operator search-attribute create --name OrderStage --type Keyword`.
+- From inside the Workflow, `Workflow.upsertTypedSearchAttributes(...)` tags the execution; update it as state changes so `temporal workflow list` and the UI stay current.
+
+> Indexed, queryable metadata on a running Workflow — the bridge from a Workflow to your ops dashboards.
+
+<!--
+Lead-in before the Search Attributes code. Contrast with metrics (aggregate) and
+memo (attached but NOT indexed). Keys are registered per namespace first, then
+upserted from Workflow code. This is how the "tenant ID in Search Attributes" from
+the namespace slide actually becomes filterable.
+-->
+
+---
+
+<!-- _class: code -->
+
+## Typed Search Attributes from a Workflow
+
+<!-- Open in VSCode: examples/05-production/search_attributes_ops.java -->
+
+```java
+// Register once per namespace:
+//   temporal operator search-attribute create --name OrderStage --type Keyword
+private static final SearchAttributeKey<String> ORDER_STAGE =
+    SearchAttributeKey.forKeyword("OrderStage");
+
+Workflow.upsertTypedSearchAttributes(ORDER_STAGE.valueSet("RECEIVED"));
+activities.charge(orderId);
+Workflow.upsertTypedSearchAttributes(ORDER_STAGE.valueSet("CHARGED"));  // update as it moves
+```
+
+> Now `temporal workflow list --query "OrderStage='CHARGED'"` finds every matching live execution.
 
 ---
 
@@ -5753,6 +5941,35 @@ Source: https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-man
 The determinism trap: SSM values can change between replays. Bootstrap config at
 startup; per-run secrets via an Activity. This is also the on-ramp to IRSA/task
 roles (next sub-section) - no static keys.
+-->
+
+---
+
+<!-- _class: code -->
+
+## Boot the Worker from SSM
+
+<!-- Open in VSCode: examples/07-aws-containers/ssm_parameter_config.java -->
+
+```java
+// Startup code (NOT a Workflow): read the config tree, then build the stubs.
+WorkerConfig cfg = loadConfig(ssm, "/temporal-training/worker/");  // getParametersByPath
+
+WorkflowServiceStubs service = WorkflowServiceStubs.newServiceStubs(
+    WorkflowServiceStubsOptions.newBuilder().setTarget(cfg.temporalAddress()).build());
+WorkflowClient client = WorkflowClient.newInstance(
+    service, WorkflowClientOptions.newBuilder().setNamespace(cfg.namespace()).build());
+
+// A step needing the key calls fetchApiKey() — read inside the Activity, never in Workflow code.
+```
+
+> `setTarget` / `setNamespace` build the *real* stubs from config — not hard-coded, not `newLocalServiceStubs()`.
+
+<!--
+The conceptual slide said "config in startup code, secrets via an Activity"; this
+is the code. getParametersByPath loads the tree at boot; setTarget/setNamespace
+build the non-local stubs from it. fetchApiKey keeps the secret read behind the
+Activity boundary.
 -->
 
 ---
