@@ -121,6 +121,7 @@ ui: ## Open the Temporal Web UI in the default browser
 # ---------------------------------------------------------------------------
 
 .PHONY: stack-temporal stack-kafka stack-obs stack-aws stack-all stack-down stack-status grafana prometheus localstack
+.PHONY: stack-temporal-down stack-kafka-down stack-obs-down stack-aws-down
 
 stack-temporal: ## Day 1 variant: Temporal cluster + PostgreSQL + UI on :7233/:8233 (stop 'make temporal' first)
 	scripts/start-stack.sh temporal up
@@ -139,6 +140,18 @@ stack-all: ## Bring up every docker stack
 
 stack-down: ## Tear down every docker stack (removes volumes)
 	scripts/start-stack.sh all down
+
+stack-temporal-down: ## Tear down the Temporal cluster stack (removes volumes)
+	scripts/start-stack.sh temporal down
+
+stack-kafka-down: ## Day 3: tear down the Kafka stack (removes volumes)
+	scripts/start-stack.sh kafka down
+
+stack-obs-down: ## Day 4: tear down Prometheus + Grafana (removes volumes)
+	scripts/start-stack.sh obs down
+
+stack-aws-down: ## Day 6 AM: tear down LocalStack (removes volumes)
+	scripts/start-stack.sh aws down
 
 stack-status: ## docker compose ps across stacks
 	scripts/start-stack.sh all status
