@@ -35,6 +35,7 @@ Examples:
   scripts/run-example.sh continue
   scripts/run-example.sh choreography
   scripts/run-example.sh wordcount
+  scripts/run-example.sh routing      # one Workflow, Activities on separate pools
 
 Use scripts/list-examples.sh to see all examples.
 EOF
@@ -121,6 +122,9 @@ case "$EXAMPLE" in
   wordcount|word-count|fanout|14|14-word-count-fanout)
     DIR="examples/runnable/14-word-count-fanout"
     ;;
+  routing|task-queue-routing|taskqueue|15|15-task-queue-routing)
+    DIR="examples/runnable/15-task-queue-routing"
+    ;;
   *)
     echo "Unknown runnable example: $EXAMPLE" >&2
     usage >&2
@@ -155,7 +159,14 @@ case "$LANG_CHOICE" in
     if [[ "$ROLE" == "starter" ]]; then
       WORKER_CLASS="$MAIN_CLASS"
       if [[ -z "$WORKER_CLASS" ]]; then
-        WORKER_CLASS="$(sed -n 's:.*<mainClass>\(.*\)</mainClass>.*:\1:p' pom.xml | head -1)"
+        # The plugin's <mainClass> is usually just ${exec.mainClass}, which the
+        # exec plugin can't resolve from the CLI (it cycles). Read the actual
+        # *Worker class from the <exec.mainClass> property first; fall back to a
+        # literal <mainClass> for older poms that inline the class.
+        WORKER_CLASS="$(sed -n 's:.*<exec.mainClass>\(.*\)</exec.mainClass>.*:\1:p' pom.xml | head -1)"
+        if [[ -z "$WORKER_CLASS" ]]; then
+          WORKER_CLASS="$(sed -n 's:.*<mainClass>\(.*\)</mainClass>.*:\1:p' pom.xml | head -1)"
+        fi
       fi
       MAIN_CLASS="${WORKER_CLASS/%Worker/Starter}"
     fi

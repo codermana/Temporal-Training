@@ -204,6 +204,7 @@ show: ## Print an example file (FILE=02-reliability/heartbeat_long_activity.java
 .PHONY: run-retries run-child run-replay run-continue run-choreography
 .PHONY: run-hello-starter run-connect-starter run-async-starter run-approval-starter
 .PHONY: run-retries-starter run-child-starter run-continue-starter run-choreography-starter
+.PHONY: run-routing run-routing-starter
 
 # Split labs ship a standalone Worker and a standalone starter (client). The
 # run-* target launches the long-lived Worker; the run-*-starter target starts
@@ -266,6 +267,11 @@ run-choreography: ## Day 5: choreography participant (Worker)
 	scripts/run-example.sh choreography
 run-choreography-starter: ## Day 5: choreography participant (starter)
 	scripts/run-example.sh choreography java starter
+
+run-routing:   ## Day 1: task-queue routing — one Workflow, Activities on separate pools (Worker)
+	scripts/run-example.sh routing
+run-routing-starter:  ## Day 1: task-queue routing (starter)
+	scripts/run-example.sh routing java starter
 
 # ---------------------------------------------------------------------------
 # Per-day bundles - bring everything required for that day up / down

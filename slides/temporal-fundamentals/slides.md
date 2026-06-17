@@ -397,6 +397,77 @@ box there. Tie back to WorkerOptions on the previous slide.
 
 <!-- _class: dense -->
 
+## Routing Activities by Task Queue
+
+An Activity runs on the Task Queue its stub names (`ActivityOptions.setTaskQueue`) — default is the Workflow's own queue. The unit of "who registers what" is the **Task Queue**, not the Worker.
+
+| Variant | Topology | Each Worker registers |
+|---|---|---|
+| **One Worker, everything** | 1 queue, 1 pool | all **n** Workflows **+ m** Activities |
+| **Split by Task Queue** | k queues, k pools | the **subset** routed to its queue |
+| **Same queue, l replicas** | 1 queue, l identical pods | the **same** full set — pods interchangeable |
+| **Mismatch (bug)** | route to a queue no pool serves | nothing runs it → task retries until timeout |
+
+> Subset registration is legal **across** Task Queues; **within** one queue every Worker must be homogeneous.
+
+<!--
+The rule in one line: route by Task Queue, register the subset that queue needs.
+The failure mode is the day-one bug - an Activity routed to a queue no Worker
+serves just sits there retrying. Homogeneous within a queue, heterogeneous across.
+-->
+
+---
+
+<!-- _class: code -->
+
+## One Workflow, three pools
+
+```text
+                   Task Queue        Worker pool (registers)
+  OrderWorkflow ─▶ "orders"   ─────▶ Orchestrator [OrderWorkflow]
+       │
+       ├ charge ─▶ "payments" ─────▶ Payments pool [PaymentActivities]
+       └ render ─▶ "media"    ─────▶ Media pool    [MediaActivities]  (GPU)
+```
+
+> No single pool registers everything. Each stub's `setTaskQueue` picks the pool — scale and hardware follow the queue.
+
+---
+
+<!-- _class: code -->
+
+## Routing in code
+
+<!-- Open in VSCode: examples/01-foundations/activity_task_routing.java · Run: make run-routing -->
+
+```java
+// Workflow runs on "orders"; each Activity stub routes to its own pool.
+PaymentActivities pay = Workflow.newActivityStub(PaymentActivities.class,
+    ActivityOptions.newBuilder()
+        .setTaskQueue("payments")                       // payments pool
+        .setStartToCloseTimeout(Duration.ofSeconds(30)).build());
+MediaActivities media = Workflow.newActivityStub(MediaActivities.class,
+    ActivityOptions.newBuilder()
+        .setTaskQueue("media")                          // media / GPU pool
+        .setStartToCloseTimeout(Duration.ofMinutes(5)).build());
+
+String charged = pay.charge(orderId);     // runs on the payments Worker
+String receipt = media.render(orderId);   // runs on the media Worker
+```
+
+> The payments Worker registers only `PaymentActivities`; the media Worker only `MediaActivities`. Neither knows the other exists.
+
+<!--
+Demo: make run-routing (one Worker process, 3 pools) + make run-routing-starter.
+The two pools log independently - each Activity lands on the queue its stub
+named, and no single Worker registered the full set. Runnable end-to-end in
+examples/runnable/15-task-queue-routing (Java/Python/Go).
+-->
+
+---
+
+<!-- _class: dense -->
+
 # Airflow → Temporal map
 
 | Airflow | Temporal |
@@ -4398,6 +4469,31 @@ Open in VSCode: examples/05-production/namespace_strategy.md
 
 ---
 
+<!-- _class: dense -->
+
+# Access control stops at the namespace
+
+Self-hosted: **mTLS** authenticates the connection; two Go hooks authorize the call.
+
+| Hook | Job |
+| --- | --- |
+| `ClaimMapper` | token → who you are + your **namespace Role** |
+| `Authorizer` | claims + API call → **allow / deny** |
+
+- The **default** `Authorizer` only checks you hold *some* role on the namespace — it ignores the Role level **and** the Task Queue.
+- Finer than a namespace (per-Task-Queue, per-Workflow) = a **custom `Authorizer`** — the one hook that sees the request.
+- **Cloud:** RBAC is fixed (account + namespace roles); Workers use **Service Accounts + scoped API keys**; finer grain = more namespaces.
+
+> No config knob between "one namespace" and "write your own Authorizer."
+
+<!--
+Maps to instructor Demo 3 (custom-authorizer harness): a working Authorizer that
+pins each caller to a Role AND a Task Queue. The teaching point: the namespace is
+the boundary the platform enforces; everything finer is code you own.
+-->
+
+---
+
 <!-- _class: code -->
 
 ## Namespace retention operations
@@ -6127,6 +6223,8 @@ spec:
 
 # K8s deploy on kind
 
+Challenge → [`day-06-aws-containers/lab-5-kubernetes-keda`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-06-aws-containers/lab-5-kubernetes-keda.md)
+
 ```bash
 make kind-up          # cluster + KEDA
 make kind-load        # build + load Worker image
@@ -6266,6 +6364,8 @@ KEDA scaled `transform-worker` from **1 → 10** off the Temporal task-queue bac
 ###### Lab · Day 6
 
 # End-to-end S3 → Temporal → S3
+
+Challenge → [`day-06-aws-containers/lab-2-s3-checkpointing`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-06-aws-containers/lab-2-s3-checkpointing.md)
 
 ```bash
 make stack-aws        # LocalStack
