@@ -27,11 +27,12 @@ scripts/run-example.sh hello go starter    # terminal 2: starts one Workflow
 Per language the split is: Go `go run ./worker` / `go run ./starter` (shared defs
 in a package at the module root); Python `worker.py` / `starter.py`; Java a
 `*Worker` class / a `*Starter` class. A few labs aren't split: `04-schedules`
-and `05-kafka-bridge` are driven differently, `07-saga` and `08-aws-containers`
-run the Worker and are started from the Temporal CLI, and `06-testing` /
-`11-determinism-replay` run a test suite instead. `16-spring-boot` is a single
-Spring Boot process (Java only): the starter hosts the Worker and the app serves
-REST on `:8080`.
+and `05-kafka-bridge` are driven differently, `07-saga`, `08-aws-containers` and
+`18-aws-import-pipeline` run the Worker and are started from the Temporal CLI (or
+the SQS bridge), and `06-testing` / `11-determinism-replay` run a test suite
+instead. `16-spring-boot` and `17-spring-glue-pipeline` are single Spring Boot
+processes (Java only): the starter hosts the Worker and the app serves REST on
+`:8080`.
 
 | Lab | Day | Topic |
 | --- | --- | --- |
@@ -52,3 +53,5 @@ REST on `:8080`.
 | `14-word-count-fanout` | 2 | Word-count fan-out / fan-in |
 | `15-task-queue-routing` | 5 | One Workflow, Activities on separate pools |
 | `16-spring-boot` | 5 | Temporal Spring Boot starter (auto-config, REST-driven) |
+| `17-spring-glue-pipeline` | 6 | Spring Boot orchestrating a Glue job end-to-end (S3 → SQS → SNS) |
+| `18-aws-import-pipeline` | 6 | Runnable Day-6 morning labs (plain SDK): real S3 / SQS / SNS / SSM on LocalStack |
