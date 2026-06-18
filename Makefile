@@ -123,8 +123,8 @@ ui: ## Open the Temporal Web UI in the default browser
 # Docker stacks (Day 3 Kafka, Day 4 Observability, Day 6 LocalStack)
 # ---------------------------------------------------------------------------
 
-.PHONY: stack-temporal stack-kafka stack-obs stack-aws stack-all stack-down stack-status grafana prometheus localstack
-.PHONY: stack-temporal-down stack-kafka-down stack-obs-down stack-aws-down
+.PHONY: stack-temporal stack-kafka stack-obs stack-trace stack-aws stack-all stack-down stack-status grafana prometheus jaeger localstack
+.PHONY: stack-temporal-down stack-kafka-down stack-obs-down stack-trace-down stack-aws-down
 
 stack-temporal: ## Day 1 variant: Temporal cluster + PostgreSQL + UI on :7233/:8233 (stop 'make temporal' first)
 	scripts/start-stack.sh temporal up
@@ -134,6 +134,9 @@ stack-kafka: ## Day 3: Kafka KRaft broker on :9092
 
 stack-obs: ## Day 4: Prometheus :9091 + Grafana :3000
 	scripts/start-stack.sh obs up
+
+stack-trace: ## Day 4: Jaeger all-in-one (UI :16686, OTLP :4317/:4318) for the tracing lab
+	scripts/start-stack.sh trace up
 
 stack-aws: ## Day 6 AM: LocalStack (S3/SQS/SNS/SSM/KMS) on :4566
 	scripts/start-stack.sh aws up
@@ -153,6 +156,9 @@ stack-kafka-down: ## Day 3: tear down the Kafka stack (removes volumes)
 stack-obs-down: ## Day 4: tear down Prometheus + Grafana (removes volumes)
 	scripts/start-stack.sh obs down
 
+stack-trace-down: ## Day 4: tear down Jaeger (removes volumes)
+	scripts/start-stack.sh trace down
+
 stack-aws-down: ## Day 6 AM: tear down LocalStack (removes volumes)
 	scripts/start-stack.sh aws down
 
@@ -166,6 +172,10 @@ grafana: ## Open Grafana in the default browser (admin/admin)
 prometheus: ## Open Prometheus in the default browser
 	@open http://127.0.0.1:9091 2>/dev/null || xdg-open http://127.0.0.1:9091 2>/dev/null || \
 		echo "Open http://127.0.0.1:9091 manually"
+
+jaeger: ## Open the Jaeger tracing UI in the default browser
+	@open http://127.0.0.1:16686 2>/dev/null || xdg-open http://127.0.0.1:16686 2>/dev/null || \
+		echo "Open http://127.0.0.1:16686 manually"
 
 localstack: ## Show LocalStack health
 	@curl -sf http://127.0.0.1:4566/_localstack/health | jq . 2>/dev/null || \
@@ -221,6 +231,7 @@ show: ## Print an example file (FILE=02-reliability/heartbeat_long_activity.java
 .PHONY: run-hello-starter run-connect-starter run-async-starter run-approval-starter
 .PHONY: run-retries-starter run-child-starter run-continue-starter run-choreography-starter
 .PHONY: run-routing run-routing-starter run-spring run-spring-glue seed-glue run-import seed-import
+.PHONY: run-trace run-trace-starter
 
 # Split labs ship a standalone Worker and a standalone starter (client). The
 # run-* target launches the long-lived Worker; the run-*-starter target starts
@@ -288,6 +299,11 @@ run-routing:   ## Day 1: task-queue routing — one Workflow, Activities on sepa
 	scripts/run-example.sh routing
 run-routing-starter:  ## Day 1: task-queue routing (starter)
 	scripts/run-example.sh routing java starter
+
+run-trace:     ## Day 4: OpenTelemetry tracing Worker -> Jaeger (needs stack-trace + temporal)
+	scripts/run-example.sh trace
+run-trace-starter:    ## Day 4: OpenTelemetry tracing starter (then open make jaeger)
+	scripts/run-example.sh trace java starter
 
 run-spring:    ## Day 5: Temporal Spring Boot starter — REST app on :8080 (Java only)
 	scripts/run-example.sh spring

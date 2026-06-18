@@ -43,6 +43,7 @@ Examples:
   scripts/run-example.sh choreography
   scripts/run-example.sh wordcount
   scripts/run-example.sh routing      # one Workflow, Activities on separate pools
+  scripts/run-example.sh trace        # OpenTelemetry tracing to Jaeger (needs make stack-trace)
   scripts/run-example.sh spring       # Temporal Spring Boot starter, REST on :8080 (Java only)
   scripts/run-example.sh spring-glue  # Spring Boot supervising a local stitch job (Glue stand-in), REST on :8080 (Java only)
   scripts/run-example.sh import       # plain-SDK Import Worker: real S3/SNS/SSM + SQS bridge (Java only)
@@ -134,6 +135,12 @@ case "$EXAMPLE" in
     ;;
   routing|task-queue-routing|taskqueue|15|15-task-queue-routing)
     DIR="examples/runnable/15-task-queue-routing"
+    ;;
+  trace|tracing|otel|19|19-distributed-tracing)
+    # OpenTelemetry distributed tracing: client -> Workflow -> Activity spans in
+    # one Jaeger trace. Worker/starter split. Needs Jaeger's OTLP receiver
+    # (make stack-trace) in addition to a Temporal dev server.
+    DIR="examples/runnable/19-distributed-tracing"
     ;;
   spring|springboot|spring-boot|16|16-spring-boot)
     # Single Spring Boot process: the starter stands up the Worker and the app

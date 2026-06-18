@@ -1,0 +1,14 @@
+name: temporal-training-trace
+
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    container_name: temporal-training-jaeger
+    environment:
+      # Turn on Jaeger's built-in OTLP receiver so SDK OTLP exporters can send
+      # straight to Jaeger with no separate OpenTelemetry Collector.
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4317:4317"     # OTLP gRPC (Java + Go exporters)
+      - "4318:4318"     # OTLP HTTP (Python exporter)

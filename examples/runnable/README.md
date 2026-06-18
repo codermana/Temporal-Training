@@ -55,3 +55,4 @@ processes (Java only): the starter hosts the Worker and the app serves REST on
 | `16-spring-boot` | 5 | Temporal Spring Boot starter (auto-config, REST-driven) |
 | `17-spring-glue-pipeline` | 6 | Spring Boot orchestrating a Glue job end-to-end (S3 → SQS → SNS) |
 | `18-aws-import-pipeline` | 6 | Runnable Day-6 morning labs (plain SDK): real S3 / SQS / SNS / SSM on LocalStack |
+| `19-distributed-tracing` | 4 | OpenTelemetry tracing: client → Workflow → Activity spans in one Jaeger trace (needs `make stack-trace`) |

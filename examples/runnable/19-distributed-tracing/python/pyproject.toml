@@ -1,0 +1,14 @@
+[project]
+name = "temporal-lab-distributed-tracing"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "temporalio>=1.7,<2",
+    "opentelemetry-sdk>=1.25",
+    "opentelemetry-exporter-otlp-proto-http>=1.25",
+]
+
+# These labs are runnable scripts, not installable packages — uv just manages the
+# environment. Run with:  uv run worker.py   (or: uv run starter.py)
+[tool.uv]
+package = false

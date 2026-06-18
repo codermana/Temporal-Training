@@ -12,6 +12,7 @@ Stacks:
   temporal Temporal cluster + PostgreSQL + Web UI on :7233/:8233 (Day 1 variant)
   kafka    Kafka KRaft single-broker on localhost:9092          (Day 3 labs)
   obs      Prometheus on :9091 + Grafana on :3000               (Day 4 lab)
+  trace    Jaeger all-in-one: UI :16686 + OTLP :4317/:4318      (Day 4 lab)
   aws      LocalStack (S3, SQS, SNS, SSM, Glue) on :4566        (Day 6 AM)
   all      All of the above
 
@@ -60,6 +61,9 @@ case "$STACK" in
   obs|observability)
     FILES=(-f "$COMPOSE_DIR/compose.observability.yml")
     ;;
+  trace|tracing|jaeger)
+    FILES=(-f "$COMPOSE_DIR/compose.tracing.yml")
+    ;;
   aws|localstack)
     FILES=(-f "$COMPOSE_DIR/compose.localstack.yml")
     ;;
@@ -67,6 +71,7 @@ case "$STACK" in
     FILES=(
       -f "$COMPOSE_DIR/compose.kafka.yml"
       -f "$COMPOSE_DIR/compose.observability.yml"
+      -f "$COMPOSE_DIR/compose.tracing.yml"
       -f "$COMPOSE_DIR/compose.localstack.yml"
     )
     ;;

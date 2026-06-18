@@ -4454,25 +4454,92 @@ the Activity spans are orphans; with it, you see the whole request as one tree.
 
 <!-- _class: code -->
 
-## Tracing with OpenTelemetry
+## Tracing with OpenTelemetry (Java)
 
 ```java
-client = WorkflowClient.newInstance(service,
-    WorkflowClientOptions.newBuilder()
-        .setInterceptors(new OpenTracingClientInterceptor(otOptions))
-        .build());
+// No official temporal-opentelemetry for Java: bridge the OTel SDK
+// through the OpenTracing shim, then use Temporal's interceptors.
+OpenTracingOptions ot = OpenTracingOptions.newBuilder()
+    .setTracer(OpenTracingShim.createTracerShim(otelSdk))   // OTel → OpenTracing
+    .build();
 
-factory = WorkerFactory.newInstance(client,
-    WorkerFactoryOptions.newBuilder()
-        .setWorkerInterceptors(new OpenTracingWorkerInterceptor())
-        .build());
+client  = WorkflowClient.newInstance(service, WorkflowClientOptions.newBuilder()
+    .setInterceptors(new OpenTracingClientInterceptor(ot)).build());
+factory = WorkerFactory.newInstance(client, WorkerFactoryOptions.newBuilder()
+    .setWorkerInterceptors(new OpenTracingWorkerInterceptor(ot)).build());
 ```
 
-> One trace spans client → Workflow → Activity. Needs `temporal-opentracing`.
+> **Gotcha:** give the OTel SDK a real propagator (W3C TraceContext). The default is **no-op** → spans still export, but fragment into separate traces.
 
 <!--
-Example: examples/05-production/java/otel_tracing.java
+Runnable lab: examples/runnable/19-distributed-tracing (Java/Go/Python).
+Snippet: examples/05-production/java/otel_tracing.java. Java reaches OTel via the
+OpenTracing shim; Go and Python have native OTel interceptors. The propagator
+gotcha is real - without W3C TraceContext every span became its own root.
 -->
+
+---
+
+<!-- _class: code -->
+
+## One connected trace
+
+```text
+StartWorkflow:OrderWorkflow              ← client / starter
+└─ RunWorkflow:OrderWorkflow             ← worker   (FOLLOWS_FROM)
+   ├─ StartActivity:ValidateOrder  →  RunActivity:ValidateOrder
+   ├─ StartActivity:ChargePayment  →  RunActivity:ChargePayment
+   └─ StartActivity:ShipOrder      →  RunActivity:ShipOrder
+```
+
+> The Workflow + Activity code **never mentions tracing** — the interceptors do it. One trace, two processes (client + Worker), in Jaeger.
+
+<!--
+This is the payoff: 8 spans, one trace, across two services. Temporal uses
+FOLLOWS_FROM for the worker-side continuation (RunWorkflow follows StartWorkflow)
+and CHILD_OF for scheduling (StartActivity under RunWorkflow). Verified live.
+-->
+
+---
+
+## OpenTelemetry vs OpenTracing
+
+| SDK | Native tracing module | OTel path |
+| --- | --- | --- |
+| **Go** | `contrib/opentelemetry` (+ legacy `…/opentracing`) | native interceptor |
+| **Python** | `contrib.opentelemetry` only | native interceptor |
+| **Java** | `temporal-opentracing` only | OpenTracing interceptors **+ OTel shim** |
+
+- OpenTracing is archived → **superseded by OpenTelemetry**. Use OTel for new work.
+- Migrating is mostly swapping the *tracer / exporter*; the **Temporal interceptor surface barely changes**.
+
+> Backend is agnostic — Jaeger ingests OTLP either way.
+
+<!--
+Why this matters in three SDKs: Java is the interesting one - no native OTel
+module, so you keep the OpenTracing interceptors and bridge with the shim. The
+migration story is "swap the tracer, keep the wiring."
+-->
+
+---
+
+<!-- _class: lab -->
+
+###### Lab · Day 4
+
+# Distributed tracing → Jaeger
+
+`examples/runnable/19-distributed-tracing` (Java · Go · Python)
+
+```bash
+make stack-trace        # Jaeger UI :16686 + OTLP :4317/:4318
+make temporal           # dev server
+make run-trace          # Worker   (terminal 1)
+make run-trace-starter  # starter  (terminal 2)
+make jaeger             # open http://localhost:16686
+```
+
+In Jaeger, pick service `temporal-client-java`, **Find Traces**, open the latest: the client's start span with the Workflow + Activity spans nested underneath.
 
 ---
 

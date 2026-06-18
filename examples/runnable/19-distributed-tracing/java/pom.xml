@@ -1,0 +1,113 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>training.temporal</groupId>
+  <artifactId>distributed-tracing</artifactId>
+  <version>1.0-SNAPSHOT</version>
+
+  <properties>
+    <maven.compiler.release>17</maven.compiler.release>
+    <temporal.version>1.32.1</temporal.version>
+    <otel.version>1.39.0</otel.version>
+    <!-- Default entry point (the Worker). Override on the CLI to run the
+         starter: mvn ... exec:java -Dexec.mainClass=...TracingStarter -->
+    <exec.mainClass>training.temporal.tracing.TracingWorker</exec.mainClass>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- Keeps every io.opentelemetry:* artifact on one matching version. -->
+      <dependency>
+        <groupId>io.opentelemetry</groupId>
+        <artifactId>opentelemetry-bom</artifactId>
+        <version>${otel.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.temporal</groupId>
+      <artifactId>temporal-sdk</artifactId>
+      <version>${temporal.version}</version>
+    </dependency>
+    <!-- Temporal's tracing interceptors speak the OpenTracing API. There is no
+         official temporal-opentelemetry module for Java; OpenTelemetry is wired
+         in below via the OpenTracing shim. -->
+    <dependency>
+      <groupId>io.temporal</groupId>
+      <artifactId>temporal-opentracing</artifactId>
+      <version>${temporal.version}</version>
+    </dependency>
+    <!-- OpenTelemetry SDK + OTLP exporter (talks to Jaeger's OTLP receiver). -->
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-sdk</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-exporter-otlp</artifactId>
+    </dependency>
+    <!-- The bridge: exposes an OpenTelemetry Tracer as an OpenTracing Tracer so
+         Temporal's OpenTracing interceptors emit OpenTelemetry spans. -->
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-opentracing-shim</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-simple</artifactId>
+      <version>2.0.13</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+        <configuration>
+          <release>17</release>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.3.0</version>
+        <configuration>
+          <!-- Referencing the property (not hardcoding the class) lets
+               -Dexec.mainClass override it; a hardcoded value here would
+               silently win over the CLI and always run the Worker. -->
+          <mainClass>${exec.mainClass}</mainClass>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.6.0</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>${exec.mainClass}</mainClass>
+                </transformer>
+              </transformers>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
