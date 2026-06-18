@@ -5,6 +5,7 @@ import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
+import io.temporal.worker.WorkerOptions;
 
 public final class WorkerMain {
 
@@ -24,8 +25,17 @@ public final class WorkerMain {
             service,
             io.temporal.client.WorkflowClientOptions.newBuilder().setNamespace(namespace).build());
 
+    // Optional: cap how many Activities one Worker runs at once. Left at the SDK
+    // default normally; the Day-6 KEDA lab sets it low (e.g. 2) so Task Queue
+    // backlog builds faster than one pod can drain it, making autoscale visible.
+    WorkerOptions.Builder workerOptions = WorkerOptions.newBuilder();
+    String maxActivities = System.getenv("MAX_CONCURRENT_ACTIVITIES");
+    if (maxActivities != null && !maxActivities.isBlank()) {
+      workerOptions.setMaxConcurrentActivityExecutionSize(Integer.parseInt(maxActivities.trim()));
+    }
+
     WorkerFactory factory = WorkerFactory.newInstance(client);
-    Worker worker = factory.newWorker(taskQueue);
+    Worker worker = factory.newWorker(taskQueue, workerOptions.build());
     worker.registerWorkflowImplementationTypes(ImportWorkflowImpl.class);
     worker.registerActivitiesImplementations(new ImportActivitiesImpl());
 
