@@ -49,7 +49,7 @@ Pace check: end of Day 1 should leave the room with one Workflow running.
 | 2 | Reliability + interactions | Signals, Updates, Schedules |
 | 3 | Kafka integration | End-to-end Kafka pipeline, DLQ |
 | 4 | Production engineering | Replay tests, dashboards |
-| 5 | Saga + Spring Boot + capstone | Capstone Workflow |
+| 5 | Saga + Spring Boot | Saga in Spring Boot |
 | 6 | AWS migration + containers | Glue, K8s, KEDA |
 
 Build-it-yourself labs (starter code, no solutions) live in [`challenges/`](https://github.com/codermana/Temporal-Training/tree/master/challenges), each lab slide links its own challenge.
@@ -4966,16 +4966,17 @@ A decision framework.
 
 ###### Day 5
 
-# Saga, Spring Boot & capstone
+# Saga & Spring Boot
 
-Real-world Workflow walkthrough. Then build one.
+Real-world Workflow walkthrough, driven through a Spring Boot service.
 
 <!--
 4 hours.
 
-Morning is saga + Spring.
+Saga + Spring Boot: sync Updates, async Signals, continue-as-new.
 
-Afternoon is capstone (75 min of build time + 25 min review + 20 min Q&A).
+The capstone build (75 min build + 25 review + 20 Q&A) moved to the course
+close - it now caps all six days rather than just Day 5.
 -->
 
 ---
@@ -5501,6 +5502,24 @@ void onOrder(OrderRequest request) {
 
 ---
 
+<!-- _class: lab -->
+
+###### Lab · Day 5
+
+# Saga in Spring Boot
+
+Challenge → [`day-05-saga-spring/lab-2-saga-spring-boot`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-05-saga-spring/lab-2-saga-spring-boot.md)
+
+Wire the saga into a Spring Boot app:
+
+1. Register the Worker as a `@Component` with `WorkerFactory` lifecycle bound to the app context.
+2. Drive the Workflow from a `@RestController`: start, signal, query.
+3. Inject Activity dependencies (DB, HTTP clients) as Spring beans.
+
+> Goal: the saga runs inside Spring Boot, started from an HTTP endpoint.
+
+---
+
 ## Continue-as-new: why
 
 History grows with **every event**. A Workflow that loops forever, a subscription, a counter, an actor, would grow its history without bound. That means slower replay and, eventually, hard limits.
@@ -5569,138 +5588,6 @@ The **Relationships** tab exposes the chain continue-as-new builds:
 Captured from examples/runnable/12-continue-as-new (processed 9 events across 3
 Runs). The First/Previous Execution links are the chain - walk them backwards.
 -->
-
----
-
-<!-- _class: lab -->
-
-###### Lab · Day 5
-
-# Saga in Spring Boot
-
-Challenge → [`day-05-saga-spring/lab-2-saga-spring-boot`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-05-saga-spring/lab-2-saga-spring-boot.md)
-
-Wire the saga into a Spring Boot app:
-
-1. Register the Worker as a `@Component` with `WorkerFactory` lifecycle bound to the app context.
-2. Drive the Workflow from a `@RestController`: start, signal, query.
-3. Inject Activity dependencies (DB, HTTP clients) as Spring beans.
-
-> Goal: the saga runs inside Spring Boot, started from an HTTP endpoint.
-
----
-
-<!-- _class: section -->
-<!-- _transition: slide 0.5s -->
-
-###### Day 5
-
-# Capstone
-
-Redesign a Kafka-triggered Airflow DAG as a Temporal Saga.
-
-<!--
-Scaffold from examples/runnable/07-saga/ (Run: make run-saga). Challenge: day-05-saga-spring/lab-3-capstone.
--->
-
-
----
-
-<!-- _class: onramp -->
-<!-- _transition: slide 0.5s -->
-
-###### Day 5 · on-ramp
-
-# Capstone
-
-- **Where this fits**: You build: take a Kafka-triggered Airflow DAG and redesign it as a Temporal saga.
-- **Why it matters**: It's the rehearsal for the migration you'll do back at work.
-- **By the end**: You'll have a working saga you designed, against a clear acceptance bar.
-
----
-
-
-# The task
-
-> A customer signup flow. Kafka event `customer-signup` arrives with `{userId, email, plan}`. The DAG runs four tasks: create user, charge first month, provision tenant, send welcome email. Failure handling today is ad hoc.
-
-Redesign it as a Saga. Demonstrate one compensation path.
-
----
-
-# Deliverable plan (75 min)
-
-| Time | Deliverable |
-| --- | --- |
-| 0-10 | Sketch Workflow signature + Activity interface + compensation order on paper |
-| 10-50 | Implement enough Java to run the happy path + one failure path |
-| 50-65 | Wire the Kafka trigger with `signalWithStart` |
-| 65-75 | Run end-to-end against the local stack; demo one compensation |
-
----
-
-# Acceptance criteria
-
-1. At least three forward steps.
-2. Compensation registered immediately after each step.
-3. `@KafkaListener` triggering via `signalWithStart`.
-4. One demonstrated failure → compensation visible in the Web UI history.
-
----
-
-<!-- _class: lab -->
-
-###### Lab · Day 5
-
-# Capstone
-
-Challenge → [`day-05-saga-spring/lab-3-capstone`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-05-saga-spring/lab-3-capstone.md)
-
-```bash
-make stack-kafka
-make temporal
-# Use 07-saga or scaffold your own
-```
-
-Go. 75 minutes. Walk the room every 15. Unstick people on Spring config -
-the lesson is in the saga shape, not the wiring.
-
-<!--
-Hold the line on time.
-
-At 50 minutes, stop everyone and check in.
-
-If most are stuck, slow down; if most are done, pull review forward.
--->
-
----
-
-# Capstone review (25 min)
-
-Two or three volunteer pairs share screen. The room critiques. Cover:
-
-- How did they decide what was a Workflow vs an Activity?
-- Where did they put idempotency keys?
-- Orchestration or choreography? Why?
-- What would they change for a 30-day saga?
-
-<!--
-Resist correcting code style.
-
-Focus on the four questions above.
-
-They are what the cohort will face on real systems.
--->
-
----
-
-# Q&A + open migration planning (20 min)
-
-Anchor questions if the room is quiet:
-
-- Pick one Airflow DAG. What's the first thing that would break in Temporal?
-- What's your team's hardest distributed-transaction failure? Would a Saga have caught it?
-- Where does "I think it ran but I'm not sure" happen in your stack? That's a Workflow.
 
 ---
 
@@ -5882,6 +5769,63 @@ public String runGlueJob(String jobName, String inputS3Uri) {
   }
 }
 ```
+
+---
+
+<!-- _class: dense -->
+
+###### Day 6
+
+# Resuming from a failed step
+
+A single Glue job is **opaque**, Temporal can't resume a Spark script at line 200. The resume boundary is the **Activity**: model each resumable step as its own Activity, and history skips the ones already done.
+
+| Resume *what?* | Mechanism | Owns the checkpoint |
+| --- | --- | --- |
+| A failed **step** in a multi-job pipeline | History replays completed Activities, doesn't re-run them | **Temporal** |
+| **Polling** one run after a Worker crash | Heartbeat `runId` + `getHeartbeatDetails` re-attach | **Temporal** |
+| A point **inside** one Spark job | Glue Job Bookmarks, or split the job into steps | **Glue** |
+
+> "Resume where it failed" lives at the **Activity boundary**, make each resumable step its own Activity.
+
+<!--
+The question students always ask: "can Temporal resume my Glue job from step 3?"
+The honest answer is a question back: what's a step? Temporal can't reach inside
+one Spark script, that's opaque. But if your pipeline is extract → transform →
+load as three jobs, model each as an Activity and Temporal resumes at the failed
+one for free. Finer than that (mid-Spark) is Glue Job Bookmarks' job, not
+Temporal's. The heartbeat row is the re-attach case from the previous slides.
+-->
+
+---
+
+<!-- _class: code dense -->
+
+## Steps = Activities; history resumes the rest
+
+<!-- Open in VSCode: examples/runnable/17-spring-glue-pipeline -->
+
+```java
+@Override
+public void run(TransformRequest req) {
+  String raw     = glue.runGlueJob("extract",   req.inputS3Uri());  // ✓ recorded
+  String curated = glue.runGlueJob("transform", raw);               // ✓ recorded
+  glue.runGlueJob("load", curated);                                 // ✗ fails here
+}
+```
+
+- On a Worker crash or replay, history shows `extract` and `transform` **already SUCCEEDED**, so they aren't re-run, execution resumes at `load`.
+- No checkpoint table, no S3 spelunking, no manual restart, the history *is* the checkpoint.
+
+> Coarser than an Activity and you're back to Glue Job Bookmarks doing the bookkeeping.
+
+<!--
+The payoff slide. Three Glue jobs, three Activities, one Workflow. When `load`
+fails, you fix it and the retry doesn't re-pay for extract + transform, their
+results come straight out of event history. This is the "resume from the failed
+step" guarantee the previous slide promised, made concrete. Contrast with Step
+Functions, where resuming mid-state-machine is a console-diving runbook.
+-->
 
 ---
 
@@ -6735,12 +6679,22 @@ ECS has **no native Temporal scaler**. So you assemble what KEDA bundles: publis
 >
 > *Amazon ECS Developer Guide* · docs.aws.amazon.com
 
+<!--
+Source: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-auto-scaling.html
+The headline: ECS has no native Temporal scaler the way EKS has KEDA. So you
+rebuild what KEDA bundles - publish backlog as a CloudWatch metric, target-track
+it. The wiring is on the next slide.
+-->
+
+---
+
+# ECS Fargate: wiring the backlog scaler
+
 - A tiny **backlog publisher** calls `DescribeTaskQueue` → `PutMetricData` (`Temporal/Worker` / `TaskQueueBacklog`).
 - Application Auto Scaling target-tracks it, the CloudWatch analog of KEDA's `targetQueueSize`.
 - The Service has **no load balancer**: Workers are outbound-only (same as the Deployment).
 
 <!--
-Source: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-auto-scaling.html
 Contrast with lab 5: KEDA polls DescribeTaskQueue FOR you. On ECS you wire the
 poller -> metric -> scaler yourself. Same idea (scale on queue depth), more glue.
 Manifests: examples/07-aws-containers/aws/ecs_*.json + backlog_publisher.md
@@ -6812,16 +6766,24 @@ The `load` step persists to **Aurora** (Postgres-compatible). Activities are at-
 >
 > *Amazon Aurora User Guide* · docs.aws.amazon.com
 
+<!--
+Source: https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/CHAP_AuroraOverview.html
+This is the at-least-once thesis again, in SQL: a retried load Activity must not
+double-insert. The mechanics that make it safe are on the next slide.
+-->
+
+---
+
+# Aurora: making the write idempotent
+
 - Make the write **idempotent**: `INSERT … ON CONFLICT (idempotency_key) DO NOTHING`, one transaction per batch.
 - The key must be **stable across attempts**: derive it from `workflowId`, never wall-clock/random.
 - Bounded **connection pool** (HikariCP) sized to Activity concurrency; creds via SSM / IAM DB auth, the relational sibling of the DynamoDB conditional-write.
 
 <!--
-Source: https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/CHAP_AuroraOverview.html
-This is the at-least-once thesis again, in SQL. The DynamoDB example
-(dynamodb_idempotency.*) is the NoSQL sibling. Aurora can also be Temporal's own
-persistence store when self-hosting - but that's an aside; the lab's focus is
-Aurora-as-application-sink.
+The DynamoDB example (dynamodb_idempotency.*) is the NoSQL sibling. Aurora can
+also be Temporal's own persistence store when self-hosting - but that's an aside;
+the lab's focus is Aurora-as-application-sink.
 Files: examples/07-aws-containers/aws/aurora_schema.sql, aurora_load_activity.java, aurora_terraform.tf
 -->
 
@@ -6901,6 +6863,118 @@ Challenge → [`day-06-aws-containers/lab-12-route53-failover`](https://github.c
 <!-- _class: section -->
 <!-- _transition: slide 0.5s -->
 
+# Capstone
+
+Redesign a Kafka-triggered Airflow DAG as a Temporal Saga.
+
+<!--
+Scaffold from examples/runnable/07-saga/ (Run: make run-saga). Challenge: day-05-saga-spring/lab-3-capstone.
+-->
+
+
+---
+
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Capstone · on-ramp
+
+# Capstone
+
+- **Where this fits**: You build: take a Kafka-triggered Airflow DAG and redesign it as a Temporal saga.
+- **Why it matters**: It's the rehearsal for the migration you'll do back at work.
+- **By the end**: You'll have a working saga you designed, against a clear acceptance bar.
+
+---
+
+
+# The task
+
+> A customer signup flow. Kafka event `customer-signup` arrives with `{userId, email, plan}`. The DAG runs four tasks: create user, charge first month, provision tenant, send welcome email. Failure handling today is ad hoc.
+
+Redesign it as a Saga. Demonstrate one compensation path.
+
+---
+
+# Deliverable plan (75 min)
+
+| Time | Deliverable |
+| --- | --- |
+| 0-10 | Sketch Workflow signature + Activity interface + compensation order on paper |
+| 10-50 | Implement enough Java to run the happy path + one failure path |
+| 50-65 | Wire the Kafka trigger with `signalWithStart` |
+| 65-75 | Run end-to-end against the local stack; demo one compensation |
+
+---
+
+# Acceptance criteria
+
+1. At least three forward steps.
+2. Compensation registered immediately after each step.
+3. `@KafkaListener` triggering via `signalWithStart`.
+4. One demonstrated failure → compensation visible in the Web UI history.
+
+---
+
+<!-- _class: lab -->
+
+###### Lab · Capstone
+
+# Capstone
+
+Challenge → [`day-05-saga-spring/lab-3-capstone`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-05-saga-spring/lab-3-capstone.md)
+
+```bash
+make stack-kafka
+make temporal
+# Use 07-saga or scaffold your own
+```
+
+Go. 75 minutes. Walk the room every 15. Unstick people on Spring config -
+the lesson is in the saga shape, not the wiring.
+
+<!--
+Hold the line on time.
+
+At 50 minutes, stop everyone and check in.
+
+If most are stuck, slow down; if most are done, pull review forward.
+-->
+
+---
+
+# Capstone review (25 min)
+
+Two or three volunteer pairs share screen. The room critiques. Cover:
+
+- How did they decide what was a Workflow vs an Activity?
+- Where did they put idempotency keys?
+- Orchestration or choreography? Why?
+- What would they change for a 30-day saga?
+
+<!--
+Resist correcting code style.
+
+Focus on the four questions above.
+
+They are what the cohort will face on real systems.
+-->
+
+---
+
+# Q&A + open migration planning (20 min)
+
+Anchor questions if the room is quiet:
+
+- Pick one Airflow DAG. What's the first thing that would break in Temporal?
+- What's your team's hardest distributed-transaction failure? Would a Saga have caught it?
+- Where does "I think it ran but I'm not sure" happen in your stack? That's a Workflow.
+
+---
+
+<!-- _class: section -->
+<!-- _transition: slide 0.5s -->
+
 ###### Course close
 
 # What you have now
@@ -6911,7 +6985,7 @@ A complete Temporal mental model and the patterns to ship with.
 
 # Where to go next
 
-* Take the **capstone** from Day 5 back to your team. Ship it side-by-side with the existing implementation.
+* Take the **capstone** back to your team. Ship it side-by-side with the existing implementation.
 * Stand up the **observability stack** in your real env. Get the metrics flowing first.
 * Start the **replay corpus**. One captured history per non-trivial Workflow.
 * Pick one **Airflow DAG** to migrate using the framework.
