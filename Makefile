@@ -31,7 +31,9 @@ setup-mac: ## Install the required tools on macOS (JDK, Maven, Temporal CLI)
 setup-mac-full: setup-mac ## Install required + optional tools on macOS
 	brew install docker kcat kind kubectl helm
 	@command -v pipx >/dev/null 2>&1 || brew install pipx
-	pipx install awscli-local || true
+	pipx install awscli-local || pipx upgrade awscli-local || true
+	@pipx ensurepath >/dev/null 2>&1 || true
+	@$(MAKE) --no-print-directory verify-awslocal
 
 setup-ubuntu: ## Install the required tools on Ubuntu/Debian (uses sudo)
 	sudo apt-get update
@@ -96,6 +98,7 @@ setup-ubuntu-full: setup-ubuntu ## Install required + optional tools on Ubuntu/D
 	fi
 	@pipx install awscli-local || pipx upgrade awscli-local || true
 	@pipx ensurepath || true
+	@$(MAKE) --no-print-directory verify-awslocal
 
 check: ## Verify required and optional tools
 	scripts/check-local.sh
@@ -375,32 +378,46 @@ kafka-consume: ## Tail a topic (TOPIC=order-outcomes)
 # LocalStack helpers (Day 6)
 # ---------------------------------------------------------------------------
 
-.PHONY: aws-init aws-buckets aws-resources
+.PHONY: aws-init aws-buckets aws-resources verify-awslocal
 
-aws-init: ## Create all LocalStack resources used by Day 6 AM labs (S3/SQS/SNS/SSM)
+# Resolve awslocal robustly: prefer PATH, then pipx's default bin (~/.local/bin),
+# so the aws-* targets work right after `make setup-*-full` even before the shell
+# rc is re-sourced. Falls back to bare `awslocal` (which errors clearly if absent).
+AWSLOCAL := $(shell command -v awslocal 2>/dev/null || ([ -x "$$HOME/.local/bin/awslocal" ] && echo "$$HOME/.local/bin/awslocal") || echo awslocal)
+
+verify-awslocal: ## Confirm awslocal is installed and resolvable (used by setup-*-full)
+	@if "$(AWSLOCAL)" --version >/dev/null 2>&1; then \
+		echo ">> awslocal OK: $$(command -v awslocal 2>/dev/null || echo $(AWSLOCAL))"; \
+	else \
+		echo ">> awslocal not found. Install it with: pipx install awscli-local && pipx ensurepath"; \
+		echo "   Then open a NEW shell so ~/.local/bin is on PATH (or run: export PATH=\"\$$HOME/.local/bin:\$$PATH\")."; \
+		exit 1; \
+	fi
+
+aws-init: verify-awslocal ## Create all LocalStack resources used by Day 6 AM labs (S3/SQS/SNS/SSM)
 	# Lab 1-3: import buckets
-	awslocal s3 mb s3://imports-incoming  || true
-	awslocal s3 mb s3://imports-validated || true
-	awslocal s3 mb s3://imports-output    || true
+	$(AWSLOCAL) s3 mb s3://imports-incoming  || true
+	$(AWSLOCAL) s3 mb s3://imports-validated || true
+	$(AWSLOCAL) s3 mb s3://imports-output    || true
 	# Lab 6: SQS event-trigger queue (the EventBridge->Lambda->StartExecution stand-in)
-	awslocal sqs create-queue --queue-name imports-events || true
+	$(AWSLOCAL) sqs create-queue --queue-name imports-events || true
 	# Lab 7: SNS completion topic + an SQS subscriber to verify fan-out
-	awslocal sns create-topic --name imports-complete || true
-	awslocal sqs create-queue --queue-name imports-complete-sub || true
+	$(AWSLOCAL) sns create-topic --name imports-complete || true
+	$(AWSLOCAL) sqs create-queue --queue-name imports-complete-sub || true
 	# Lab 8: Worker config tree in SSM Parameter Store (+ one SecureString secret)
-	awslocal ssm put-parameter --name /temporal-training/worker/temporal-address --value 127.0.0.1:7233 --type String --overwrite || true
-	awslocal ssm put-parameter --name /temporal-training/worker/namespace        --value default        --type String --overwrite || true
-	awslocal ssm put-parameter --name /temporal-training/worker/task-queue        --value transform      --type String --overwrite || true
-	awslocal ssm put-parameter --name /temporal-training/worker/api-key           --value local-dev-secret --type SecureString --overwrite || true
+	$(AWSLOCAL) ssm put-parameter --name /temporal-training/worker/temporal-address --value 127.0.0.1:7233 --type String --overwrite || true
+	$(AWSLOCAL) ssm put-parameter --name /temporal-training/worker/namespace        --value default        --type String --overwrite || true
+	$(AWSLOCAL) ssm put-parameter --name /temporal-training/worker/task-queue        --value transform      --type String --overwrite || true
+	$(AWSLOCAL) ssm put-parameter --name /temporal-training/worker/api-key           --value local-dev-secret --type SecureString --overwrite || true
 
 aws-buckets: ## List LocalStack S3 buckets
-	awslocal s3 ls
+	$(AWSLOCAL) s3 ls
 
 aws-resources: ## List the Day 6 LocalStack resources (buckets, queues, topics, params)
-	@echo "== S3 buckets =="       && awslocal s3 ls
-	@echo "== SQS queues =="       && awslocal sqs list-queues
-	@echo "== SNS topics =="       && awslocal sns list-topics
-	@echo "== SSM parameters ==" && awslocal ssm get-parameters-by-path --path /temporal-training/worker/ --with-decryption
+	@echo "== S3 buckets =="       && $(AWSLOCAL) s3 ls
+	@echo "== SQS queues =="       && $(AWSLOCAL) sqs list-queues
+	@echo "== SNS topics =="       && $(AWSLOCAL) sns list-topics
+	@echo "== SSM parameters ==" && $(AWSLOCAL) ssm get-parameters-by-path --path /temporal-training/worker/ --with-decryption
 
 # ---------------------------------------------------------------------------
 # Slides (Marp)

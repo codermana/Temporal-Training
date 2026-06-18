@@ -3,6 +3,10 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# Include pipx's default bin so tools like awslocal are detected even if the shell
+# rc hasn't been re-sourced since `make setup-*-full` ran `pipx ensurepath`.
+export PATH="$HOME/.local/bin:$PATH"
+
 missing=0
 
 require() {

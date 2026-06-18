@@ -46,8 +46,14 @@ brew install kcat            # Day 3 Kafka labs
 brew install kind            # Day 6 K8s lab
 brew install kubectl         # Day 6 K8s lab
 brew install helm            # Day 6 KEDA install
-pipx install awscli-local    # Day 6 LocalStack (awslocal)
+pipx install awscli-local && pipx ensurepath   # Day 6 LocalStack (awslocal)
 ```
+
+> `make setup-mac-full` / `make setup-ubuntu-full` install all of the above
+> (including `awslocal`) for you and run `pipx ensurepath` + a `verify-awslocal`
+> check. `awslocal` lands in `~/.local/bin`; **open a new shell** afterward so it
+> is on your `PATH` (the `make aws-*` targets also resolve it from `~/.local/bin`
+> automatically, so they work even before you do). Confirm with `make check`.
 
 If your shell does not find `java` after installing OpenJDK, follow Homebrew's
 post-install instructions for adding the JDK to your `PATH`.
