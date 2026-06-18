@@ -3,6 +3,13 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+run() {
+  printf '+'
+  printf ' %q' "$@"
+  printf '\n'
+  command "$@"
+}
+
 usage() {
   cat <<'EOF'
 Usage: scripts/run-example.sh <example> [lang] [role]
@@ -199,9 +206,9 @@ case "$LANG_CHOICE" in
     case "$MODE" in
       exec)
         if [[ -n "$MAIN_CLASS" ]]; then
-          mvn -q compile exec:java -Dexec.mainClass="$MAIN_CLASS"
+          run mvn -q compile exec:java -Dexec.mainClass="$MAIN_CLASS"
         else
-          mvn -q compile exec:java
+          run mvn -q compile exec:java
         fi
         ;;
       spring)
@@ -217,16 +224,16 @@ case "$LANG_CHOICE" in
             echo "Spring Boot 3.3 may not run on Java $JAVA_MAJOR. Install JDK 17." >&2
           fi
         fi
-        mvn -q -DskipTests spring-boot:run
+        run mvn -q -DskipTests spring-boot:run
         ;;
       test)
-        mvn -q test
+        run mvn -q test
         ;;
       compile)
         if [[ -n "$MAIN_CLASS" ]]; then
-          mvn -q compile exec:java -Dexec.mainClass="$MAIN_CLASS"
+          run mvn -q compile exec:java -Dexec.mainClass="$MAIN_CLASS"
         else
-          mvn -q -DskipTests compile
+          run mvn -q -DskipTests compile
         fi
         ;;
     esac
@@ -255,11 +262,11 @@ case "$LANG_CHOICE" in
     # uv reads pyproject.toml, provisions an isolated env, and runs — no manual
     # venv/pip. Falls back to plain python3 if uv isn't installed.
     if command -v uv >/dev/null 2>&1; then
-      uv run "$ENTRY"
+      run uv run "$ENTRY"
     elif command -v python3 >/dev/null 2>&1; then
       echo "uv not found; falling back to system python3 (install uv: https://docs.astral.sh/uv/)." >&2
       echo "Tip: create a venv and 'pip install .' from $DIR/python first." >&2
-      python3 "$ENTRY"
+      run python3 "$ENTRY"
     else
       echo "uv (preferred) or python3 is required. See Setup.md." >&2
       exit 1
@@ -279,9 +286,9 @@ case "$LANG_CHOICE" in
     # Split labs have ./worker and ./starter command dirs; older single-binary
     # labs keep main at the module root (go run .).
     if [[ -d "$ROLE" ]]; then
-      go run "./$ROLE"
+      run go run "./$ROLE"
     else
-      go run .
+      run go run .
     fi
     ;;
   *)
