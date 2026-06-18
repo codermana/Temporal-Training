@@ -1,0 +1,23 @@
+# Lab 6.5: scale the import Worker on Task Queue BACKLOG, not CPU. A poller can be
+# idle on CPU while a deep backlog waits, so queue depth is the correct signal.
+# KEDA's native Temporal scaler polls DescribeTaskQueue — no Prometheus exporter.
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: temporal-import-worker
+spec:
+  scaleTargetRef:
+    name: temporal-import-worker
+  minReplicaCount: 1 # keep one poller alive: timers + sticky execution keep progressing
+  maxReplicaCount: 10
+  triggers:
+    - type: temporal
+      metadata:
+        # Must reach the SAME Frontend the Deployment uses (endpoint mismatch is the
+        # most common failure here). On kind, host.docker.internal:7233.
+        endpoint: host.docker.internal:7233
+        namespace: default
+        taskQueue: transform
+        queueType: ActivityTaskQueue
+        targetQueueSize: "20"
+        activationTargetQueueSize: "5"

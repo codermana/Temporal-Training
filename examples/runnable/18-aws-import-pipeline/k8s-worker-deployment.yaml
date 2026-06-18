@@ -1,0 +1,80 @@
+# Lab 6.5: the import Worker on Kubernetes. A stateless, outbound-only pod — no
+# Service, no Ingress. The rolling update preserves capacity (maxUnavailable: 0)
+# and the long grace period lets in-flight Activities drain instead of being killed.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: temporal-import-worker
+spec:
+  replicas: 2
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: temporal-import-worker
+  template:
+    metadata:
+      labels:
+        app: temporal-import-worker
+    spec:
+      # Align with the longest startToCloseTimeout (the transform job): drain, don't abort.
+      terminationGracePeriodSeconds: 120
+      containers:
+        - name: worker
+          image: temporal-import-worker:dev # kind-loaded tag; set imagePullPolicy IfNotPresent
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: TEMPORAL_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: temporal-import-config
+                  key: temporal-address
+            - name: TEMPORAL_NAMESPACE
+              valueFrom:
+                configMapKeyRef:
+                  name: temporal-import-config
+                  key: temporal-namespace
+            - name: TASK_QUEUE
+              value: transform
+            # Point the AWS clients at wherever LocalStack/AWS is reachable from the
+            # cluster. Empty => real AWS via the default provider chain (IRSA/task role).
+            - name: AWS_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: temporal-import-config
+                  key: aws-endpoint
+            # No queue URL in-cluster => the SQS bridge stays off (drive via the host).
+            - name: BRIDGE_ENABLED
+              value: "false"
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2"
+              memory: "2Gi"
+          # The Worker is not an HTTP server — probe the process, not a port. Add an
+          # HTTP /health endpoint and switch to httpGet for richer readiness.
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pgrep -f worker.jar > /dev/null"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "pgrep -f worker.jar > /dev/null"]
+            initialDelaySeconds: 30
+            periodSeconds: 20
+---
+# The ConfigMap the Deployment reads. Adjust the address to whatever Frontend the
+# pods can actually reach (host.docker.internal on kind, or an in-cluster Service).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: temporal-import-config
+data:
+  temporal-address: host.docker.internal:7233
+  temporal-namespace: default
+  aws-endpoint: http://host.docker.internal:4566

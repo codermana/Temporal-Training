@@ -38,6 +38,7 @@ Examples:
   scripts/run-example.sh routing      # one Workflow, Activities on separate pools
   scripts/run-example.sh spring       # Temporal Spring Boot starter, REST on :8080 (Java only)
   scripts/run-example.sh spring-glue  # Spring Boot supervising a local stitch job (Glue stand-in), REST on :8080 (Java only)
+  scripts/run-example.sh import       # plain-SDK Import Worker: real S3/SNS/SSM + SQS bridge (Java only)
 
 Use scripts/list-examples.sh to see all examples.
 EOF
@@ -140,6 +141,15 @@ case "$EXAMPLE" in
     # demo resources seeded (scripts/seed-glue-demo.sh up). Java only.
     DIR="examples/runnable/17-spring-glue-pipeline"
     MODE="spring"
+    ;;
+  import|import-pipeline|aws-import|18|18-aws-import-pipeline)
+    # Plain-SDK Java Worker for the Day-6 import pipeline: validate -> transform
+    # (supervised job) -> load -> SNS-notify, doing REAL LocalStack S3/SNS/SSM
+    # work, plus the SQS trigger bridge in the same process. Needs LocalStack
+    # (make stack-aws) seeded via scripts/seed-import-demo.sh up. Java only.
+    DIR="examples/runnable/18-aws-import-pipeline"
+    MODE="exec"
+    MAIN_CLASS="training.temporal.aws.WorkerMain"
     ;;
   *)
     echo "Unknown runnable example: $EXAMPLE" >&2

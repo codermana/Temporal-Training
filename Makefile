@@ -220,7 +220,7 @@ show: ## Print an example file (FILE=02-reliability/heartbeat_long_activity.java
 .PHONY: run-retries run-child run-replay run-continue run-choreography
 .PHONY: run-hello-starter run-connect-starter run-async-starter run-approval-starter
 .PHONY: run-retries-starter run-child-starter run-continue-starter run-choreography-starter
-.PHONY: run-routing run-routing-starter run-spring run-spring-glue seed-glue
+.PHONY: run-routing run-routing-starter run-spring run-spring-glue seed-glue run-import seed-import
 
 # Split labs ship a standalone Worker and a standalone starter (client). The
 # run-* target launches the long-lived Worker; the run-*-starter target starts
@@ -297,6 +297,12 @@ run-spring-glue: ## Day 6: Spring Boot supervising a local stitch job (Glue stan
 
 seed-glue:     ## Day 6: seed LocalStack for the Spring-Glue demo (bucket, SQS bus, SNS topic + A's inbox, a Parquet partition)
 	scripts/seed-glue-demo.sh up
+
+run-import:    ## Day 6: plain-SDK Import Worker (real S3/SNS/SSM + SQS bridge) — labs 1-8 runnable (needs stack-aws + seed-import + temporal)
+	scripts/run-example.sh import
+
+seed-import:   ## Day 6: seed LocalStack for the import pipeline (3 buckets, SQS bus, SNS topic + subscriber, SSM config + secret, an input CSV)
+	scripts/seed-import-demo.sh up
 
 # ---------------------------------------------------------------------------
 # Per-day bundles - bring everything required for that day up / down
