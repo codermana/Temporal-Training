@@ -4015,6 +4015,58 @@ Open in VSCode: examples/05-production/worker_options_manual.java, worker_tuner.
 
 ---
 
+<!-- _class: code -->
+
+## The levers, mapped to one Worker
+
+```
+1 Worker  ──►  runs n Workflows + m Activities      (one Task Queue, one JVM)
+
+a  workflows    maxConcurrentWorkflowTaskExecutionSize    int      default 200
+b  activities   maxConcurrentActivityExecutionSize        int      default 200
+c  wf threads   setUsingVirtualWorkflowThreads(true)      boolean  default false
+d  act threads  setUsingVirtualThreads(true)              boolean  default false
+```
+
+> `a`, `b`, `d` are `WorkerOptions` (per Task Queue); `c` is `WorkerFactoryOptions` (whole factory). `c` and `d` are both *virtual threads* — `c` for Workflow threads, `d` for Activity threads.
+
+<!--
+Corrected shorthand of the levers table: one Worker runs n Workflows + m
+Activities off one queue. a/b are integer slot counts (both default 200); c/d are
+JDK-21 virtual-thread booleans (both default false). The trap the original
+snippet hid: c is set on the Factory, not the Worker, and c vs d is Workflow- vs
+Activity-thread scope, not "threads vs virtual threads".
+-->
+
+---
+
+<!-- _class: code -->
+
+## The other levers, same shape
+
+```
+e  local work    maxConcurrentLocalActivityExecutionSize   int      default 200
+f  wf pollers     maxConcurrentWorkflowTaskPollers          int      default 5
+g  act pollers    maxConcurrentActivityTaskPollers          int      default 5
+h  worker rate    setMaxActivitiesPerSecond                 double   default 0 = ∞
+i  queue rate     setMaxTaskQueueActivitiesPerSecond        double   default 0 = ∞
+j  slot tuner     setWorkerTuner(tuner)                     —        default off
+k  sticky cache   setWorkflowCacheSize                      int      default 600
+l  fan-out        Task Queue count                          int      default 1
+```
+
+> `0 = ∞` (unlimited). `h` caps **this Worker**'s Activity starts/sec; `i` caps the **whole queue** server-side. `j` off → fixed slots from `a`/`b`/`e`; swap in `ResourceBasedTuner` / `CompositeTuner` to auto-size. `k` is `WorkerFactoryOptions`; `l` is a design choice — one queue per resource profile.
+
+<!--
+Same a/b/c/d shorthand extended to the rest of the table, with defaults. e is the
+third slot count. f/g are the poller pairs (5 + 5). h/i are the two rate caps
+(per-Worker vs queue-wide, server-enforced). j replaces the fixed slot counts
+with a tuner. k is the sticky cache. l is the topology lever. Lettering continues
+e–l so it reads as one continuous list with the previous slide.
+-->
+
+---
+
 <!-- _class: cols-figure -->
 
 ## Who's polling?: the Workers / Pollers tab
