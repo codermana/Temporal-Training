@@ -6588,17 +6588,6 @@ KEDA scaled `transform-worker` from **1 → 10** off the Temporal task-queue bac
 
 ---
 
-# Glue Activities in containers
-
-* Worker pod runs Glue-orchestration Activities.
-* **IRSA**, not access keys: `eks.amazonaws.com/role-arn` on the ServiceAccount.
-* Outbound to Temporal frontend (Cloud or self-hosted ELB).
-* Outbound to AWS APIs via VPC endpoints.
-
-> No bundled access keys. IRSA + VPC endpoints is the production shape.
-
----
-
 <!-- _class: dense -->
 
 # Temporal Cloud vs EKS self-hosted
@@ -6613,30 +6602,6 @@ KEDA scaled `transform-worker` from **1 → 10** off the Temporal task-queue bac
 | Audit / compliance | SOC2, HIPAA tiers | You provide evidence |
 
 > Use Cloud unless you have a specific reason not to.
-
----
-
-<!-- _class: lab -->
-
-###### Lab · Day 6
-
-# End-to-end S3 → Temporal → S3
-
-Challenge → [`day-06-aws-containers/lab-2-s3-checkpointing`](https://github.com/codermana/Temporal-Training/blob/master/challenges/day-06-aws-containers/lab-2-s3-checkpointing.md)
-
-```bash
-make stack-aws        # LocalStack
-make temporal         # dev server
-make run-aws          # Worker
-awslocal s3 cp test-input.csv s3://imports-incoming/
-scripts/start-workflow.sh transform end2end ImportWorkflow "s3://imports-incoming/test-input.csv"
-awslocal s3 ls s3://imports-output/
-```
-
-Verify:
-
-- Three Activity completions in the Web UI.
-- Workflow history holds URIs + `rowCount`, not file bytes.
 
 ---
 
@@ -6714,6 +6679,17 @@ Challenge → [`day-06-aws-containers/lab-9-ecs-fargate-autoscaling`](https://gi
 
 - `ecs_task_definition.json`: secrets from SSM, `stopTimeout: 120` (graceful drain).
 - `ecs_autoscaling.json`: target-track the backlog metric, min 1 / max 10.
+
+---
+
+# Glue Activities in containers
+
+* Worker pod runs Glue-orchestration Activities.
+* **IRSA**, not access keys: `eks.amazonaws.com/role-arn` on the ServiceAccount.
+* Outbound to Temporal frontend (Cloud or self-hosted ELB).
+* Outbound to AWS APIs via VPC endpoints.
+
+> No bundled access keys. IRSA + VPC endpoints is the production shape.
 
 ---
 
@@ -6853,6 +6829,13 @@ Challenge → [`day-06-aws-containers/lab-12-route53-failover`](https://github.c
 * Temporal replaces orchestration **state**, not all compute. Keep Glue Spark; replace Step Functions JSON.
 * Every AWS edge is **at-least-once**: SQS in, SNS out. An idempotency key the receiver dedups on reconciles it with Temporal's at-least-once Activities (`signalWithStart`, `ON CONFLICT`).
 * Externalize config/secrets to **SSM**; read bootstrap at startup, per-run secrets in an Activity.
+
+---
+
+<!-- _class: takeaway -->
+
+# Day 6 takeaways *(continued)*
+
 * Workers have no inbound traffic. Use `exec` probes or add Actuator deliberately.
 * Scale on **queue backlog**: KEDA's native scaler on EKS; a published CloudWatch metric on ECS. Identity via **IRSA / task roles**, never static keys.
 * Route 53 failover is frontend **reachability, not data replication**: cross-region DR needs Temporal multi-cluster replication.
