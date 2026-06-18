@@ -13,6 +13,7 @@ Kubernetes (Lab 6.5) can probe it.
 ## Learning goals
 
 - Build a small Worker image with a multi-stage Dockerfile.
+- Package an executable fat JAR without losing gRPC service-provider metadata.
 - Set container-aware JVM flags (`UseContainerSupport`, `MaxRAMPercentage`).
 - Handle `SIGTERM` → `WorkerFactory.shutdown()` to drain in-flight work.
 - Provide a health signal (process check or an HTTP `/health`).
@@ -61,8 +62,12 @@ WORKDIR /app
 # TODO 4: ENTRYPOINT java -jar /app/worker.jar
 ```
 
-> If your jar isn't runnable on its own, add the Maven Shade plugin (or set the
-> `Main-Class` manifest) so `java -jar worker.jar` works.
+> If your JAR isn't runnable on its own, add the Maven Shade plugin. Configure
+> both `ManifestResourceTransformer` to set `Main-Class` and
+> `ServicesResourceTransformer` to merge dependency service-provider files.
+> Temporal's gRPC dependencies use `META-INF/services`; without the services
+> transformer, the image can build successfully but fail at runtime with
+> `Could not find policy 'round_robin'`.
 
 <details><summary><b>Doing this lab in Python or Go?</b> Container scaffolds</summary>
 
@@ -134,7 +139,8 @@ For the k8s probe (Lab 6.5), adjust `pgrep -f worker.jar` to `worker.py` / `work
 
 ## Tasks
 
-1. Make the jar runnable (`java -jar` finds `WorkerMain`).
+1. Make the JAR runnable (`java -jar` finds `WorkerMain`) and preserve
+   `META-INF/services` entries from all dependencies.
 2. Complete the multi-stage Dockerfile.
 3. Add the graceful-shutdown hook to `WorkerMain`.
 4. Build the image and run it against your local Temporal dev server.
@@ -162,6 +168,8 @@ hook ran.
 ## Definition of done
 
 - [ ] Multi-stage build produces a small runtime image (JRE, not full JDK+Maven).
+- [ ] The shaded JAR merges service-provider metadata; gRPC loads its
+      `round_robin` policy at runtime.
 - [ ] JVM uses container memory limits (`MaxRAMPercentage`), not a fixed `-Xmx`.
 - [ ] `docker stop` triggers `factory.shutdown()` (graceful drain), visible in logs.
 - [ ] The containerized Worker executes a Workflow started on its Task Queue.
@@ -179,13 +187,82 @@ hook ran.
 
 ## Hints
 
-<details><summary>Hint 1: runnable jar</summary>
+<details><summary>Hint 1: runnable JAR for Maven projects</summary>
 
-Add the Shade plugin so `package` produces a fat jar with the right `Main-Class`,
-then `COPY --from=build /src/target/<artifact>.jar /app/worker.jar`.
+Edit `pom.xml`.
+
+If the project already has `maven-shade-plugin`, add this entry under
+`plugin` → `executions` → `execution` → `configuration` → `transformers`:
+
+```xml
+<transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+```
+
+If the project does not have `maven-shade-plugin`, add the complete plugin below
+under `project` → `build` → `plugins`:
+
+```xml
+<plugin>
+  <groupId>org.apache.maven.plugins</groupId>
+  <artifactId>maven-shade-plugin</artifactId>
+  <version>3.6.0</version>
+  <executions>
+    <execution>
+      <phase>package</phase>
+      <goals>
+        <goal>shade</goal>
+      </goals>
+      <configuration>
+        <createDependencyReducedPom>false</createDependencyReducedPom>
+        <transformers>
+          <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+          <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+            <mainClass>${exec.mainClass}</mainClass>
+          </transformer>
+        </transformers>
+      </configuration>
+    </execution>
+  </executions>
+</plugin>
+```
+
+Ensure `${exec.mainClass}` is defined under `project` → `properties`:
+
+```xml
+<properties>
+  <exec.mainClass>training.temporal.aws.WorkerMain</exec.mainClass>
+</properties>
+```
+
+Alternatively, replace `${exec.mainClass}` in the plugin with the fully
+qualified Worker class name.
+
+`ServicesResourceTransformer` merges the `META-INF/services` files contributed
+by gRPC dependencies. Without it, the JAR may build successfully but fail at
+runtime because only one load-balancer provider was retained.
+
+After packaging, copy the shaded JAR into the runtime image:
+
+```dockerfile
+COPY --from=build /src/target/<artifact>.jar /app/worker.jar
+```
 </details>
 
-<details><summary>Hint 2: health endpoint (for Lab 6.5)</summary>
+<details><summary>Hint 2: <code>Could not find policy 'round_robin'</code></summary>
+
+Confirm the Shade configuration contains `ServicesResourceTransformer`, then
+rebuild the image:
+
+```bash
+docker build --no-cache -t temporal-transform-worker:latest .
+```
+
+The error is a packaging problem, not a Temporal connectivity problem: gRPC's
+load-balancer provider classes are present, but their merged service descriptor
+is missing from the shaded JAR.
+</details>
+
+<details><summary>Hint 3: health endpoint (for Lab 6.5)</summary>
 
 A plain `com.sun.net.httpserver.HttpServer` returning `200` on `/health` only
 **after** `factory.start()` succeeds is enough for a readiness probe. Spring
