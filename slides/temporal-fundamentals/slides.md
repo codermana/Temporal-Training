@@ -119,7 +119,7 @@ Don't proceed without this; the rest of the day depends on it.
 The failure modes of cron- and DAG-based orchestration.
 
 <!--
-Open in VSCode: examples/01-foundations/airflow_dag_vs_temporal_workflow.java + .py - DAG shape vs durable code, side by side.
+Open in VSCode: examples/01-foundations/java/airflow_dag_vs_temporal_workflow.java + .py - DAG shape vs durable code, side by side.
 -->
 
 
@@ -228,7 +228,7 @@ latency - that's why it fits user-facing flows Airflow can't serve.
 Workflows, Activities, Workers, Task Queues.
 
 <!--
-Open in VSCode: examples/01-foundations/core_primitives.java - all four roles in one file.
+Open in VSCode: examples/01-foundations/java/core_primitives.java - all four roles in one file.
 Run: make run-hello
 -->
 
@@ -438,7 +438,7 @@ serves just sits there retrying. Homogeneous within a queue, heterogeneous acros
 
 ## Routing in code
 
-<!-- Open in VSCode: examples/01-foundations/activity_task_routing.java · Run: make run-routing -->
+<!-- Open in VSCode: examples/01-foundations/java/activity_task_routing.java · Run: make run-routing -->
 
 ```java
 // Workflow runs on "orders"; each Activity stub routes to its own pool.
@@ -905,7 +905,7 @@ This is why a team can adopt Temporal without a language rewrite.
 The single concept that breaks the most Airflow brains.
 
 <!--
-Open in VSCode: examples/01-foundations/deterministic_replay_bad.java vs deterministic_replay_good.java - diff them side by side.
+Open in VSCode: examples/01-foundations/java/deterministic_replay_bad.java vs deterministic_replay_good.java - diff them side by side.
 -->
 
 
@@ -1915,7 +1915,7 @@ Lots of code.
 Promises, not threads.
 
 <!--
-Open in VSCode: examples/02-reliability/async_activity.java, parallel_fanout_allof.java
+Open in VSCode: examples/02-reliability/java/async_activity.java, parallel_fanout_allof.java
 Run: make run-async
 -->
 
@@ -2207,7 +2207,7 @@ Promise.anyOf(primary, fallback).get();
 > `allOf` waits for every branch; `anyOf` wakes on the first.
 
 <!--
-Example: examples/02-reliability/async_procedure_and_race.java
+Example: examples/02-reliability/java/async_procedure_and_race.java
 -->
 
 ---
@@ -2249,7 +2249,7 @@ for (var e : futures.entrySet()) {
 > One branch failing doesn't sink the others - collect per-branch outcomes.
 
 <!--
-Example: examples/02-reliability/partial_failure.java
+Example: examples/02-reliability/java/partial_failure.java
 -->
 
 ---
@@ -2275,7 +2275,7 @@ the replay-safe way to throttle inside Workflow code - never a JDK Semaphore.
 
 ## Bounded fan-out
 
-<!-- Open in VSCode: examples/02-reliability/bounded_fanout.java -->
+<!-- Open in VSCode: examples/02-reliability/java/bounded_fanout.java -->
 
 ```java
 int[] inFlight = {0};
@@ -2362,7 +2362,7 @@ whole point - image left, the parts named on the right.
 Know what each setting controls or you'll misuse all of them.
 
 <!--
-Open in VSCode: examples/02-reliability/retry_and_timeouts.java, heartbeat_long_activity.java
+Open in VSCode: examples/02-reliability/java/retry_and_timeouts.java, heartbeat_long_activity.java
 -->
 
 
@@ -2510,7 +2510,7 @@ detection + resume-where-you-left-off.
 
 ## Heartbeats
 
-<!-- Open in VSCode: examples/02-reliability/heartbeat_long_activity.java -->
+<!-- Open in VSCode: examples/02-reliability/java/heartbeat_long_activity.java -->
 
 ```java
 public String exportLargeTable(String tableName) {
@@ -2534,7 +2534,7 @@ public String exportLargeTable(String tableName) {
 
 ## Resume from the last heartbeat
 
-<!-- Open in VSCode: examples/02-reliability/heartbeat_resume_from_checkpoint.java -->
+<!-- Open in VSCode: examples/02-reliability/java/heartbeat_resume_from_checkpoint.java -->
 
 ```java
 public String backfill(String dataset) {
@@ -2601,7 +2601,7 @@ return result.get();
 > Cancellation flows to the Activity via heartbeat; it cleans up partial work.
 
 <!--
-Example: examples/02-reliability/cancellation_scope.java
+Example: examples/02-reliability/java/cancellation_scope.java
 -->
 
 ---
@@ -2616,7 +2616,7 @@ Example: examples/02-reliability/cancellation_scope.java
 The rules that keep replay honest.
 
 <!--
-Open in VSCode: examples/02-reliability/workflow_time.java - durable sleep records TimerStarted; no thread parks.
+Open in VSCode: examples/02-reliability/java/workflow_time.java - durable sleep records TimerStarted; no thread parks.
 -->
 
 
@@ -2665,7 +2665,7 @@ list.
 Push data in. Pull data out.
 
 <!--
-Open in VSCode: examples/03-interactions/signals_queries.java
+Open in VSCode: examples/03-interactions/java/signals_queries.java
 Run: make run-approval
 -->
 
@@ -2822,7 +2822,7 @@ this explicit.
 Synchronous, validated, write-capable RPC into a running Workflow.
 
 <!--
-Open in VSCode: examples/03-interactions/update_completed.java, update_with_start.java
+Open in VSCode: examples/03-interactions/java/update_completed.java, update_with_start.java
 Run: make run-approval
 -->
 
@@ -2864,7 +2864,7 @@ reject bad input synchronously without polluting history.
 
 ## @UpdateMethod + @UpdateValidatorMethod
 
-<!-- Open in VSCode: examples/03-interactions/update_completed.java -->
+<!-- Open in VSCode: examples/03-interactions/java/update_completed.java -->
 
 ```java
 @WorkflowInterface
@@ -2919,7 +2919,7 @@ int itemCount = handle.getResult();   // block only when you need the value
 - A typed-stub `addItem(...)` call blocks outright; `startUpdate` hands back a handle.
 
 <!--
-Example: examples/03-interactions/update_completed.java
+Example: examples/03-interactions/java/update_completed.java
 -->
 
 ---
@@ -2985,7 +2985,7 @@ both creates the Workflow and needs an answer (e.g. submit-and-confirm).
 
 ## startUpdateWithStart
 
-<!-- Open in VSCode: examples/03-interactions/update_with_start.java -->
+<!-- Open in VSCode: examples/03-interactions/java/update_with_start.java -->
 
 ```java
 WithStartWorkflowOperation<String> start =
@@ -3074,7 +3074,7 @@ event and the Update Accepted/Completed pair, named on the right.
 Replacing Airflow's scheduler.
 
 <!--
-Open in VSCode: examples/03-interactions/schedule_interval.java, schedule_cron_overlap.java
+Open in VSCode: examples/03-interactions/java/schedule_interval.java, schedule_cron_overlap.java
 Run: make run-schedules
 -->
 
@@ -3117,7 +3117,7 @@ Contrast with a cron line on a box that dies when the box dies.
 
 ## Hourly schedule
 
-<!-- Open in VSCode: examples/03-interactions/schedule_interval.java -->
+<!-- Open in VSCode: examples/03-interactions/java/schedule_interval.java -->
 
 ```java
 import io.temporal.client.schedules.*;  // Schedule, ScheduleSpec, ScheduleActionStartWorkflow…
@@ -3182,7 +3182,7 @@ SchedulePolicy.newBuilder()
 | `CANCEL_OTHER` / `TERMINATE_OTHER` | stop the running one first |
 
 <!--
-Example: examples/03-interactions/schedule_cron_overlap.java
+Example: examples/03-interactions/java/schedule_cron_overlap.java
 -->
 
 ---
@@ -3254,7 +3254,7 @@ Here you set ScheduleOverlapPolicy.
 When to compose. How to bound.
 
 <!--
-Open in VSCode: examples/03-interactions/child_workflow.java, workflow_and_run_timeouts.java
+Open in VSCode: examples/03-interactions/java/child_workflow.java, workflow_and_run_timeouts.java
 -->
 
 
@@ -3300,7 +3300,7 @@ for when the sub-task is a real orchestration in its own right.
 
 ## Child Workflows
 
-<!-- Open in VSCode: examples/03-interactions/child_workflow.java -->
+<!-- Open in VSCode: examples/03-interactions/java/child_workflow.java -->
 
 ```java
 FraudWorkflow fraud = Workflow.newChildWorkflowStub(FraudWorkflow.class,
@@ -3369,7 +3369,7 @@ in-flight children. Contrast the default: children terminate with the parent.
 
 ## Per-tenant child fan-out
 
-<!-- Open in VSCode: examples/03-interactions/tenant_fanout.java -->
+<!-- Open in VSCode: examples/03-interactions/java/tenant_fanout.java -->
 
 ```java
 for (String tenantId : tenantIds) {
@@ -3452,7 +3452,7 @@ hands-on (full Kafka → Temporal → Kafka loop).
 Different jobs. Used together.
 
 <!--
-Open in VSCode: examples/04-kafka/kafka_consumer_activity.java, producer_activity_idempotent.java, outbox_activity.java
+Open in VSCode: examples/04-kafka/java/kafka_consumer_activity.java, producer_activity_idempotent.java, outbox_activity.java
 -->
 
 
@@ -3543,7 +3543,7 @@ Lead-in before the producer config. The point: publishing is a side effect
 
 ## Producer Activity
 
-<!-- Open in VSCode: examples/04-kafka/producer_activity_idempotent.java -->
+<!-- Open in VSCode: examples/04-kafka/java/producer_activity_idempotent.java -->
 
 ```java
 properties.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
@@ -3580,7 +3580,7 @@ DB-write + Kafka-publish can't be atomic, so make the publish derive from a row.
 
 ## Outbox pattern
 
-<!-- Open in VSCode: examples/04-kafka/outbox_activity.java -->
+<!-- Open in VSCode: examples/04-kafka/java/outbox_activity.java -->
 
 ```java
 transactionTemplate.execute(status -> {
@@ -3609,7 +3609,7 @@ transactionTemplate.execute(status -> {
 Replacing Kafka-triggered Airflow DAGs.
 
 <!--
-Open in VSCode: examples/04-kafka/signal_bridge.java - signalWithStart, not bare start.
+Open in VSCode: examples/04-kafka/java/signal_bridge.java - signalWithStart, not bare start.
 Run: make run-kafka
 -->
 
@@ -3645,7 +3645,7 @@ Run: make run-kafka
 
 ## The bridge
 
-<!-- Open in VSCode: examples/04-kafka/signal_bridge.java -->
+<!-- Open in VSCode: examples/04-kafka/java/signal_bridge.java -->
 
 ```java
 BatchRequest batch = client.newSignalWithStartRequest();
@@ -3767,7 +3767,7 @@ Two strategies:
 
 ## Inside-Workflow fan-out
 
-<!-- Open in VSCode: examples/04-kafka/partition_fanout.java -->
+<!-- Open in VSCode: examples/04-kafka/java/partition_fanout.java -->
 
 ```java
 List<Promise<Integer>> counts =
@@ -3821,7 +3821,7 @@ done
 
 ## DLQ Activity
 
-<!-- Open in VSCode: examples/04-kafka/dlq_after_retry_exhaustion.java -->
+<!-- Open in VSCode: examples/04-kafka/java/dlq_after_retry_exhaustion.java -->
 
 ```java
 try {
@@ -3876,7 +3876,7 @@ Two big labs: metrics dashboard and replay tests.
 Shipping new code without breaking in-flight Workflows.
 
 <!--
-Open in VSCode: examples/05-production/get_version_patch.java, versioning_behavior.java
+Open in VSCode: examples/05-production/java/get_version_patch.java, versioning_behavior.java
 -->
 
 
@@ -3912,7 +3912,7 @@ In-flight Workflow resumes against **v2 code** with **v1 history** → non-deter
 
 ## `Workflow.getVersion`
 
-<!-- Open in VSCode: examples/05-production/get_version_patch.java -->
+<!-- Open in VSCode: examples/05-production/java/get_version_patch.java -->
 
 ```java
 int v = Workflow.getVersion("charge-before-reserve", Workflow.DEFAULT_VERSION, 1);
@@ -3950,7 +3950,7 @@ you can drain a 5-minute checkout; you can't drain a 6-month subscription.
 
 ## Versioning behavior
 
-<!-- Open in VSCode: examples/05-production/versioning_behavior.java -->
+<!-- Open in VSCode: examples/05-production/java/versioning_behavior.java -->
 
 ```java
 @WorkflowVersioningBehavior(VersioningBehavior.PINNED)
@@ -3975,7 +3975,7 @@ class SubscriptionLifecycleWorkflow implements SubscriptionWorkflow { ... }
 Sized for resource profile, not business domain.
 
 <!--
-Open in VSCode: examples/05-production/worker_options_manual.java, worker_tuner.java, composite_tuner.java, virtual_threads.java
+Open in VSCode: examples/05-production/java/worker_options_manual.java, worker_tuner.java, composite_tuner.java, virtual_threads.java
 -->
 
 
@@ -4152,7 +4152,7 @@ how many tasks this process runs at once.
 
 ## Manual sizing
 
-<!-- Open in VSCode: examples/05-production/worker_options_manual.java -->
+<!-- Open in VSCode: examples/05-production/java/worker_options_manual.java -->
 
 ```java
 Worker worker = factory.newWorker(
@@ -4187,7 +4187,7 @@ lift the ceiling for blocking I/O Activities without a thread-per-slot cost.
 
 ## Virtual-thread Worker
 
-<!-- Open in VSCode: examples/05-production/virtual_threads.java -->
+<!-- Open in VSCode: examples/05-production/java/virtual_threads.java -->
 
 ```java
 WorkerFactoryOptions factoryOptions =
@@ -4228,7 +4228,7 @@ sizing" slide: same goal (right concurrency), but driven by live resource use.
 
 ## Resource-based tuner
 
-<!-- Open in VSCode: examples/05-production/worker_tuner.java -->
+<!-- Open in VSCode: examples/05-production/java/worker_tuner.java -->
 
 ```java
 ResourceBasedTuner tuner =
@@ -4287,7 +4287,7 @@ WorkerTuner tuner = new CompositeTuner(
 > Fixed where load is predictable; resource-based where it isn't.
 
 <!--
-Example: examples/05-production/composite_tuner.java
+Example: examples/05-production/java/composite_tuner.java
 -->
 
 ---
@@ -4313,7 +4313,7 @@ is the one that actually protects a shared dependency under horizontal scaling.
 
 ## Rate-limiting an Activity pool
 
-<!-- Open in VSCode: examples/05-production/rate_limited_activity_pool.java -->
+<!-- Open in VSCode: examples/05-production/java/rate_limited_activity_pool.java -->
 
 ```java
 Worker worker = factory.newWorker(
@@ -4338,7 +4338,7 @@ Worker worker = factory.newWorker(
 Metrics on day one.
 
 <!--
-Open in VSCode: examples/05-production/micrometer_metrics.java, custom_activity_metric.java, otel_tracing.java
+Open in VSCode: examples/05-production/java/micrometer_metrics.java, custom_activity_metric.java, otel_tracing.java
 Stack: make stack-obs, then make grafana
 -->
 
@@ -4380,7 +4380,7 @@ Stack: make stack-obs, then make grafana
 
 ## Micrometer wiring
 
-<!-- Open in VSCode: examples/05-production/micrometer_metrics.java -->
+<!-- Open in VSCode: examples/05-production/java/micrometer_metrics.java -->
 
 ```java
 PrometheusMeterRegistry registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
@@ -4431,7 +4431,7 @@ class InvoiceActivitiesImpl implements InvoiceActivities {
 > Same Micrometer registry as the SDK metrics; your KPIs sit beside Temporal's.
 
 <!--
-Example: examples/05-production/custom_activity_metric.java
+Example: examples/05-production/java/custom_activity_metric.java
 -->
 
 ---
@@ -4471,7 +4471,7 @@ factory = WorkerFactory.newInstance(client,
 > One trace spans client → Workflow → Activity. Needs `temporal-opentracing`.
 
 <!--
-Example: examples/05-production/otel_tracing.java
+Example: examples/05-production/java/otel_tracing.java
 -->
 
 ---
@@ -4550,7 +4550,7 @@ the namespace slide actually becomes filterable.
 
 ## Typed Search Attributes from a Workflow
 
-<!-- Open in VSCode: examples/05-production/search_attributes_ops.java -->
+<!-- Open in VSCode: examples/05-production/java/search_attributes_ops.java -->
 
 ```java
 // Register once per namespace:
@@ -4666,7 +4666,7 @@ temporal workflow delete --namespace default \
 In-process Workflow tests with time skipping.
 
 <!--
-Open in VSCode: examples/05-production/junit5_extension_mockito_test.java; runnable test in examples/runnable/06-testing/ReminderWorkflowTest.java
+Open in VSCode: examples/05-production/java/junit5_extension_mockito_test.java; runnable test in examples/runnable/06-testing/ReminderWorkflowTest.java
 Run: make run-testing (no server needed)
 -->
 
@@ -4713,19 +4713,22 @@ durable timers normally make long Workflows untestable; here they run instantly.
 
 ```java
 TestWorkflowEnvironment env = TestWorkflowEnvironment.newInstance();
-Worker worker = env.newWorker("reminder");
+Worker worker = env.newWorker("test-reminder");
 worker.registerWorkflowImplementationTypes(ReminderWorkflowImpl.class);
-worker.registerActivitiesImplementations(new ReminderActivitiesImpl());
 env.start();
 
-ReminderWorkflow stub = env.getWorkflowClient().newWorkflowStub(
+ReminderWorkflow wf = env.getWorkflowClient().newWorkflowStub(
     ReminderWorkflow.class,
-    WorkflowOptions.newBuilder().setTaskQueue("reminder").build());
+    WorkflowOptions.newBuilder().setTaskQueue("test-reminder").build());
 
-String result = stub.run("hello");
+var run = WorkflowClient.start(wf::remindAfterOneDay, "ship report");
+env.sleep(Duration.ofDays(1));        // durable timer skipped - runs instantly
+assertEquals("Reminder: ship report",
+    env.getWorkflowClient()
+       .newUntypedWorkflowStub(run.getWorkflowId()).getResult(String.class));
 ```
 
-> No Docker. No network. *Time skipping* - a 30-day reminder completes in milliseconds.
+> No Docker. No network. *Time skipping* - a one-day durable timer completes in milliseconds.
 
 ---
 
@@ -4766,7 +4769,7 @@ void completes(TestWorkflowEnvironment env, Worker worker, ReminderWorkflow wf) 
 > Extension injects env/worker/stub; Mockito mocks Activities - zero I/O.
 
 <!--
-Example: examples/05-production/junit5_extension_mockito_test.java
+Example: examples/05-production/java/junit5_extension_mockito_test.java
 -->
 
 ---
@@ -4799,7 +4802,7 @@ make run-testing
 Catching determinism regressions before they reach production.
 
 <!--
-Open in VSCode: examples/05-production/replay_test.java
+Open in VSCode: examples/05-production/java/replay_test.java
 -->
 
 
@@ -4823,7 +4826,7 @@ Open in VSCode: examples/05-production/replay_test.java
 
 ## Capture & replay
 
-<!-- Open in VSCode: examples/05-production/replay_test.java -->
+<!-- Open in VSCode: examples/05-production/java/replay_test.java -->
 
 ```bash
 # Capture
@@ -4987,7 +4990,7 @@ Afternoon is capstone (75 min of build time + 25 min review + 20 min Q&A).
 The canonical demo: payment → inventory → ship; compensate on failure.
 
 <!--
-Open in VSCode: examples/06-saga-spring/saga_compensation.java (full project: examples/runnable/07-saga/)
+Open in VSCode: examples/06-saga-spring/java/saga_compensation.java (full project: examples/runnable/07-saga/)
 Run: make run-saga
 -->
 
@@ -5031,7 +5034,7 @@ after each success; on failure, pop them in reverse. Temporal runs your undo.
 
 ## The saga
 
-<!-- Open in VSCode: examples/06-saga-spring/saga_compensation.java (full project: examples/runnable/07-saga/) -->
+<!-- Open in VSCode: examples/06-saga-spring/java/saga_compensation.java (full project: examples/runnable/07-saga/) -->
 
 ```java
 public String process(String orderId) {
@@ -5254,7 +5257,7 @@ How Temporal lives inside a Spring app.
 
 <!--
 The generic integration, before any saga specifics. Open in VSCode:
-examples/06-saga-spring/spring_temporal_config.java (manual wiring) and the
+examples/06-saga-spring/java/spring_temporal_config.java (manual wiring) and the
 runnable starter app examples/runnable/16-spring-boot. Saga-specific triggers
 (sync Update, Kafka Signal) come in the next section.
 -->
@@ -5402,7 +5405,7 @@ Driving the saga, sync over HTTP, async over Kafka.
 
 <!--
 Now the saga-specific wiring on top of the Spring Boot + Temporal basics. Open in
-VSCode: examples/06-saga-spring/sync_saga_update.java, async_saga_signal.java,
+VSCode: examples/06-saga-spring/java/sync_saga_update.java, async_saga_signal.java,
 kafka_listener_trigger.java, continue_as_new.java
 -->
 
@@ -5441,7 +5444,7 @@ next slide: HTTP Update here, Kafka Signal next - same Workflow underneath.
 
 ## Sync interaction (Update)
 
-<!-- Open in VSCode: examples/06-saga-spring/sync_saga_update.java -->
+<!-- Open in VSCode: examples/06-saga-spring/java/sync_saga_update.java -->
 
 ```java
 WithStartWorkflowOperation<String> start =
@@ -5478,7 +5481,7 @@ the consumer never checks "does this order's Workflow exist yet?"
 
 ## Async interaction (Signal)
 
-<!-- Open in VSCode: examples/06-saga-spring/async_saga_signal.java -->
+<!-- Open in VSCode: examples/06-saga-spring/java/kafka_listener_trigger.java -->
 
 ```java
 @KafkaListener(topics = "orders")
@@ -5519,7 +5522,7 @@ if a Workflow keeps appending events forever, continue-as-new resets the slate.
 
 ## Continue-as-new
 
-<!-- Open in VSCode: examples/06-saga-spring/continue_as_new.java -->
+<!-- Open in VSCode: examples/06-saga-spring/java/continue_as_new.java -->
 
 ```java
 @Override
@@ -5812,7 +5815,7 @@ Open in VSCode: examples/07-aws-containers/aws_mapping.md, step_functions_before
 The canonical supervise-AWS-compute pattern.
 
 <!--
-Open in VSCode: examples/07-aws-containers/glue_activity.java, s3_reference_payload.java
+Open in VSCode: examples/07-aws-containers/java/glue_activity.java, s3_reference_payload.java
 Run: make run-aws
 -->
 
@@ -5857,7 +5860,7 @@ job (Glue, EMR, Batch, SageMaker): start → poll+heartbeat → settle.
 
 ## Glue activity
 
-<!-- Open in VSCode: examples/07-aws-containers/glue_activity.java · Run: make run-aws -->
+<!-- Open in VSCode: examples/07-aws-containers/java/glue_activity.java · Run: make run-aws -->
 
 ```java
 @Override
@@ -5972,7 +5975,7 @@ WorkflowClient.newInstance(service,
 > Server stores ciphertext only. A standalone codec server lets the Web UI decode on demand.
 
 <!--
-Example: examples/07-aws-containers/codec_server.java
+Example: examples/07-aws-containers/java/codec_server.java
 -->
 
 ---
@@ -6355,7 +6358,7 @@ roles (next sub-section) - no static keys.
 
 ## Boot the Worker from SSM
 
-<!-- Open in VSCode: examples/07-aws-containers/ssm_parameter_config.java -->
+<!-- Open in VSCode: examples/07-aws-containers/java/ssm_parameter_config.java -->
 
 ```java
 // Startup code (NOT a Workflow): read the config tree, then build the stubs.
@@ -6442,7 +6445,7 @@ Open in VSCode: examples/07-aws-containers/Dockerfile, worker_deployment.yaml, k
 
 ## Dockerfile
 
-<!-- Open in VSCode: examples/07-aws-containers/Dockerfile (runnable: examples/runnable/08-aws-containers/Dockerfile) -->
+<!-- Open in VSCode: examples/07-aws-containers/Dockerfile (runnable: examples/runnable/08-aws-containers/java/Dockerfile) -->
 
 ```dockerfile
 FROM maven:3.9-eclipse-temurin-17 AS build
@@ -6470,7 +6473,7 @@ Challenge → [`day-06-aws-containers/lab-4-worker-container`](https://github.co
 
 ```bash
 cd examples/runnable/08-aws-containers
-docker build -t temporal-transform-worker:dev .
+docker build -t temporal-transform-worker:dev ./java   # or ./python, ./go
 
 docker run --rm \
   -e TEMPORAL_ADDRESS=host.docker.internal:7233 \

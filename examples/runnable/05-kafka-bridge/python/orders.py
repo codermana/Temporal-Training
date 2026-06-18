@@ -62,6 +62,8 @@ class OrderWorkflow:
             if processed >= 1000:
                 workflow.continue_as_new(order_id)
 
-    @workflow.signal
+    # External signal name matches the Java/Go bridges ("orderEvent") so the
+    # history reads identically across all three SDKs; the handler stays snake_case.
+    @workflow.signal(name="orderEvent")
     def order_event(self, payload: str) -> None:
         self._events.append(payload)

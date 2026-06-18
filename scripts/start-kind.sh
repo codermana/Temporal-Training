@@ -77,7 +77,7 @@ EOF
     require kind   "brew install kind"
 
     ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-    BUILD_DIR="$ROOT_DIR/examples/runnable/08-aws-containers"
+    BUILD_DIR="$ROOT_DIR/examples/runnable/08-aws-containers/${WORKER_BUILD_LANG:-java}"
 
     if [[ ! -f "$BUILD_DIR/Dockerfile" ]]; then
       echo "Dockerfile not found at $BUILD_DIR/Dockerfile" >&2

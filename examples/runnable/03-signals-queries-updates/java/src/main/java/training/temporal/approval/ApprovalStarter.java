@@ -12,7 +12,7 @@ import io.temporal.serviceclient.WorkflowServiceStubs;
  *
  * <pre>
  *   temporal workflow query  --workflow-id approval-demo --type currentState
- *   temporal workflow update --workflow-id approval-demo --name changeNote \
+ *   temporal workflow update execute --workflow-id approval-demo --name changeNote \
  *       --input '"expedite before close of business"'
  *   temporal workflow signal --workflow-id approval-demo --name approve \
  *       --input '"manager@example.com"'
@@ -48,7 +48,7 @@ public class ApprovalStarter {
     System.out.println(
         "  temporal workflow query  --workflow-id approval-demo --type currentState");
     System.out.println(
-        "  temporal workflow update --workflow-id approval-demo --name changeNote"
+        "  temporal workflow update execute --workflow-id approval-demo --name changeNote"
             + " --input '\"expedite before close of business\"'");
     System.out.println(
         "  temporal workflow signal --workflow-id approval-demo --name approve"

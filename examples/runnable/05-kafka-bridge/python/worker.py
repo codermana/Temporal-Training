@@ -41,7 +41,7 @@ async def bridge(client: Client, bootstrap_servers: str, topic: str) -> None:
                         order_id,
                         id=f"order-{order_id}",
                         task_queue=TASK_QUEUE,
-                        start_signal="order_event",
+                        start_signal="orderEvent",
                         start_signal_args=[record.value],
                     )
             if batches:
