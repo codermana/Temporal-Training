@@ -29,7 +29,7 @@ public class GlueController {
     this.client = client;
   }
 
-  /** Start the stitch Workflow and block for its result (Glue is faked, so it's quick). */
+  /** Start the stitch Workflow and block for its result (the local stitch job is quick). */
   @PostMapping
   public StitchResult stitch(@RequestBody StitchRequest request) {
     GlueStitchWorkflow workflow =

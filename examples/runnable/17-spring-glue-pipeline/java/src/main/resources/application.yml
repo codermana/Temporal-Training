@@ -15,18 +15,21 @@ spring:
       packages:
         - training.temporal.glue
 
-# The AWS side of the diagram. All four services live in one LocalStack
-# container on :4566 (S3 + SQS + SNS are Community; Glue is Pro-only and faked).
-# Override any of these with env vars (AWS_ENDPOINT, AWS_BUCKET, ...) or point
-# at real AWS by clearing `endpoint` so the SDK uses the default resolver + the
-# task role / IRSA for credentials.
+# The AWS side of the diagram. S3 + SQS + SNS live in one LocalStack container on
+# :4566 (all on LocalStack's free tier). Glue is NOT used — it is a paid-tier
+# emulator on LocalStack — so the stitch runs as a self-hosted local job
+# (LocalStitchJobRunner) doing a real S3 read→merge→write. Override any of these
+# with env vars (AWS_ENDPOINT, AWS_BUCKET, ...) or point at real AWS by clearing
+# `endpoint` so the SDK uses the default resolver + the task role / IRSA.
 aws:
   endpoint: http://127.0.0.1:4566   # LocalStack; clear to use real AWS
   region: us-east-1
   bucket: lake                      # the S3 "data lake" producer A writes to
   raw-prefix: raw/orders/           # where A lands Parquet partitions
-  curated-prefix: curated/orders/   # where the Glue job writes the stitched output
-  glue-job-name: stitch-orders      # the (faked) Glue Spark job the Workflow supervises
+  curated-prefix: curated/orders/   # where the stitch job writes the merged output
+  glue-job-name: stitch-orders      # logical job name the Workflow supervises (a real Glue job name on AWS)
+  glue-step-delay-millis: 400       # pace per merged part so heartbeats are visible; a real Spark stage is minutes
+  glue-poll-millis: 300             # how long the Activity waits between GetJobRun polls
   trigger-queue-url: http://127.0.0.1:4566/000000000000/glue-triggers   # the bus A drops events on
   notify-topic-arn: arn:aws:sns:us-east-1:000000000000:lake-validated   # SNS topic that notifies A back
   bridge:

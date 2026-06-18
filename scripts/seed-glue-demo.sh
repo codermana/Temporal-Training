@@ -3,8 +3,9 @@
 #
 # It stands in for producer "A" and the AWS control plane: it creates the S3
 # bucket (the lake), the SQS trigger queue (the bus), the SNS topic + a subscribed
-# SQS queue (A's inbox), and lands a fake Parquet partition. Glue is Pro-only on
-# LocalStack Community, so the running Spring Boot app fakes the Glue job itself.
+# SQS queue (A's inbox), and lands a fake Parquet partition. Glue is a paid-tier
+# emulator on LocalStack (and we never call real AWS), so the running Spring Boot
+# app supervises a self-hosted local stitch job that merges the parts itself.
 #
 # Usage:
 #   scripts/seed-glue-demo.sh up                 # create resources + land a partition

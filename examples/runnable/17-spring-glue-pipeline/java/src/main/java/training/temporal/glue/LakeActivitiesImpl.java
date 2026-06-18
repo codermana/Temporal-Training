@@ -4,16 +4,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.temporal.activity.Activity;
 import io.temporal.failure.ApplicationFailure;
 import io.temporal.spring.boot.ActivityImpl;
-import java.nio.charset.StandardCharsets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.sns.SnsClient;
 import software.amazon.awssdk.services.sns.model.PublishRequest;
@@ -24,9 +21,9 @@ import software.amazon.awssdk.services.sns.model.PublishRequest;
  * {@link ActivityImpl} hands it to the starter, which registers it on the
  * {@code glue-stitch} task queue's Worker.
  *
- * <p>Every method here is non-deterministic I/O — listing S3, polling Glue,
- * publishing to SNS — which is exactly why it lives in an Activity and not in the
- * Workflow.
+ * <p>Every method here is non-deterministic I/O — listing S3, polling the stitch
+ * job, publishing to SNS — which is exactly why it lives in an Activity and not in
+ * the Workflow.
  */
 @Component
 @ActivityImpl(taskQueues = GlueStitchConstants.TASK_QUEUE)
@@ -43,6 +40,7 @@ public class LakeActivitiesImpl implements LakeActivities {
   private final String rawPrefix;
   private final String curatedPrefix;
   private final String notifyTopicArn;
+  private final long pollMillis;
 
   public LakeActivitiesImpl(
       S3Client s3,
@@ -52,7 +50,8 @@ public class LakeActivitiesImpl implements LakeActivities {
       @Value("${aws.glue-job-name:stitch-orders}") String glueJobName,
       @Value("${aws.raw-prefix:raw/orders/}") String rawPrefix,
       @Value("${aws.curated-prefix:curated/orders/}") String curatedPrefix,
-      @Value("${aws.notify-topic-arn}") String notifyTopicArn) {
+      @Value("${aws.notify-topic-arn}") String notifyTopicArn,
+      @Value("${aws.glue-poll-millis:300}") long pollMillis) {
     this.s3 = s3;
     this.sns = sns;
     this.glueJobRunner = glueJobRunner;
@@ -61,6 +60,7 @@ public class LakeActivitiesImpl implements LakeActivities {
     this.rawPrefix = rawPrefix;
     this.curatedPrefix = curatedPrefix;
     this.notifyTopicArn = notifyTopicArn;
+    this.pollMillis = pollMillis;
   }
 
   @Override
@@ -96,24 +96,45 @@ public class LakeActivitiesImpl implements LakeActivities {
 
   @Override
   public String runGlueJob(StitchRequest request) {
-    // Start + poll the (faked) Glue job, heartbeating with the run id so a
-    // resumed Activity continues the poll rather than re-launching the job.
+    // The curated partition mirrors the raw one (raw/orders/dt=… -> curated/orders/dt=…).
+    String outputPrefix = request.prefix().replace(rawPrefix, curatedPrefix);
+
+    // Start the stitch job (returns immediately, like Glue StartJobRun) and then
+    // SUPERVISE it: poll to a terminal state, heartbeating the run id on every
+    // poll so a resumed Activity continues the poll rather than re-launching, and
+    // so Temporal can tell a stuck job from a slow one. This loop is byte-for-byte
+    // what a real GlueClient-backed runner uses — only the runner behind the seam
+    // differs (see LocalStitchJobRunner / the README).
     String runId =
-        glueJobRunner.runToCompletion(
-            glueJobName,
-            request.inputS3Uri(),
-            rid -> Activity.getExecutionContext().heartbeat(rid));
+        glueJobRunner.startJobRun(glueJobName, request.bucket(), request.prefix(), outputPrefix);
 
-    // The job's output is a curated partition mirroring the raw one. We write a
-    // small marker object so the curated prefix is real and verifiable in S3.
-    String curatedKey = request.prefix().replace(rawPrefix, curatedPrefix) + "part-0000.parquet";
-    s3.putObject(
-        PutObjectRequest.builder().bucket(request.bucket()).key(curatedKey).build(),
-        RequestBody.fromString("STITCHED by Glue run " + runId, StandardCharsets.UTF_8));
+    while (true) {
+      Activity.getExecutionContext().heartbeat(runId);
+      JobRun run = glueJobRunner.getJobRun(runId);
+      switch (run.state()) {
+        case SUCCEEDED -> {
+          log.info("stitch run {} succeeded; curated output at {}", runId, run.curatedS3Uri());
+          return run.curatedS3Uri();
+        }
+        case FAILED ->
+            // A bad terminal state surfaces as a typed failure in the Temporal UI,
+            // not a generic stack trace.
+            throw ApplicationFailure.newFailure(
+                "stitch job " + runId + " failed: " + run.errorMessage(), "GlueJobFailed");
+        default -> backoff(); // RUNNING: wait, then poll again
+      }
+    }
+  }
 
-    String curatedUri = "s3://" + request.bucket() + "/" + curatedKey;
-    log.info("Glue run {} succeeded; curated output at {}", runId, curatedUri);
-    return curatedUri;
+  /** Back off between polls. {@code Thread.sleep} is fine here — this is Activity code, not Workflow code. */
+  private void backoff() {
+    try {
+      Thread.sleep(pollMillis);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw ApplicationFailure.newFailure(
+          "interrupted while polling the stitch job", "GluePollingInterrupted");
+    }
   }
 
   @Override

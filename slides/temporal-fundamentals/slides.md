@@ -6244,10 +6244,10 @@ awslocal sqs receive-message --queue-url \
  SNS → SQS → A is told "VALIDATED"          (Spring Boot, one process)
 ```
 
-- The `temporal-spring-boot-starter` (Day 5) hosts the Worker; the AWS edges (S3, Glue, SNS) are Activities.
+- The `temporal-spring-boot-starter` (Day 5) hosts the Worker; the AWS edges (S3, stitch job, SNS) are Activities.
 - Two front doors into one Workflow: the **SQS bridge** (event) and a **REST** endpoint (sync).
 
-> Glue is the only faked piece (Pro-only on LocalStack); the orchestration is real.
+> No AWS Glue (it's a paid-tier LocalStack emulator); the stitch is a self-hosted local job doing real S3 work, and the orchestration is real.
 
 <!--
 The capstone of the AWS morning: nothing new, just composition. validate (S3
@@ -6703,7 +6703,7 @@ Verify:
 ECS · EKS · Aurora · Route 53, the production shapes (real account required).
 
 <!--
-These four are NOT on free LocalStack (Pro-only), so the labs are conceptual +
+These four are NOT on free LocalStack (paid-tier emulators), so the labs are conceptual +
 reference manifests under examples/07-aws-containers/aws/ - no make targets.
 Walk them as lecture; apply only with an account. Each costs real money - tear
 down after. Labs 9-12.

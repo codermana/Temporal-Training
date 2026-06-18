@@ -1,9 +1,17 @@
 # 17 · Spring Boot orchestrating an AWS Glue job (the full loop)
 
 A runnable Spring Boot service that ties Day 5 (the `temporal-spring-boot-starter`)
-to Day 6 (Glue / S3 / SNS / SQS) into one picture: **producer A lands Parquet in
-S3 and drops a message on a bus; Temporal validates the data, triggers and
-supervises a Glue job that stitches it, then notifies A back.**
+to Day 6 (S3 / SNS / SQS + supervised compute) into one picture: **producer A lands
+Parquet in S3 and drops a message on a bus; Temporal validates the data, triggers
+and supervises a stitch job that merges it, then notifies A back.**
+
+> **Why not AWS Glue?** Glue is a *paid-tier* emulator on LocalStack (Ultimate),
+> and this example never calls real AWS. So the "Glue job" is a **self-hosted
+> local job runner** (`LocalStitchJobRunner`) that does the same work for real
+> against LocalStack S3 — it reads the raw Parquet parts, merges their bytes, and
+> writes one curated object. The Temporal-side pattern (start → poll + heartbeat →
+> map terminal state) is *identical* to a `GlueClient`-backed runner; swapping in
+> real Glue is a one-class change (see [below](#running-against-real-aws)).
 
 ```
   Producer A ──writes Parquet──▶  S3  (s3://lake/raw/orders/dt=…/part-*.parquet)
@@ -15,7 +23,7 @@ supervises a Glue job that stitches it, then notifies A back.**
                   │   SqsTriggerBridge  ──signalWithStart──▶             │
                   │                          GlueStitchWorkflow:         │
                   │     1. validatePartition  (list S3, assert non-empty)│
-                  │     2. runGlueJob         (start + poll Glue*)       │
+                  │     2. runGlueJob         (start + poll stitch job*) │
                   │     3. publishValidation  (SNS publish)              │
                   └───────────────────────────────┬─────────────────────┘
                                                    │
@@ -23,11 +31,14 @@ supervises a Glue job that stitches it, then notifies A back.**
                                           SQS  ──▶ Producer A is notified
 ```
 
-> \* Glue is **Pro-only on LocalStack Community**, so the app supervises a
-> **faked** Glue job (`FakeGlueJobRunner`) that mimics `StartJobRun` + poll →
-> `SUCCEEDED` with heartbeats. The Workflow, Activity, retry, and heartbeat
-> semantics are exactly what a real `GlueClient`-backed runner uses — swapping it
-> in for real AWS is a one-class change (see [below](#running-against-real-aws)).
+> \* No AWS Glue is involved (it is a paid-tier emulator on LocalStack, and we
+> never touch real AWS). `runGlueJob` supervises a **self-hosted local stitch
+> job** (`LocalStitchJobRunner`): `startJobRun` kicks off a background thread that
+> really reads the raw parts from S3, merges them, and writes the curated object;
+> the Activity polls `getJobRun` to `SUCCEEDED`, heartbeating each poll. The
+> Workflow, Activity, retry, and heartbeat semantics are exactly what a real
+> `GlueClient`-backed runner uses — swapping it in for real AWS is a one-class
+> change (see [below](#running-against-real-aws)).
 
 > **Java only**, like Day 5's [`16-spring-boot`](../16-spring-boot/): the starter
 > is a Java/Spring artifact.
@@ -46,8 +57,11 @@ supervises a Glue job that stitches it, then notifies A back.**
   finished, a later trigger starts a fresh stitch — which is harmless, since the
   Glue job rewrites the same deterministic curated path.)
 - **Supervised external compute.** `runGlueJob` starts the job and polls it to a
-  terminal state, **heartbeating** each poll so a long Spark job that outlives a
-  Worker restart resumes its poll instead of re-launching.
+  terminal state, **heartbeating** each poll so Temporal can tell a stuck job from
+  a slow one. (The local runner keeps run state in-process, so a Worker restart
+  re-launches the job rather than resuming the poll — safe here because the job
+  rewrites the same deterministic curated key. A real `GlueClient`-backed runner
+  gets cross-restart resume for free, since Glue, not the Worker, holds the state.)
 - **References, not bytes.** Activities pass S3 URIs; the SNS notification carries
   the curated URI + `workflowId` (for subscriber dedup), never the data.
 
@@ -94,7 +108,7 @@ for i in 1 2 3; do scripts/seed-glue-demo.sh trigger; done
 curl -s localhost:8080/stitch/stitch-lake-raw-orders-dt-2026-06-17 | jq .
 # {"workflowId":"stitch-lake-raw-orders-dt-2026-06-17","status":"DONE","triggerCount":3}
 
-# See the curated output the (faked) Glue job wrote:
+# See the curated output the stitch job actually merged + wrote to S3:
 scripts/seed-glue-demo.sh ls
 ```
 
@@ -119,16 +133,18 @@ Nothing about the Workflow changes — only the edges:
    then use the default endpoint resolver and the `DefaultCredentialsProvider`
    chain — the ECS task role or EKS IRSA — so there are no static keys.
 2. **Use a real Glue job.** Add `software.amazon.awssdk:glue` and provide a
-   `GlueJobRunner` backed by `GlueClient` (start `StartJobRun`, poll `GetJobRun`
-   to `SUCCEEDED`, throw on `FAILED`/`TIMEOUT`/`STOPPED`). The `FakeGlueJobRunner`
-   javadoc shows the exact shape; the real Glue Activity also lives in
+   `GlueJobRunner` backed by `GlueClient`: `startJobRun` → Glue `StartJobRun`,
+   `getJobRun` → Glue `GetJobRun` (map `SUCCEEDED`, and `FAILED`/`TIMEOUT`/`STOPPED`
+   to a failed `JobRun`). The interface is already the exact Glue shape, so
+   `LakeActivitiesImpl` does not change. The standalone real-Glue Activity also
+   lives in
    [`08-aws-containers`](../08-aws-containers/java/src/main/java/training/temporal/aws/GlueJobActivitiesImpl.java).
 3. **Point at your topic/queue ARNs** in `application.yml` (or env vars).
 
 ## Where this sits
 
 - The Spring Boot on-ramp this builds on: [`16-spring-boot`](../16-spring-boot/)
-- The same Glue/S3/SNS/SQS pieces as standalone Day-6 labs:
+- The same supervised-job / S3 / SNS / SQS pieces as standalone Day-6 labs:
   [`challenges/day-06-aws-containers`](../../../challenges/day-06-aws-containers/)
-  (lab 1 Glue, lab 6 SQS trigger, lab 7 SNS notify)
+  (lab 1 supervised job, lab 6 SQS trigger, lab 7 SNS notify)
 - Containerizing the Worker: [`08-aws-containers`](../08-aws-containers/)

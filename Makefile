@@ -132,7 +132,7 @@ stack-kafka: ## Day 3: Kafka KRaft broker on :9092
 stack-obs: ## Day 4: Prometheus :9091 + Grafana :3000
 	scripts/start-stack.sh obs up
 
-stack-aws: ## Day 6 AM: LocalStack (S3/SQS/SNS/SSM/Glue) on :4566
+stack-aws: ## Day 6 AM: LocalStack (S3/SQS/SNS/SSM/KMS) on :4566
 	scripts/start-stack.sh aws up
 
 stack-all: ## Bring up every docker stack
@@ -289,7 +289,7 @@ run-routing-starter:  ## Day 1: task-queue routing (starter)
 run-spring:    ## Day 5: Temporal Spring Boot starter — REST app on :8080 (Java only)
 	scripts/run-example.sh spring
 
-run-spring-glue: ## Day 6: Spring Boot orchestrating a (faked) Glue job — REST on :8080 (needs stack-aws + seed-glue + temporal)
+run-spring-glue: ## Day 6: Spring Boot supervising a local stitch job (Glue stand-in) — REST on :8080 (needs stack-aws + seed-glue + temporal)
 	scripts/run-example.sh spring-glue
 
 seed-glue:     ## Day 6: seed LocalStack for the Spring-Glue demo (bucket, SQS bus, SNS topic + A's inbox, a Parquet partition)

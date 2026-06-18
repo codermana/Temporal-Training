@@ -2,17 +2,22 @@ name: temporal-training-localstack
 
 services:
   localstack:
+    # Pinned to the pre-2026 image on purpose: it runs token-free for the
+    # free-tier services below. LocalStack retired the open-source Community
+    # edition in March 2026 — newer images need a LOCALSTACK_AUTH_TOKEN (free
+    # "Hobby" tier, non-commercial), though these same services stay free. See Setup.md.
     image: localstack/localstack:3.5
     container_name: temporal-training-localstack
     ports:
       - "4566:4566"
     environment:
-      # s3/sqs/sns/ssm/kms are all in the LocalStack Community image.
+      # s3/sqs/sns/ssm/kms are all free-tier services.
       # Day-6 morning labs: s3 (blobs), sqs (event trigger, lab 6), sns
       # (fan-out notify, lab 7), ssm+kms (Parameter Store + SecureString, lab 8).
-      # Glue (lab 1, supervised compute) is Pro-only — it returns InternalFailure
-      # on Community, so lab 1 mocks GlueClient instead. ECS/EKS/RDS/Route53 are
-      # likewise Pro-only and are covered as conceptual labs (9–12).
+      # Glue (lab 1, supervised compute) is a PAID-tier emulator (Ultimate), so
+      # lab 1 supervises a self-hosted local job runner instead — no Glue, no real
+      # AWS. ECS/EKS/RDS/Route53 are likewise paid/real-AWS and are covered as
+      # conceptual labs (9–12).
       SERVICES: "s3,sqs,sns,ssm,kms,iam,sts,logs"
       DEFAULT_REGION: "us-east-1"
       AWS_DEFAULT_REGION: "us-east-1"

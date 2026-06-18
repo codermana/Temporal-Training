@@ -2,6 +2,9 @@
 
 Two halves. **Morning:** replace AWS Glue + Lambda + S3 + Step Functions
 orchestration with Temporal, using LocalStack so no real AWS account is needed.
+(Glue itself is a paid-tier LocalStack emulator, so lab 1 supervises a self-hosted
+local job instead of calling it — and the pinned LocalStack image runs token-free;
+see [Setup.md](../../Setup.md) for the 2026 free-tier change.)
 **Afternoon:** run the Worker as a container (Dockerfile, Kubernetes Deployment,
 and KEDA autoscaling on Task Queue backlog) using a local `kind` cluster as an
 EKS stand-in.
@@ -23,7 +26,7 @@ Beyond the core five, two extra tiers go deeper into the AWS surface:
 ```bash
 make temporal       # terminal 1: always
 
-# Morning (AWS labs): LocalStack mocks S3/SQS/Glue:
+# Morning (AWS labs): LocalStack provides S3/SQS/SNS/SSM (Glue is paid-tier — see lab 1):
 make stack-aws      # LocalStack on :4566
 
 # Afternoon (container labs): local Kubernetes + KEDA:

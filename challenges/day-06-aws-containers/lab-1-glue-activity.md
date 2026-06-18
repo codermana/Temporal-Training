@@ -4,11 +4,13 @@
 
 ## Scenario
 
-A long-running Glue ETL job needs to be orchestrated reliably: started, polled to
+A long-running ETL job needs to be orchestrated reliably: started, polled to
 completion, and have its failures surfaced where you can see them. In the AWS
 world this is Step Functions + CloudWatch glue. Here it's a single Activity that
-submits the Glue run, **heartbeats** while polling, and throws a structured
-`ApplicationFailure` on a bad terminal state. LocalStack stands in for Glue.
+submits the job run, **heartbeats** while polling, and throws a structured
+`ApplicationFailure` on a bad terminal state. The job itself is a **self-hosted
+local runner** doing a real S3 read→merge→write — no AWS Glue, no real-AWS calls
+(see the note below).
 
 ## Learning goals
 
@@ -45,13 +47,17 @@ docker compose -f docker/compose.localstack.yml up -d
 
 </details>
 
-> **Note: Glue is Pro-only on LocalStack Community.** `awslocal glue create-job`
-> returns `InternalFailure: ... not yet implemented or pro feature`, so the
-> runnable **mocks `GlueClient`** and the job-run states are simulated. The
-> deliverable is the supervise-via-Activity pattern (start → poll + heartbeat →
-> settle), not a live Glue call. S3 (`awslocal s3 ...`) is real on Community and
-> drives the demo. Everything below applies unchanged to a real `GlueClient`
-> pointed at AWS.
+> **Note: we don't use AWS Glue — and we never call real AWS.** Glue is a
+> **paid-tier emulator** on LocalStack (Ultimate), so the runnable supervises a
+> **self-hosted local job runner** instead — a background job that does a *real*
+> S3 read→merge→write against LocalStack (read the raw `.parquet` parts, merge
+> them, write the curated object). The deliverable is the supervise-via-Activity
+> pattern (start → poll + heartbeat → settle), and that pattern is **byte-for-byte
+> identical** to a real `GlueClient`-backed runner — only the thing behind the
+> seam changes. A complete, runnable version of exactly this is
+> [`examples/runnable/17-spring-glue-pipeline`](../../examples/runnable/17-spring-glue-pipeline/)
+> (`LocalStitchJobRunner`). The `GlueClient` code below is the **real-AWS target
+> shape**: write it that way and it drops onto a real Glue job unchanged.
 
 ## Starter code
 
@@ -172,10 +178,11 @@ typed `ApplicationFailure`/`ApplicationError`.
 
 ## Verification
 
-Since Glue is mocked (Pro-only on LocalStack Community), verify from the
-Temporal side rather than `awslocal glue get-job-runs` (which errors on
-Community). The mocked `GlueClient` logs each `startJobRun`/`getJobRun` to the
-Worker console; watch the poll loop there.
+Since the job is a self-hosted local runner (no Glue API), verify from the
+Temporal side rather than `awslocal glue get-job-runs` (which errors — Glue is a
+paid-tier emulator). The runner logs each `startJobRun`/`getJobRun` to the Worker
+console; watch the poll loop there, then confirm the curated object really landed
+in S3 with `awslocal s3 ls`.
 
 In the Temporal Web UI: the successful run's Activity completes with the
 `jobRunId`; the failed run shows an `ActivityTaskFailed` carrying the

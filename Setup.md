@@ -158,7 +158,17 @@ scripts/start-stack.sh kafka down  # tear down (also: status, logs)
 | Kafka (KRaft, 1 broker) | 9092      | Auto-create topics enabled                  |
 | Prometheus              | 9091      | Scrapes Temporal server + Worker (:9464)    |
 | Grafana                 | 3000      | admin / admin; anonymous viewer allowed     |
-| LocalStack              | 4566      | S3, SQS, SNS, SSM, KMS, IAM, STS, Logs (Glue is Pro-only, lab 1 mocks it) |
+| LocalStack              | 4566      | S3, SQS, SNS, SSM, KMS, IAM, STS, Logs (all free-tier; Glue/Batch/ECS are paid-tier, so lab 1 uses a self-hosted local job runner) |
+
+> **LocalStack free tier changed in 2026.** LocalStack retired the open-source
+> *Community* edition in March 2026; the free **Hobby** tier now requires a
+> LocalStack account + auth token (`LOCALSTACK_AUTH_TOKEN`) and is
+> non-commercial-only. The Day-6 compose **pins the pre-change image
+> (`localstack/localstack:3.5`)**, which still runs **token-free** for the free
+> services these labs use (S3/SQS/SNS/SSM/KMS). If you bump to a 2026+ image you
+> will need to set `LOCALSTACK_AUTH_TOKEN`; the same services are still free.
+> Glue, Batch, ECS, EMR, and Athena are paid-tier emulators on every plan — which
+> is why the labs supervise a self-hosted local job instead of calling Glue.
 
 ## Start the Local Kubernetes Cluster (Day 6 PM)
 

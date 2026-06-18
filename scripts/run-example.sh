@@ -37,7 +37,7 @@ Examples:
   scripts/run-example.sh wordcount
   scripts/run-example.sh routing      # one Workflow, Activities on separate pools
   scripts/run-example.sh spring       # Temporal Spring Boot starter, REST on :8080 (Java only)
-  scripts/run-example.sh spring-glue  # Spring Boot orchestrating a (faked) Glue job, REST on :8080 (Java only)
+  scripts/run-example.sh spring-glue  # Spring Boot supervising a local stitch job (Glue stand-in), REST on :8080 (Java only)
 
 Use scripts/list-examples.sh to see all examples.
 EOF
