@@ -5327,7 +5327,7 @@ curl -s localhost:8080/greetings/Ada      # Query the Workflow's status
 # {"message":"DONE"}
 ```
 
-> Optional, self-contained: one Spring process is both the client and the Worker. No `@Configuration`, no `registerWorkflowImplementationTypes`: the REST handler started a durable Workflow, the auto-stood-up Worker ran it.
+> Optional, self-contained: one Spring process is both the client and the Worker — no `@Configuration`, no `registerWorkflowImplementationTypes`. **Day 6 picks this up:** the same starter orchestrates an AWS Glue job end-to-end (`examples/runnable/17-spring-glue-pipeline`).
 
 <!--
 OPTIONAL hands-on (or run it live as a demo). One Spring process is both the
@@ -6169,6 +6169,113 @@ awslocal sqs receive-message --queue-url \
 ```
 
 > The subscribed SQS queue receives the completion event, the publisher just moved into an Activity.
+
+---
+
+<!-- _class: onramp -->
+<!-- _transition: slide 0.5s -->
+
+###### Day 6 · on-ramp
+
+# Spring Boot orchestrates Glue
+
+- **Where this fits**: The morning's pieces — Glue, S3, SQS in, SNS out — composed into one Spring Boot service.
+- **Why it matters**: This is the shape of a real ingestion pipeline: a producer lands data and rings a bell; you validate, stitch, and notify back.
+- **By the end**: You'll run the full loop end-to-end on the `temporal-spring-boot-starter`.
+
+---
+
+# Spring Boot orchestrates Glue: the full loop
+
+```text
+ A → S3 (Parquet) → SQS ─signalWithStart→ [ validate S3 → Glue → SNS ]
+ SNS → SQS → A is told "VALIDATED"          (Spring Boot, one process)
+```
+
+- The `temporal-spring-boot-starter` (Day 5) hosts the Worker; the AWS edges (S3, Glue, SNS) are Activities.
+- Two front doors into one Workflow: the **SQS bridge** (event) and a **REST** endpoint (sync).
+
+> Glue is the only faked piece (Pro-only on LocalStack); the orchestration is real.
+
+<!--
+The capstone of the AWS morning: nothing new, just composition. validate (S3
+list) → runGlueJob (the supervise-compute pattern from earlier) → publishValidation
+(SNS). The starter from Day 5 is what hosts it. Runnable: examples/runnable/17.
+-->
+
+---
+
+<!-- _class: code -->
+
+## The Workflow: validate → stitch → notify
+
+<!-- Open in VSCode: examples/runnable/17-spring-glue-pipeline/java/.../GlueStitchWorkflowImpl.java -->
+
+```java
+@WorkflowImpl(taskQueues = "glue-stitch")            // discovered by the Spring starter
+public class GlueStitchWorkflowImpl implements GlueStitchWorkflow {
+  public StitchResult stitch(StitchRequest req) {
+    PartitionManifest m = io.validatePartition(req.bucket(), req.prefix()); // list S3, assert non-empty
+    String curated      = glue.runGlueJob(req);        // start + poll Glue, heartbeating
+    String msgId        = io.publishValidation(        // SNS publish → notify A
+        new GlueNotification(Workflow.getInfo().getWorkflowId(), "VALIDATED", m.fileCount(), curated));
+    return new StitchResult(m.fileCount(), m.totalBytes(), curated, msgId);
+  }
+}
+```
+
+> The three edges (S3, Glue, SNS) are Activities; the sequence is durable Workflow code.
+
+---
+
+<!-- _class: code dense -->
+
+## The trigger: SQS → signalWithStart (a Spring bean, not a Workflow)
+
+<!-- Open in VSCode: examples/runnable/17-spring-glue-pipeline/java/.../SqsTriggerBridge.java -->
+
+```java
+@Component
+class SqsTriggerBridge {                  // plain glue: own daemon thread, no determinism rules
+  void handle(Message m) {
+    StitchRequest req = json.readValue(m.body(), StitchRequest.class);
+    var stub = client.newWorkflowStub(GlueStitchWorkflow.class,
+        WorkflowOptions.newBuilder()
+            .setWorkflowId("stitch-" + slug(req.bucket() + "-" + req.prefix()))  // idempotency key
+            .setTaskQueue("glue-stitch").build());
+    BatchRequest batch = client.newSignalWithStartRequest();
+    batch.add(stub::stitch, req);                      // start the run if absent
+    batch.add(stub::triggerReceived, m.messageId());   // signal the in-flight run
+    client.signalWithStart(batch);
+    sqs.deleteMessage(/* ... */);                      // delete only AFTER the signal is durable
+  }
+}
+```
+
+> A redelivery *while the stitch is in flight* re-signals the one run — no duplicate.
+
+---
+
+<!-- _class: lab -->
+
+###### Lab · Day 6
+
+# Spring Boot → Glue, end to end
+
+Runnable → [`examples/runnable/17-spring-glue-pipeline`](https://github.com/codermana/Temporal-Training/blob/master/examples/runnable/17-spring-glue-pipeline/README.md)
+
+```bash
+make temporal                 # :7233
+make stack-aws                # LocalStack :4566
+make seed-glue                # bucket + SQS bus + SNS topic + A's inbox + a Parquet partition
+make run-spring-glue          # the Spring Boot service on :8080
+
+# in another terminal — A drops an event on the bus, then read A's inbox:
+scripts/seed-glue-demo.sh trigger
+scripts/seed-glue-demo.sh notify     # the VALIDATED SNS notification arrives
+```
+
+> Burst the trigger 3× while it runs: `triggerCount` climbs, but the UI shows one execution.
 
 ---
 

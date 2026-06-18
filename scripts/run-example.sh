@@ -37,6 +37,7 @@ Examples:
   scripts/run-example.sh wordcount
   scripts/run-example.sh routing      # one Workflow, Activities on separate pools
   scripts/run-example.sh spring       # Temporal Spring Boot starter, REST on :8080 (Java only)
+  scripts/run-example.sh spring-glue  # Spring Boot orchestrating a (faked) Glue job, REST on :8080 (Java only)
 
 Use scripts/list-examples.sh to see all examples.
 EOF
@@ -130,6 +131,14 @@ case "$EXAMPLE" in
     # Single Spring Boot process: the starter stands up the Worker and the app
     # serves REST on :8080. Not Worker/starter split — role is ignored. Java only.
     DIR="examples/runnable/16-spring-boot"
+    MODE="spring"
+    ;;
+  spring-glue|glue-spring|17|17-spring-glue-pipeline)
+    # Spring Boot service that orchestrates a (faked) AWS Glue job: an SQS trigger
+    # bridge + a REST front door drive a validate-S3 -> Glue -> SNS-notify
+    # Workflow. One process on :8080. Needs LocalStack (make stack-aws) with the
+    # demo resources seeded (scripts/seed-glue-demo.sh up). Java only.
+    DIR="examples/runnable/17-spring-glue-pipeline"
     MODE="spring"
     ;;
   *)
