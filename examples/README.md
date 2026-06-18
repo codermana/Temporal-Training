@@ -55,6 +55,7 @@ scripts/run-example.sh async go         # same lab, Go SDK
 - `05-production`: Versioning, worker sizing, observability, namespaces, replay testing.
 - `06-saga-spring`: Saga compensation, sync/async Saga APIs, choreography bridge, Spring bean wiring, continue-as-new.
 - `07-aws-containers`: AWS primitive mapping, Glue wrapper, S3 references, Docker, Kubernetes, KEDA.
+- `08-ai-ml`: Temporal for AI — durable agent loop (LLM + tools as Activities, Signals for turns), MCP tools backed by Workflows, and an ML training pipeline. See `08-ai-ml/notes.md`.
 - `runnable`: Complete mini-projects for labs and live demos, including a choreography participant demo.
 
 ## Format
